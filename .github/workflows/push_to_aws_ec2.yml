@@ -22,4 +22,4 @@ jobs:
           SOURCE: "./"
           REMOTE_HOST: "ec2-52-33-23-223.us-west-2.compute.amazonaws.com"
           REMOTE_USER: "admin"
-          TARGET: "~/src"
+          TARGET: "/src"
