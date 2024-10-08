@@ -1,6 +1,9 @@
 name: Push-to-EC2
 
-on: push
+on:
+  push:
+    branches:
+      - main  # Only triggers on push to the main branch
 
 jobs:
   deploy:
