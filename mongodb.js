@@ -1,17 +1,22 @@
 const { MongoClient, Timestamp } = require("mongodb");
 
+module.exports = { db_start, db_connect, db_setup, new_print_job, new_workflow, new_workflow_step, new_simulation_report };
 
-async function main() {
-	[client, database] = db_connect();
+
+async function db_start() {
+	[client, database] = await db_connect();
 	try {
 		await db_setup(database);
 	} finally { await client.close(); }
 }
 
 
-function db_connect(){
+async function db_connect(){
 	const uri = "mongodb://localhost:27017/HP";
 	const client = new MongoClient(uri);
+	console.log("Connecting to MongoDB...");
+	await client.connect();
+	console.log("Database connected");
 	const database = client.db('HP');
 	return [client, database];
 }
@@ -28,8 +33,8 @@ async function db_setup(database){
 
 	//Create collections
 	const collections = ["PrintJob", "Workflow", "WorkflowStep", "SimulationReport"];
-	for(i = 0; i < collections.length; i++){
-		await database.createCollection(collections[i]);
+	for(const coll of collections){
+		await database.createCollection(coll);
 	}
 
 	//Insert dummy data
@@ -52,9 +57,17 @@ async function insert(database, collection_name, doc){
 }
 
 
+function check_null(args){
+	for(const arg of args){
+		if(arg == null) throw new Error("Invalid argument");
+	}
+}
+
+
 //title is a string, page_count is an int, and rasterization_profile is an array of strings
 //TODO: Is there a way to place type constraints on a function?
 async function new_print_job(database, title, page_count, rasterization_profile){
+	check_null([database, title, page_count, rasterization_profile]);
 	return await insert(database, "PrintJob", {
 		Title: title, 
 		DateCreated: new Timestamp(), 
@@ -64,8 +77,10 @@ async function new_print_job(database, title, page_count, rasterization_profile)
 }
 
 
+
 //title is a string, workflow_steps is an array of ObjectID()s
 async function new_workflow(database, title, workflow_steps){
+	check_null([database, title, workflow_steps]);
 	return await insert(database, "Workflow", {
 		Title: title, 
 		WorkflowSteps: workflow_steps
@@ -75,6 +90,7 @@ async function new_workflow(database, title, workflow_steps){
 
 //title is a string, previous_step and next_step are ObjectID()s, setup_time and time_per_page are ints
 async function new_workflow_step(database, title, previous_step, next_step, setup_time, time_per_page){
+	check_null([database, title, setup_time, time_per_page]);
 	return await insert(database, "WorkflowStep", {
 		Title: title, 
 		PreviousStep: previous_step,
@@ -87,6 +103,7 @@ async function new_workflow_step(database, title, previous_step, next_step, setu
 
 //print_job_id and workflow_id are ObjectID()s, total_time_taken and rasterization_time_taken are ints
 async function new_simulation_report(database, print_job_id, workflow_id, total_time_taken, rasterization_time_taken){
+	check_null([database, print_job_id, workflow_id, total_time_taken, rasterization_time_taken]);
 	return await insert(database, "SimulationReport", {
 		PrintJobID: print_job_id,
 		WorkflowID: workflow_id,
@@ -94,6 +111,3 @@ async function new_simulation_report(database, print_job_id, workflow_id, total_
 		RasterizationTimeTaken: rasterization_time_taken
 	});
 }
-
-
-main().catch(console.dir);
