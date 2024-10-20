@@ -1,14 +1,6 @@
 const { MongoClient, Timestamp } = require("mongodb");
 
-module.exports = { db_start, db_connect, db_setup, new_print_job, new_workflow, new_workflow_step, new_simulation_report };
-
-
-async function db_start() {
-	[client, database] = await db_connect();
-	try {
-		await db_setup(database);
-	} finally { await client.close(); }
-}
+module.exports = { db_connect, db_setup, new_print_job, new_workflow, new_workflow_step, new_simulation_report };
 
 
 async function db_connect(){
@@ -27,15 +19,11 @@ async function db_connect(){
 async function db_setup(database){
 	//Drop all collections
 	const old_collections = await database.listCollections().toArray();
-	for(const coll of old_collections){
-		await database.collection(coll.name).drop();
-	}
+	Promise.all(old_collections.map((c) => database.collection(c.name).drop()));
 
 	//Create collections
 	const collections = ["PrintJob", "Workflow", "WorkflowStep", "SimulationReport"];
-	for(const coll of collections){
-		await database.createCollection(coll);
-	}
+	Promise.all(collections.map((c) => database.createCollection(c)));
 
 	//Insert dummy data
 	const pj_id = await new_print_job(database, "PrintJob 1", 5, ["RP 1"]);
@@ -65,6 +53,7 @@ function check_null(args){
 
 
 //title is a string, page_count is an int, and rasterization_profile is an array of strings
+//TODO: Check the validity of foreign keys
 //TODO: Is there a way to place type constraints on a function?
 async function new_print_job(database, title, page_count, rasterization_profile){
 	check_null([database, title, page_count, rasterization_profile]);
