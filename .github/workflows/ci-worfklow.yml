@@ -22,7 +22,7 @@ jobs:
         - name: Run Linting
           run: npm run lint
 
-    all_tests:
+    unit_tests:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout the code
@@ -31,6 +31,17 @@ jobs:
             - name: Install dependencies
               run: npm install
 
-            - name: Run tests
-              run: npm run test
-      
+            - name: Run unit tests
+              run: npm run unit
+
+    integration_tests:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout the code
+              uses: actions/checkout@v1
+
+            - name: Install dependencies
+              run: npm install
+
+            - name: Run integration tests
+              run: npm run integration
