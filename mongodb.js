@@ -6,7 +6,7 @@ export default { dbConnect, dbSetup, newPrintJob, newWorfklow, newWorfklowStep, 
  * @param {string} url The URL of the MongoDB database connection
  * @returns {[MongoClient, Db]} A tuple containing the client and database objects.
  */
-async function dbConnect(url){
+async function dbConnect(url) {
 	const client = new MongoClient(url);
 	console.log("Connecting to MongoDB...");
 	await client.connect();
@@ -20,7 +20,7 @@ async function dbConnect(url){
  * TODO: convert to a test in mongodb.test.js
  * @param {Db} database 
  */
-async function dbSetup(database){
+async function dbSetup(database) {
 	// Drop all collections
 	const old_collections = await database.listCollections().toArray();
 	Promise.all(old_collections.map((c) => database.collection(c.name).drop()));
@@ -43,12 +43,12 @@ async function dbSetup(database){
  * @param {*} doc 
  * @returns 
  */
-async function insert(database, collection_name, doc){
+async function insert(database, collection_name, doc) {
 	const collection = database.collection(collection_name);
 	const insert = await collection.insertOne(doc);
-	if(insert.acknowledged){
+	if (insert.acknowledged) {
 		// TODO: Do Stuff
-	} else { 
+	} else {
 		// TODO: Do other stuff
 	}
 	return insert.insertedId;
@@ -58,10 +58,10 @@ async function insert(database, collection_name, doc){
  * Checks if the given array contains any null values.
  * @param {*[]} args 
  */
-function checkNull(args){
-	for(const arg of args){
+function checkNull(args) {
+	for (const arg of args) {
 		// TODO: are we sure about throwing an error here?
-		if(arg === null) throw new Error("Invalid argument");
+		if (arg === null) throw new Error("Invalid argument");
 	}
 }
 
@@ -73,14 +73,14 @@ function checkNull(args){
  * @param {string[]} rasterization_profile 
  * @returns 
  */
-async function newPrintJob(database, title, page_count, rasterization_profile){
+async function newPrintJob(database, title, page_count, rasterization_profile) {
 	// TODO: Check the validity of foreign keys
 	// TODO: Is there a way to place type constraints on a function?
 	checkNull([database, title, page_count, rasterization_profile]);
 	return await insert(database, "PrintJob", {
-		Title: title, 
-		DateCreated: new Timestamp(), 
-		PageCount: page_count, 
+		Title: title,
+		DateCreated: new Timestamp(),
+		PageCount: page_count,
 		RasterizationProfile: rasterization_profile
 	});
 }
@@ -92,10 +92,10 @@ async function newPrintJob(database, title, page_count, rasterization_profile){
  * @param {ObjectId[]} workflow_steps 
  * @returns 
  */
-async function newWorfklow(database, title, workflow_steps){
+async function newWorfklow(database, title, workflow_steps) {
 	checkNull([database, title, workflow_steps]);
 	return await insert(database, "Workflow", {
-		Title: title, 
+		Title: title,
 		WorkflowSteps: workflow_steps
 	});
 }
@@ -110,10 +110,10 @@ async function newWorfklow(database, title, workflow_steps){
  * @param {Int32} time_per_page 
  * @returns 
  */
-async function newWorfklowStep(database, title, previous_step, next_step, setup_time, time_per_page){
+async function newWorfklowStep(database, title, previous_step, next_step, setup_time, time_per_page) {
 	checkNull([database, title, setup_time, time_per_page]);
 	return await insert(database, "WorkflowStep", {
-		Title: title, 
+		Title: title,
 		PreviousStep: previous_step,
 		NextStep: next_step,
 		SetupTime: setup_time,
@@ -130,7 +130,7 @@ async function newWorfklowStep(database, title, previous_step, next_step, setup_
  * @param {Int32} rasterization_time_taken 
  * @returns 
  */
-async function newSimulationReport(database, print_job_id, workflow_id, total_time_taken, rasterization_time_taken){
+async function newSimulationReport(database, print_job_id, workflow_id, total_time_taken, rasterization_time_taken) {
 	checkNull([database, print_job_id, workflow_id, total_time_taken, rasterization_time_taken]);
 	return await insert(database, "SimulationReport", {
 		PrintJobID: print_job_id,
