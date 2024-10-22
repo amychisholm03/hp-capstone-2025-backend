@@ -23,11 +23,11 @@ async function dbConnect(url) {
 async function dbSetup(database) {
 	// Drop all collections
 	const old_collections = await database.listCollections().toArray();
-	Promise.all(old_collections.map((c) => database.collection(c.name).drop()));
+	await Promise.all(old_collections.map((c) => database.collection(c.name).drop()));
 
 	// Create collections
 	const collections = ["PrintJob", "Workflow", "WorkflowStep", "SimulationReport"];
-	Promise.all(collections.map((c) => database.createCollection(c)));
+	await Promise.all(collections.map((c) => database.createCollection(c)));
 
 	// Insert dummy data
 	const pj_id = await newPrintJob(database, "PrintJob 1", 5, ["RP 1"]);
