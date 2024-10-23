@@ -22,24 +22,41 @@ jobs:
         - name: Run Linting
           run: npm run lint
 
-    create_test_folder_on_ec2:
+    deploy_to_ec2_test_folder:
         needs: lint
         runs-on: ubuntu-latest
         steps:
           - name: Checkout the code
             uses: actions/checkout@v1
 
-          - name: Create test folder on EC2 instance
+          - name: Create test folder on EC2
             uses: appleboy/ssh-action@master
             with:
               host: ${{ secrets.EC2_HOST }}
               username: ${{ secrets.EC2_USER}}
               key: ${{ secrets.EC2_SSH_KEY }}
               script: |
-                cd ~/ && mkdir test
+                cd ~/
+                if [ -d "test" ]; then
+                    rm -rf test
+                fi
+                mkdir test
+
+          - name: Deploy code to EC2 test folder
+            uses: easingthemes/ssh-deploy@v2.1.5
+            env:
+                ARGS: 
+                  --exclude='.gitignore'
+                  --exclude='.github/'
+                  --exclude='README.md'
+                SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+                SOURCE: "./"
+                REMOTE_HOST: ${{ secrets.EC2_HOST }}
+                REMOTE_USER: ${{ secrets.EC2_USER }}
+                TARGET: "~/test"
 
     unit_tests:
-        needs: create_test_folder_on_ec2
+        needs: deploy_to_ec2_test_folder
         runs-on: ubuntu-latest
         steps:
             - name: Checkout the code
@@ -55,19 +72,6 @@ jobs:
                   cd ~/test
                   npm install
                   npm run unit
-
-            - name: Deploy to EC2 instance
-              uses: easingthemes/ssh-deploy@v2.1.5
-              env:
-                ARGS: 
-                  --exclude='.gitignore'
-                  --exclude='.github/'
-                  --exclude='README.md'
-                SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
-                SOURCE: "./"
-                REMOTE_HOST: ${{ secrets.EC2_HOST }}
-                REMOTE_USER: ${{ secrets.EC2_USER }}
-                TARGET: "~/test"
 
     integration_tests:
         needs: unit_tests
@@ -101,4 +105,7 @@ jobs:
                 username: ${{ secrets.EC2_USER}}
                 key: ${{ secrets.EC2_SSH_KEY }}
                 script: |
-                  rm -rf ~/test
+                  cd ~/
+                  if [ -d "test" ]; then
+                      rm -rf test
+                  fi
