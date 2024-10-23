@@ -30,8 +30,8 @@ async function dbSetup(database) {
 
 	// Insert dummy data
 	const pj_id = await newPrintJob(database, "PrintJob 1", 5, ["RP 1"]);
-	const ws_id = await newWorfklowStep(database, "WorkflowStep 1", null, null, 10, 7);
-	const wf_id = await newWorfklow(database, "Workflow 1", [ws_id]);
+	const ws_id = await newWorkflowStep(database, "WorkflowStep 1", null, null, 10, 7);
+	const wf_id = await newWorkflow(database, "Workflow 1", [ws_id]);
 	await newSimulationReport(database, pj_id, wf_id, 3, 4);
 }
 
