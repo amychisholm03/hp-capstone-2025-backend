@@ -16,5 +16,6 @@
         "unit": "mocha 'test/unit/**/*.test.js'",
         "integration": "mocha 'test/integration/**/*.test.js'",
         "test": "npm run unit && npm run integration"
-    }
+    },
+    "type": "commonjs"
 }

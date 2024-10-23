@@ -1,5 +1,4 @@
-import { Db, Int32, ObjectId, MongoClient, Timestamp } from "mongodb";
-export default { dbConnect, dbSetup, newPrintJob, newWorfklow, newWorfklowStep, newSimulationReport };
+const { Db, Int32, ObjectId, MongoClient, Timestamp } = require("mongodb");
 
 /**
  * Connects to the MongoDB database and returns the client and database objects.
@@ -92,7 +91,7 @@ async function newPrintJob(database, title, page_count, rasterization_profile) {
  * @param {ObjectId[]} workflow_steps 
  * @returns 
  */
-async function newWorfklow(database, title, workflow_steps) {
+async function newWorkflow(database, title, workflow_steps) {
 	checkNull([database, title, workflow_steps]);
 	return await insert(database, "Workflow", {
 		Title: title,
@@ -110,7 +109,7 @@ async function newWorfklow(database, title, workflow_steps) {
  * @param {Int32} time_per_page 
  * @returns 
  */
-async function newWorfklowStep(database, title, previous_step, next_step, setup_time, time_per_page) {
+async function newWorkflowStep(database, title, previous_step, next_step, setup_time, time_per_page) {
 	checkNull([database, title, setup_time, time_per_page]);
 	return await insert(database, "WorkflowStep", {
 		Title: title,
@@ -139,3 +138,11 @@ async function newSimulationReport(database, print_job_id, workflow_id, total_ti
 		RasterizationTimeTaken: rasterization_time_taken
 	});
 }
+
+module.exports = {
+    dbConnect,
+    dbSetup,
+    newPrintJob,
+    newWorkflow,
+    newWorkflowStep
+};
