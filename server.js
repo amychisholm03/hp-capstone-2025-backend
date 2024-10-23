@@ -1,5 +1,6 @@
-const fastify = require('fastify')({ logger: true })
 const { dbConnect, dbSetup, newPrintJob, newWorkflow, newWorkflowStep } = require("./mongodb.js");
+const fastify = require('fastify')({ logger: true })
+const cors = require('@fastify/cors');
 
 // TODO: Where should we store these constants?
 const port = 80;
@@ -10,17 +11,21 @@ const mongoUrl = "mongodb://localhost:27017/HP"; // TODO: better place for this
  * Starts up the fastify server.
  */
 async function start() {
-  try {
-    setupGets();
-    await fastify.listen({ port: port, host: host });
+  // Register the fastify-cors plugin
+  fastify.register(cors, {
+    origin: '*', // Allow all origins
+    methods: ['GET', 'POST'], // Allow specific methods
+  });
 
-  } catch (err) {
-    console.log(err);
-    // TODO: not all errors are non-recoverable,
-    // e.g. user errors inputting dumb data,
-    // so we need to distinguish between them
-    process.exit(1);
-  }
+  // Start the server
+  setupGets();
+  fastify.listen({ host: host, port: port }, (err, address) => {
+    if (err) {
+      console.error(err);
+      process.exit(1);
+    }
+    console.log(`Server listening at ${address}`);
+  });
 }
 
 /**
