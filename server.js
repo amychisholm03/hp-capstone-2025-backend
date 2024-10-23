@@ -3,7 +3,7 @@ const { dbConnect, dbSetup, newPrintJob, newWorkflow, newWorkflowStep } = requir
 
 // TODO: Where should we store these constants?
 const port = 80;
-const host = "127.0.0.1";
+const host = "0.0.0.0";
 const mongoUri = "mongodb://localhost:27017/HP";
 
 /**
