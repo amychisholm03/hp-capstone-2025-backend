@@ -2,7 +2,6 @@ name: Backend CI
 on:
     push:
     pull_request:
-    workflow_dispatch:
 
 jobs:
     lint:
@@ -22,26 +21,71 @@ jobs:
         - name: Run Linting
           run: npm run lint
 
-    unit_tests:
+    deploy_to_ec2_test_folder:
+        needs: lint
+        runs-on: ubuntu-latest
+        steps:
+          - name: Checkout the code
+            uses: actions/checkout@v1
+
+          - name: Create test folder on EC2
+            uses: appleboy/ssh-action@master
+            with:
+              host: ${{ secrets.EC2_HOST }}
+              username: ${{ secrets.EC2_USER}}
+              key: ${{ secrets.EC2_SSH_KEY }}
+              script: |
+                cd ~/
+                if [ -d "test" ]; then
+                    rm -rf test
+                fi
+                mkdir test
+
+          - name: Deploy code to EC2 test folder
+            uses: easingthemes/ssh-deploy@v2.1.5
+            env:
+                ARGS: 
+                  --exclude='.gitignore'
+                  --exclude='.github/'
+                  --exclude='README.md'
+                SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+                SOURCE: "./"
+                REMOTE_HOST: ${{ secrets.EC2_HOST }}
+                REMOTE_USER: ${{ secrets.EC2_USER }}
+                TARGET: "~/test"
+
+    run_tests:
+        needs: deploy_to_ec2_test_folder
         runs-on: ubuntu-latest
         steps:
             - name: Checkout the code
               uses: actions/checkout@v1
 
-            - name: Install dependencies
-              run: npm install
+            - name: SSH into EC2 and run unit tests
+              uses: appleboy/ssh-action@master
+              with:
+                host: ${{ secrets.EC2_HOST }}
+                username: ${{ secrets.EC2_USER}}
+                key: ${{ secrets.EC2_SSH_KEY }}
+                script: |
+                  exec bash \-l
+                  cd ~/test && npm install && npm run test
 
-            - name: Run unit tests
-              run: npm run unit
-
-    integration_tests:
+    clean_up_test_folder_on_ec2:
+        needs: run_tests
         runs-on: ubuntu-latest
         steps:
             - name: Checkout the code
               uses: actions/checkout@v1
 
-            - name: Install dependencies
-              run: npm install
-
-            - name: Run integration tests
-              run: npm run integration
+            - name: Remove test folder from EC2
+              uses: appleboy/ssh-action@master
+              with:
+                host: ${{ secrets.EC2_HOST }}
+                username: ${{ secrets.EC2_USER}}
+                key: ${{ secrets.EC2_SSH_KEY }}
+                script: |
+                  cd ~/
+                  if [ -d "test" ]; then
+                      rm -rf test
+                  fi
