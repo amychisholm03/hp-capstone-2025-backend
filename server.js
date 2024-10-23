@@ -21,8 +21,7 @@ async function start() {
 }
 
 /**
- * Connects to the Mongo database and sets up the POSTs
- * related to it.
+ * Connects to the Mongo database.
  */
 async function connectToMongoDB() {
   try {
@@ -36,12 +35,19 @@ async function connectToMongoDB() {
   }
 }
 
+/**
+ * Sets up the GETs for the server
+ */
 function setupGets() {
   fastify.get('/', async (_, reply) => {
     reply.code(200).send('Hello, client!');
   });
 }
 
+/**
+ * Sets up the POSTs for the server
+ * @param {Db} database 
+ */
 function setupPosts(database) {
   // TODO: Test how mongoDB handles multiple simultaneous requests
   fastify.post('/createJob', async (request, reply) => {
@@ -82,6 +88,11 @@ async function fastifyPostHelper(reply, database, func, args) {
 function main(){
   start();
   connectToMongoDB();
+}
+
+// This is needed so that server.test.js doesn't run main()
+if (require.main === module) {
+  main();
 }
 
 module.exports = { fastify, start };
