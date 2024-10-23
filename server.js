@@ -1,5 +1,5 @@
 const fastify = require('fastify')({ logger: true })
-import { dbConnect, dbSetup, newPrintJob, newWorflow, newWorflowStep } from "./mongodb.js";
+const { dbConnect, dbSetup, newPrintJob, newWorkflow, newWorkflowStep } = require("./mongodb.js");
 
 // TODO: Where should we store these constants?
 const port = 80;
@@ -38,12 +38,12 @@ function setupPosts(database) {
   });
 
   fastify.post('/createWorkflow', async (request, reply) => {
-    await fastifyPostHelper(reply, database, newWorflow,
+    await fastifyPostHelper(reply, database, newWorkflow,
       [request.body.Title, request.body.WorkflowSteps]);
   });
 
   fastify.post('/createWorkflowStep', async (request, reply) => {
-    await fastifyPostHelper(reply, database, newWorflowStep,
+    await fastifyPostHelper(reply, database, newWorkflowStep,
       [request.body.Title, request.body.PreviousStep, request.body.NextStep, request.body.SetupTime, request.body.TimePerPage]);
   });
 
