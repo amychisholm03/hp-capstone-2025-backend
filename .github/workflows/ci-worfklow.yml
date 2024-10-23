@@ -80,6 +80,7 @@ jobs:
                   npm run integration
 
     clean_up_test_folder_on_cloud:
+        needs: integration_tests
         runs-on: ubuntu-latest
         steps:
             - name: Checkout the code
