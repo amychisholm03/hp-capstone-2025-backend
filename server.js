@@ -4,10 +4,10 @@ const { dbConnect, dbSetup, newPrintJob, newWorkflow, newWorkflowStep } = requir
 // TODO: Where should we store these constants?
 const port = 80;
 const host = "0.0.0.0";
-const mongoUri = "mongodb://localhost:27017/HP";
+const mongoUrl = "mongodb://localhost:27017/HP"; // TODO: better place for this
 
 /**
- * Starts up the fastify server
+ * Starts up the fastify server.
  */
 async function start() {
   try {
@@ -15,7 +15,10 @@ async function start() {
     await fastify.listen({ port: port, host: host });
 
   } catch (err) {
-    fastify.log.error(err);
+    console.log(err);
+    // TODO: not all errors are non-recoverable,
+    // e.g. user errors inputting dumb data,
+    // so we need to distinguish between them
     process.exit(1);
   }
 }
@@ -23,14 +26,14 @@ async function start() {
 /**
  * Connects to the Mongo database.
  */
-async function connectToMongoDB() {
+async function connectToDB() {
   try {
-    const [_, database] = await dbConnect(mongoUri);
-    await dbSetup(database); // TODO: get rid of once in mongodb.test.js
+    const [_, database] = await dbConnect(mongoUrl);
+    await dbSetup(database); // TODO: get rid of once in mongodb.test.js?
     setupPosts(database);
   }
   catch (err) {
-    fastify.log.error(err);
+    console.log(err);
     process.exit(1);
   }
 }
@@ -49,7 +52,6 @@ function setupGets() {
  * @param {Db} database 
  */
 function setupPosts(database) {
-  // TODO: Test how mongoDB handles multiple simultaneous requests
   fastify.post('/createJob', async (request, reply) => {
     await fastifyPostHelper(reply, database, newPrintJob,
       [request.body.Title, request.body.PageCount, request.body.RasterizationProfile]);
@@ -82,12 +84,13 @@ async function fastifyPostHelper(reply, database, func, args) {
   let code = 200;
   try { await func(database, ...args); }
   catch (err) { message = err; code = 500; }
-  reply.code(code).send(message);
+  finally { reply.code(code).send(message); }
 }
 
-function main(){
-  start();
-  connectToMongoDB();
+function main() {
+  start().then(() =>
+    connectToDB()
+  );
 }
 
 // This is needed so that server.test.js doesn't run main()
@@ -95,4 +98,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { fastify, start };
+module.exports = { fastify, start, connectToDB };
