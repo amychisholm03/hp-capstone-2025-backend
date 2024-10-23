@@ -69,6 +69,7 @@ jobs:
                 username: ${{ secrets.EC2_USER}}
                 key: ${{ secrets.EC2_SSH_KEY }}
                 script: |
+                  exec bash \-l
                   cd ~/test && npm install && npm run test
 
     clean_up_test_folder_on_ec2:
