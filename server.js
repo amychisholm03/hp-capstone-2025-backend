@@ -3,6 +3,7 @@ const { dbConnect, dbSetup, newPrintJob, newWorkflow, newWorkflowStep } = requir
 
 // TODO: Where should we store these constants?
 const port = 80;
+const host = "127.0.0.1";
 const mongoUri = "mongodb://localhost:27017/HP";
 
 /**
@@ -10,13 +11,8 @@ const mongoUri = "mongodb://localhost:27017/HP";
  */
 async function start() {
   try {
-    const [_, database] = await dbConnect(mongoUri);
-    await dbSetup(database); // TODO: get rid of once in mongodb.test.js
-
     setupGets();
-    setupPosts(database);
-
-    fastify.listen({ port: port, host: '0.0.0.0' });
+    await fastify.listen({ port: port, host: host });
 
   } catch (err) {
     fastify.log.error(err);
@@ -24,8 +20,24 @@ async function start() {
   }
 }
 
+/**
+ * Connects to the Mongo database and sets up the POSTs
+ * related to it.
+ */
+async function connectToMongoDB() {
+  try {
+    const [_, database] = await dbConnect(mongoUri);
+    await dbSetup(database); // TODO: get rid of once in mongodb.test.js
+    setupPosts(database);
+  }
+  catch (err) {
+    fastify.log.error(err);
+    process.exit(1);
+  }
+}
+
 function setupGets() {
-  fastify.get('/', function handler(_, reply) {
+  fastify.get('/', async (_, reply) => {
     reply.code(200).send('Hello, client!');
   });
 }
@@ -67,4 +79,9 @@ async function fastifyPostHelper(reply, database, func, args) {
   reply.code(code).send(message);
 }
 
-start();
+function main(){
+  start();
+  connectToMongoDB();
+}
+
+module.exports = { fastify, start };

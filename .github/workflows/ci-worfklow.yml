@@ -28,11 +28,18 @@ jobs:
             - name: Checkout the code
               uses: actions/checkout@v1
 
-            - name: Install dependencies
-              run: npm install
-
-            - name: Run unit tests
-              run: npm run unit
+            - name: SSH into EC2 and run unit tests
+              uses: appleboy/ssh-action@master
+              with:
+                host: ${{ secrets.EC2_HOST }}
+                username: ${{ secrets.EC2_USER}}
+                key: ${{ secrets.EC2_SSH_KEY }}
+                script: |
+                  cd ~/test
+                  npm install
+                  npm run unit
+                  cd ..
+                  rm -r ~/test
 
     integration_tests:
         runs-on: ubuntu-latest
@@ -40,8 +47,28 @@ jobs:
             - name: Checkout the code
               uses: actions/checkout@v1
 
-            - name: Install dependencies
-              run: npm install
+            - name: Deploy to EC2 instance test folder
+              uses: easingthemes/ssh-deploy@v2.1.5
+              env:
+                ARGS: 
+                  --exclude='.gitignore'
+                  --exclude='.github/'
+                  --exclude='README.md'
+                SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+                SOURCE: "./"
+                REMOTE_HOST: ${{ secrets.EC2_HOST }}
+                REMOTE_USER: ${{ secrets.EC2_USER }}
+                TARGET: "~/test"
 
-            - name: Run integration tests
-              run: npm run integration
+            - name: SSH into EC2 and run unit tests
+              uses: appleboy/ssh-action@master
+              with:
+                host: ${{ secrets.EC2_HOST }}
+                username: ${{ secrets.EC2_USER}}
+                key: ${{ secrets.EC2_SSH_KEY }}
+                script: |
+                  cd ~/test
+                  npm install
+                  npm run integration
+                  cd ..
+                  rm -r ~/test
