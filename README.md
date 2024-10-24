@@ -13,7 +13,7 @@ curl -X POST http://54.200.253.84:80/createWorkflowStep -H "Content-Type: applic
 
 <h6>Query a collection</h6>
 
-curl -X POST http://54.200.253.84:80/temp -H "Content-Type: application/json" -d '{"CollectionName": "PrintJob", "Query": {"Title": "PrintJob 1"}}'
+curl -X POST http://54.200.253.84:80/query -H "Content-Type: application/json" -d '{"CollectionName": "PrintJob", "Query": {"Title": "PrintJob 1"}}'
 
 <h6>Invalid createJob example</h6>
 
