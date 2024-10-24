@@ -96,4 +96,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { fastify, start, connectToDB };
+module.exports = { fastify, start };
