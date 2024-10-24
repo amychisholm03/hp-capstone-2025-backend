@@ -137,6 +137,7 @@ async function newSimulationReport(database, print_job_id, workflow_id, total_ti
 		TotalTimeTaken: total_time_taken,
 		RasterizationTimeTaken: rasterization_time_taken
 	});
+	// make sure that the return value of the query is not empty
 }
 
 module.exports = {
