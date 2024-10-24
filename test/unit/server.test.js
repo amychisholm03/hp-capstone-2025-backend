@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { fastify, start, connectToDB } = require('../../server.js');
+const { fastify, start } = require('../../server.js');
 
 test.before(async () => {
     await start().then(() => connectToDB());    

@@ -8,36 +8,31 @@ const host = "0.0.0.0";
 const mongoUrl = "mongodb://localhost:27017/hp"; // TODO: better place for this
 
 /**
- * Starts up the fastify server.
+ * Starts up the fastify server and connects to the Mongo database.
  */
 async function start() {
-  // Register the fastify-cors plugin
-  fastify.register(cors, {
-    origin: '*', // Allow all origins
-    methods: ['GET', 'POST'], // Allow specific methods
-  });
-
-  // Start the server
-  setupGets();
-  fastify.listen({ host: host, port: port }, (err, address) => {
-    if (err) {
-      console.error(err.message);
-      process.exit(1);
-    }
-    console.log(`Server listening at ${address}`);
-  });
-}
-
-/**
- * Connects to the Mongo database.
- */
-async function connectToDB() {
   try {
-    const [_, database] = await dbConnect(mongoUrl);
+    // Register the fastify-cors plugin
+    fastify.register(cors, {
+      origin: '*', // Allow all origins
+      methods: ['GET', 'POST'], // Allow specific methods
+    });
+
+    // Connect to the Mongo database
+    const [_, database] = dbConnect(mongoUrl);
     await dbSetup(database); // TODO: get rid of once in mongodb.test.js?
     setupPosts(database);
-  }
-  catch (err) {
+
+    // Start the server
+    setupGets();
+    fastify.listen({ host: host, port: port }, (err, address) => {
+      if (err) {
+        console.error(err.message);
+        process.exit(1);
+      }
+      console.log(`Server listening at ${address}`);
+    });
+  } catch (err) {
     console.error(err.message);
     process.exit(1);
   }
@@ -92,8 +87,8 @@ async function fastifyPostHelper(reply, database, func, args) {
   finally { reply.code(code).send(message); }
 }
 
-function main() {
-  start().then(() => connectToDB());
+function main(){
+  start();
 }
 
 // This is needed so that server.test.js doesn't run main()
