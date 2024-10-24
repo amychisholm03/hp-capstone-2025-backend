@@ -19,10 +19,9 @@ async function start() {
 
   // Start the server
   setupGets();
-  await connectToDB();
   fastify.listen({ host: host, port: port }, (err, address) => {
     if (err) {
-      console.error(err);
+      console.error(err.message);
       process.exit(1);
     }
     console.log(`Server listening at ${address}`);
@@ -39,7 +38,7 @@ async function connectToDB() {
     setupPosts(database);
   }
   catch (err) {
-    console.log(err);
+    console.error(err.message);
     process.exit(1);
   }
 }
@@ -94,7 +93,7 @@ async function fastifyPostHelper(reply, database, func, args) {
 }
 
 function main() {
-  start();
+  start().then(() => connectToDB());
 }
 
 // This is needed so that server.test.js doesn't run main()

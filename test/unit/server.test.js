@@ -1,9 +1,9 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { fastify, start } = require('../../server.js');
+const { fastify, start, connectToDB } = require('../../server.js');
 
 test.before(async () => {
-    await start();
+    await start().then(() => connectToDB());    
 });
 test.after(() => fastify.close());
 
@@ -16,7 +16,6 @@ test('GET /', async (t) => {
     assert.strictEqual(response.payload, 'Hello, client!');
 });
 
-/*
 test('POST /createJob', async (t) => {
     const response = await fastify.inject({
         method: 'POST',
@@ -59,4 +58,3 @@ test('POST /createWorkflowStep', async (t) => {
     assert.strictEqual(response.statusCode, 200);
     assert.strictEqual(response.payload, 'Operation successful\n');
 });
-*/
