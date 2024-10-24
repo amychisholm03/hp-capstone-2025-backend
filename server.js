@@ -5,7 +5,7 @@ const cors = require('@fastify/cors');
 // TODO: Where should we store these constants?
 const port = 80;
 const host = "0.0.0.0";
-const mongoUrl = "mongodb://localhost:27017/HP"; // TODO: better place for this
+const mongoUrl = "mongodb://localhost:27017/hp"; // TODO: better place for this
 
 /**
  * Starts up the fastify server.

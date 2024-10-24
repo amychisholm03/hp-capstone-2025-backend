@@ -10,7 +10,7 @@ async function dbConnect(url) {
 	console.log("Connecting to MongoDB...");
 	await client.connect();
 	console.log("Database connected");
-	const database = client.db('HP');
+	const database = client.db('hp');
 	return [client, database];
 }
 
