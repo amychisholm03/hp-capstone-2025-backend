@@ -5,7 +5,7 @@ const cors = require('@fastify/cors');
 // TODO: Where should we store these constants?
 const port = 80;
 const host = "0.0.0.0";
-const mongoUrl = "mongodb://localhost:27017/HP"; // TODO: better place for this
+const mongoUrl = "mongodb://localhost:27017/hp"; // TODO: better place for this
 
 /**
  * Starts up the fastify server.
@@ -19,6 +19,7 @@ async function start() {
 
   // Start the server
   setupGets();
+  await connectToDB();
   fastify.listen({ host: host, port: port }, (err, address) => {
     if (err) {
       console.error(err);
@@ -93,9 +94,7 @@ async function fastifyPostHelper(reply, database, func, args) {
 }
 
 function main() {
-  start().then(() =>
-    connectToDB()
-  );
+  start();
 }
 
 // This is needed so that server.test.js doesn't run main()
