@@ -19,7 +19,7 @@ async function start() {
     });
 
     // Connect to the Mongo database
-    const [_, database] = dbConnect(mongoUrl);
+    const [_, database] = await dbConnect(mongoUrl);
     await dbSetup(database); // TODO: get rid of once in mongodb.test.js?
     setupPosts(database);
 

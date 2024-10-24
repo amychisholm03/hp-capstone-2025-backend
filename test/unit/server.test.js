@@ -5,7 +5,11 @@ const { fastify, start } = require('../../server.js');
 test.before(async () => {
     await start().then(() => connectToDB());    
 });
-test.after(() => fastify.close());
+test.after(() => {
+    fastify.close();
+    process.exit(0);
+}
+);
 
 test('GET /', async (t) => {
     const response = await fastify.inject({
@@ -63,7 +67,11 @@ test('POST /query', async (t) => {
     const response = await fastify.inject({
         method: 'POST',
         url: '/query',
+        headers: {
+            'Content-Type': 'application/json'
+        },
         body: '{"CollectionName": "PrintJob", "Query": {"Title": "PrintJob 1"}}'
     });
     assert.strictEqual(response.statusCode, 200);
+    console.log(response.payload);
 });
