@@ -58,3 +58,12 @@ test('POST /createWorkflowStep', async (t) => {
     assert.strictEqual(response.statusCode, 200);
     assert.strictEqual(response.payload, 'Operation successful\n');
 });
+
+test('POST /query', async (t) => {
+    const response = await fastify.inject({
+        method: 'POST',
+        url: '/query',
+        body: '{"CollectionName": "PrintJob", "Query": {"Title": "PrintJob 1"}}'
+    });
+    assert.strictEqual(response.statusCode, 200);
+});
