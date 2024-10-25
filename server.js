@@ -24,7 +24,7 @@ async function start() {
     setupPosts(database);
 
     // Start the server
-    setupGets();
+    setupGets(database);
     fastify.listen({ host: host, port: port }, (err, address) => {
       if (err) {
         console.error(err.message);
@@ -41,7 +41,7 @@ async function start() {
 /**
  * Sets up the GETs for the server
  */
-function setupGets() {
+function setupGets(database) {
   fastify.get('/', async (_, reply) => {
     reply.code(200).send('Hello, client!');
   });
@@ -49,7 +49,6 @@ function setupGets() {
   // Add a getSimulationReport GET API
   fastify.get('/getSimulationReport', async (request, reply) => {
     const {title, workflow} = request.query;
-    const database = fastify.mongo.db;
     const printJob = await database.collection('PrintJob').findOne({Title: title});
     const workflowDoc = await database.collection('Workflow').findOne({Title: workflow});
     const simulationReport = await database.collection('SimulationReport').findOne({PrintJobID: printJob._id, WorkflowID: workflowDoc._id});
