@@ -40,6 +40,7 @@ async function start() {
 
 /**
  * Sets up the GETs for the server
+ * @param {Db} database
  */
 function setupGets(database) {
   fastify.get('/', async (_, reply) => {
