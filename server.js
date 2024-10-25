@@ -60,7 +60,7 @@ function setupGets() {
     }
     // Else
     reply.code(200).send({PrintJob: printJob, SimulationReport: simulationReport});
-  }
+  })
 }
 
 /**
