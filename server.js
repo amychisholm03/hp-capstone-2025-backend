@@ -45,6 +45,22 @@ function setupGets() {
   fastify.get('/', async (_, reply) => {
     reply.code(200).send('Hello, client!');
   });
+
+  // Add a getSimulationReport GET API
+  fastify.get('/getSimulationReport', async (request, reply) => {
+    const {title, workflow} = request.query;
+    const database = fastify.mongo.db;
+    const printJob = await database.collection('PrintJob').findOne({Title: title});
+    const workflowDoc = await database.collection('Workflow').findOne({Title: workflow});
+    const simulationReport = await database.collection('SimulationReport').findOne({PrintJobID: printJob._id, WorkflowID: workflowDoc._id});
+    // If no simulationReport is returned
+    if (!simulationReport) {
+      reply.code(404).send("Simulation report not found");
+      return;
+    }
+    // Else
+    reply.code(200).send({PrintJob: printJob, SimulationReport: simulationReport});
+  }
 }
 
 /**
