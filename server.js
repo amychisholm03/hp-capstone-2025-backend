@@ -51,7 +51,15 @@ function setupGets(database) {
   fastify.get('/getSimulationReport', async (request, reply) => {
     const {title, workflow} = request.query;
     const printJob = await database.collection('PrintJob').findOne({Title: title});
+    if (!printJob) {
+      reply.code(404).send("PrintJob not found");
+      return;
+    }
     const workflowDoc = await database.collection('Workflow').findOne({Title: workflow});
+    if (!workflowDoc) {
+      reply.code(404).send("workflowDoc not found");
+      return;
+    }
     const simulationReport = await database.collection('SimulationReport').findOne({PrintJobID: printJob._id, WorkflowID: workflowDoc._id});
     // If no simulationReport is returned
     if (!simulationReport) {
