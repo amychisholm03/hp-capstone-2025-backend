@@ -1,11 +1,11 @@
-const { test } = require('node:test');
+const { test, before, after } = require('node:test');
 const assert = require('node:assert');
 const { fastify, start } = require('../../server.js');
 
-test.before(async () => {
+before(async () => {
     await start("0.0.0.0", 8080);    
 });
-test.after(() => {
+after(() => {
     fastify.close();
     process.exit(0);
 }

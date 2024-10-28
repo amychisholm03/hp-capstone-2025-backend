@@ -71,8 +71,7 @@ jobs:
                   exec bash \-l
                   cd ~/test
                   sudo npm install
-                  sudo npm run test >> test_results.txt
-                  cat test_results.txt
+                  sudo npm run test
 
     clean_up_test_folder_on_ec2:
         needs: run_tests
