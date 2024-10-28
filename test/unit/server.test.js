@@ -75,3 +75,16 @@ test('POST /query', async (t) => {
     assert.strictEqual(response.statusCode, 200);
     console.log(response.payload);
 });
+
+test('GET /getSimulationReport', async (t) => {
+    // parameters
+    const title = 'PrintJob 1';
+    const workflow = 'Workflow 1';
+    const response = await fastify.inject({
+        method: 'GET',
+        url: `/getSimulationReport?title=${encodeURIComponent(title)}&workflow=${encodeURIComponent(workflow)}`
+    });
+    assert.strictEqual(response.statusCode, 200);
+    const payload = JSON.parse(response.payload);
+    console.log("Simulation Report:", payload);
+});
