@@ -3,14 +3,12 @@ const fastify = require('fastify')({ logger: true })
 const cors = require('@fastify/cors');
 
 // TODO: Where should we store these constants?
-const port = 80;
-const host = "0.0.0.0";
 const mongoUrl = "mongodb://localhost:27017/hp"; // TODO: better place for this
 
 /**
  * Starts up the fastify server and connects to the Mongo database.
  */
-async function start() {
+async function start(host = "0.0.0.0", port = 80){
   try {
     // Register the fastify-cors plugin
     fastify.register(cors, {

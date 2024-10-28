@@ -3,7 +3,7 @@ const assert = require('node:assert');
 const { fastify, start } = require('../../server.js');
 
 test.before(async () => {
-    await start();    
+    await start("0.0.0.0", 8080);    
 });
 test.after(() => {
     fastify.close();
