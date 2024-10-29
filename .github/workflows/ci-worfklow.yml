@@ -37,9 +37,9 @@ jobs:
               script: |
                 cd ~/
                 if [ -d "test" ]; then
-                    sudo rm -rf test
+                    sudo rm -rf ~/test
                 fi
-                mkdir test
+                mkdir ~/test
 
           - name: Deploy code to EC2 test folder
             uses: easingthemes/ssh-deploy@v2.1.5
@@ -69,6 +69,7 @@ jobs:
                 key: ${{ secrets.EC2_SSH_KEY }}
                 script: |
                   cd ~/test
+                  ls
                   sudo npm install
                   sudo npm run test
 
@@ -88,5 +89,5 @@ jobs:
                 script: |
                   cd ~/
                   if [ -d "test" ]; then
-                      sudo rm -rf test
+                      sudo rm -rf ~/test
                   fi
