@@ -1,7 +1,6 @@
 name: Backend CI
 on:
     push:
-    pull_request:
 
 jobs:
     lint:
@@ -69,7 +68,7 @@ jobs:
                 key: ${{ secrets.EC2_SSH_KEY }}
                 script: |
                   cd ~/test
-                  ls
+                  sudo rm -rf node_modules
                   sudo npm install
                   sudo npm run test
 
