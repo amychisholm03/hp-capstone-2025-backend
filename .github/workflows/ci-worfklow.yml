@@ -37,7 +37,7 @@ jobs:
               script: |
                 cd ~/
                 if [ -d "test" ]; then
-                    rm -rf test
+                    sudo rm -rf test
                 fi
                 mkdir test
 
@@ -88,5 +88,5 @@ jobs:
                 script: |
                   cd ~/
                   if [ -d "test" ]; then
-                      rm -rf test
+                      sudo rm -rf test
                   fi
