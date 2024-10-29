@@ -11,10 +11,6 @@ after(() => {
 }
 );
 
-test('delibrate fail', async (t) => {
-    assert.strictEqual(1, 2);
-});
-
 test('GET /', async (t) => {
     const response = await fastify.inject({
         method: 'GET',
