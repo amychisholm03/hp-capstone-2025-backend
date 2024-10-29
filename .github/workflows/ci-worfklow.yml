@@ -1,7 +1,6 @@
 name: Backend CI
 on:
     push:
-    pull_request:
 
 jobs:
     lint:
@@ -37,9 +36,9 @@ jobs:
               script: |
                 cd ~/
                 if [ -d "test" ]; then
-                    rm -rf test
+                    sudo rm -rf ~/test
                 fi
-                mkdir test
+                mkdir ~/test
 
           - name: Deploy code to EC2 test folder
             uses: easingthemes/ssh-deploy@v2.1.5
@@ -68,8 +67,8 @@ jobs:
                 username: ${{ secrets.EC2_USER}}
                 key: ${{ secrets.EC2_SSH_KEY }}
                 script: |
-                  exec bash \-l
                   cd ~/test
+                  sudo rm -rf node_modules
                   sudo npm install
                   sudo npm run test
 
@@ -89,5 +88,5 @@ jobs:
                 script: |
                   cd ~/
                   if [ -d "test" ]; then
-                      rm -rf test
+                      sudo rm -rf ~/test
                   fi
