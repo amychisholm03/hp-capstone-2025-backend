@@ -14,8 +14,8 @@
     "scripts": {
         "lint": "eslint ./*.{js,mjs}",
         "lint:fix": "eslint --fix, ./*.{js,mjs}",
-        "unit": "mocha 'test/unit/**/*.test.js'",
-        "integration": "mocha 'test/integration/**/*.test.js'",
+        "unit": "node --test test/unit/",
+        "integration": "node --test test/integration/",
         "test": "npm run unit && npm run integration"
     },
     "type": "commonjs"
