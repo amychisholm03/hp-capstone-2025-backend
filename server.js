@@ -24,7 +24,7 @@ async function start(host = "0.0.0.0", port = 80){
     setupPosts(database);
 
     // Start the server
-    setupGets();
+    setupGets(database);
     fastify.listen({ host: host, port: port }, (err, address) => {
       if (err) {
         console.error(err.message);
@@ -40,10 +40,34 @@ async function start(host = "0.0.0.0", port = 80){
 
 /**
  * Sets up the GETs for the server
+ * @param {Db} database
  */
-function setupGets() {
+function setupGets(database) {
   fastify.get('/', async (_, reply) => {
     reply.code(200).send('Hello, client!');
+  });
+
+  // Add a getSimulationReport GET API
+  fastify.get('/getSimulationReport', async (request, reply) => {
+    const {title, workflow} = request.query;
+    const printJob = await database.collection('PrintJob').findOne({Title: title});
+    if (!printJob) {
+      reply.code(404).send("PrintJob not found");
+      return;
+    }
+    const workflowDoc = await database.collection('Workflow').findOne({Title: workflow});
+    if (!workflowDoc) {
+      reply.code(404).send("workflowDoc not found");
+      return;
+    }
+    const simulationReport = await database.collection('SimulationReport').findOne({PrintJobID: printJob._id, WorkflowID: workflowDoc._id});
+    // If no simulationReport is returned
+    if (!simulationReport) {
+      reply.code(404).send("Simulation report not found");
+      return;
+    }
+    // Else
+    reply.code(200).send({PrintJob: printJob, SimulationReport: simulationReport});
   });
 }
 
