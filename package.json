@@ -14,8 +14,8 @@
     "scripts": {
         "lint": "eslint ./*.{js,mjs}",
         "lint:fix": "eslint --fix, ./*.{js,mjs}",
-        "unit": "node --test 'test/unit/**/*.test.js'",
-        "integration": "node --test 'test/integration/**/*.test.js'",
+        "unit": "node --test test/unit/server.test.js",
+        "integration": "node --test test/integration/mongodb.test.js",
         "test": "npm run unit && npm run integration"
     },
     "type": "commonjs"
