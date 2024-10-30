@@ -5,6 +5,7 @@ const cors = require('@fastify/cors');
 // TODO: Where should we store this?
 const mongoUrl = "mongodb://localhost:27017/hp"; 
 
+
 /**
  * Starts up the fastify server and connects to the Mongo database.
  * @param {string} host The host address
@@ -38,6 +39,7 @@ async function start(host = "0.0.0.0", port = 80){
   }
 }
 
+
 /**
  * Sets up the GETs for the server
  * @param {Db} database
@@ -47,7 +49,7 @@ function setupGets(database) {
     reply.code(200).send('Hello, client!');
   });
 
-  // Add a getSimulationReport GET API
+
   fastify.get('/getSimulationReport', async (request, reply) => {
     const {title, workflow} = request.query;
     const printJob = await database.collection('PrintJob').findOne({Title: title});
@@ -61,15 +63,11 @@ function setupGets(database) {
       return;
     }
     const simulationReport = await database.collection('SimulationReport').findOne({PrintJobID: printJob._id, WorkflowID: workflowDoc._id});
-    // If no simulationReport is returned
-    if (!simulationReport) {
-      reply.code(404).send("Simulation report not found");
-      return;
-    }
-    // Else
-    reply.code(200).send({PrintJob: printJob, SimulationReport: simulationReport});
+    if (!simulationReport) reply.code(404).send("Simulation report not found");
+    else reply.code(200).send({PrintJob: printJob, SimulationReport: simulationReport});
   });
 }
+
 
 /**
  * Sets up the POSTs for the server
@@ -81,15 +79,18 @@ function setupPosts(database) {
       [request.body.Title, request.body.PageCount, request.body.RasterizationProfile]);
   });
 
+
   fastify.post('/createWorkflow', async (request, reply) => {
     await fastifyPostHelper(reply, database, newWorkflow,
       [request.body.Title, request.body.WorkflowSteps]);
   });
 
+
   fastify.post('/createWorkflowStep', async (request, reply) => {
     await fastifyPostHelper(reply, database, newWorkflowStep,
       [request.body.Title, request.body.PreviousStep, request.body.NextStep, request.body.SetupTime, request.body.TimePerPage]);
   });
+
 
   fastify.post('/query', async (request, reply) => {
     // TODO: could the helper function be modified to support this?
@@ -103,6 +104,7 @@ function setupPosts(database) {
   });
 }
 
+
 async function fastifyPostHelper(reply, database, func, args) {
   let message = "Operation successful\n";
   let code = 200;
@@ -111,13 +113,16 @@ async function fastifyPostHelper(reply, database, func, args) {
   finally { reply.code(code).send(message); }
 }
 
+
 function main(){
   start();
 }
+
 
 // This is needed so that server.test.js doesn't run main()
 if (require.main === module) {
   main();
 }
+
 
 module.exports = { fastify, start };
