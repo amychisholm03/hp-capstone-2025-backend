@@ -50,6 +50,17 @@ function setupGets(database) {
   });
 
 
+  fastify.get('/query', async (request, reply) => {
+    let message = ""
+    let code = 200;
+    const Query = JSON.parse(request.query.Query);
+    const collection = database.collection(request.query.CollectionName);
+    try { message = await collection.find(Query).toArray(); }
+    catch(err){ message = err; code = 500; }
+    reply.code(code).send(message);
+  });
+
+
   fastify.get('/getSimulationReport', async (request, reply) => {
     const {title, workflow} = request.query;
     const printJob = await database.collection('PrintJob').findOne({Title: title});
@@ -89,18 +100,6 @@ function setupPosts(database) {
   fastify.post('/createWorkflowStep', async (request, reply) => {
     await fastifyPostHelper(reply, database, newWorkflowStep,
       [request.body.Title, request.body.PreviousStep, request.body.NextStep, request.body.SetupTime, request.body.TimePerPage]);
-  });
-
-
-  fastify.post('/query', async (request, reply) => {
-    // TODO: could the helper function be modified to support this?
-    // TODO: reformat to a get instead of post?
-    let message = ""
-    let code = 200;
-    const collection = database.collection(request.body.CollectionName);
-    try { message = await collection.find(request.body.Query).toArray(); }
-    catch (err) { message = err; code = 500; }
-    reply.code(code).send(message);
   });
 }
 
