@@ -114,14 +114,10 @@ async function fastifyPostHelper(reply, database, func, args) {
 }
 
 
-function main(){
-  start();
-}
-
-
-// This is needed so that server.test.js doesn't run main()
+// This allows passing in an alternate port as a command line argument
 if (require.main === module) {
-  main();
+  if(process.argv.length > 2) start("0.0.0.0", process.argv[2]);
+  else start();
 }
 
 
