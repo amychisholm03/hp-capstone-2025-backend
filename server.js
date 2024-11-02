@@ -59,15 +59,27 @@ function setupGets(database) {
     }
     const workflowDoc = await database.collection('Workflow').findOne({Title: workflow});
     if (!workflowDoc) {
-      reply.code(404).send("workflowDoc not found");
+      reply.code(404).send("WorkflowDoc not found");
       return;
     }
     const simulationReport = await database.collection('SimulationReport').findOne({PrintJobID: printJob._id, WorkflowID: workflowDoc._id});
     if (!simulationReport) reply.code(404).send("Simulation report not found");
     else reply.code(200).send({PrintJob: printJob, SimulationReport: simulationReport});
   });
-}
 
+  fastify.get('/getWorkflowList', async (request, reply) => {
+    const workflowDocs = await database.collection('Workflow').find();
+    if (!workflowDocs) {
+      reply.code(404).send("WorkflowDocs not found");
+      return;
+    }
+    const workflowList = [];
+    for await (const doc of workflowDocs) {
+      workflowList.push({WorkflowID: doc._id, Title: doc.Title});
+    }
+    reply.code(200).send(workflowList);
+  });
+}
 
 /**
  * Sets up the POSTs for the server

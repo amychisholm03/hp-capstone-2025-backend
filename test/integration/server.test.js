@@ -76,6 +76,16 @@ test('POST /query', async (t) => {
     console.log(response.payload);
 });
 
+test('GET /getWorkflowList', async (t) => {
+    const response = await fastify.inject({
+        method: 'GET',
+        url: '/getWorkflowList'
+    });
+    assert.strictEqual(response.statusCode, 200);
+    const payloadList = response.payload;
+    console.log("Workflows: ", payloadList);
+});
+
 test('GET /getSimulationReport', async (t) => {
     // parameters
     const title = 'PrintJob 1';
