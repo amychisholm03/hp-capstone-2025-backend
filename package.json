@@ -2,7 +2,7 @@
     "dependencies": {
         "@fastify/cors": "^10.0.0",
         "fastify": "^5.0.0",
-        "mongodb": "^6.9.0"
+        "mongodb": "^6.10.0"
     },
     "devDependencies": {
         "@eslint/js": "^9.13.0",
