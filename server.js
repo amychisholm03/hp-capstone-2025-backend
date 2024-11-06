@@ -79,6 +79,15 @@ function setupGets(database) {
     }
     reply.code(200).send(workflowList);
   });
+
+  fastify.get('/getWorkflowStepList', async (request, reply) => {
+    try {
+      const steps = await database.collection('WorkflowStep').find({}).toArray();
+      reply.code(200).send(steps);
+    } catch (err) {
+      reply.code(500).send({error: err.message});
+    }
+  });
 }
 
 /**
