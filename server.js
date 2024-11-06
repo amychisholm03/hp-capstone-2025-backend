@@ -3,7 +3,7 @@ const fastify = require('fastify')({ logger: true })
 const cors = require('@fastify/cors');
 
 // TODO: Where should we store this?
-const mongoUrl = "mongodb://localhost:27017/hp"; 
+const mongoUrl = "mongodb://db.wsuv-hp-capstone.com:27017/hp"; 
 
 
 /**
