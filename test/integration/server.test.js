@@ -98,3 +98,13 @@ test('GET /getSimulationReport', async (t) => {
     const payload = JSON.parse(response.payload);
     console.log("Simulation Report:", payload);
 });
+
+test('GET /getWorkflowStepList', async (t) => {
+    const response = await fastify.inject({
+        method: 'GET',
+        url: '/getWorkflowStepList'
+    });
+    assert.strictEqual(response.statusCode, 200);
+    const payloadList = response.payload;
+    console.log("Workflow steps: ", payloadList);
+});
