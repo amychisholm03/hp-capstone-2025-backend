@@ -51,11 +51,22 @@ function setupGets(database) {
 
 
   fastify.get('/query', async (request, reply) => {
-    let message = ""
+    let message = "";
     let code = 200;
     const Query = JSON.parse(request.query.Query);
-    const collection = database.collection(request.query.CollectionName);
-    try { message = await collection.find(Query).toArray(); }
+    const Collection = database.collection(request.query.CollectionName);
+    try { message = await Collection.find(Query).toArray(); }
+    catch(err){ message = err; code = 500; }
+    reply.code(code).send(message);
+  });
+
+
+  fastify.get('/getPrintJob', async (request, reply) => {
+    let message = "";
+    let code = 200;
+    const PrintJob = request.query.PrintJobName;
+    const Collection = database.collection("PrintJob");
+    try { message = await Collection.find({"Title": PrintJob}).toArray(); }
     catch(err){ message = err; code = 500; }
     reply.code(code).send(message);
   });

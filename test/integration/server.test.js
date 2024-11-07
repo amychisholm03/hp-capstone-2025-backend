@@ -74,6 +74,16 @@ test('GET /query', async (t) => {
     console.log("Query Results:", JSON.parse(response.payload));
 });
 
+test('GET /getPrintJob', async (t) => {
+    const PrintJobName = encodeURIComponent("PrintJob 1");
+    const response = await fastify.inject({
+        method: 'GET',
+        url:`/getPrintJob?PrintJobName=${PrintJobName}`
+    });
+    assert.strictEqual(response.statusCode, 200);
+    console.log("getPrintJob Results:", JSON.parse(response.payload));
+});
+
 test('GET /getSimulationReport', async (t) => {
     // parameters
     const title = 'PrintJob 1';
