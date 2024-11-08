@@ -106,5 +106,6 @@ test('GET /getWorkflowStepList', async (t) => {
     });
     assert.strictEqual(response.statusCode, 200);
     const payloadList = response.payload;
-    console.log("Workflow steps: ", payloadList);
+    if (!payloadList) console.log("WorkflowStepList is null");
+    else console.log("Workflow steps: ", payloadList);
 });
