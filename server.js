@@ -64,9 +64,8 @@ function setupGets(database) {
   fastify.get('/getPrintJob', async (request, reply) => {
     let message = "";
     let code = 200;
-    const PrintJob = request.query.PrintJobName;
     const Collection = database.collection("PrintJob");
-    try { message = await Collection.find({"Title": PrintJob}).toArray(); }
+    try { message = await Collection.find({"Title": request.query.Title}).toArray(); }
     catch(err){ message = err; code = 500; }
     reply.code(code).send(message);
   });
