@@ -1,10 +1,10 @@
 const { dbConnect, dbSetup, newPrintJob, newWorkflow, newWorkflowStep } = require("./mongodb.js");
 const fastify = require('fastify')({ logger: true })
 const cors = require('@fastify/cors');
+const { simulate } = require('./simulation.js');
 
 // TODO: Where should we store this?
 const mongoUrl = "mongodb://db.wsuv-hp-capstone.com:27017/hp"; 
-
 
 /**
  * Starts up the fastify server and connects to the Mongo database.
@@ -39,7 +39,6 @@ async function start(host = "0.0.0.0", port = 80){
   }
 }
 
-
 /**
  * Sets up the GETs for the server
  * @param {Db} database
@@ -49,22 +48,48 @@ function setupGets(database) {
     reply.code(200).send('Hello, client!');
   });
 
-
+  /**
+   * Get an existing simulation report from a 
+   * PrintJob id and Workflow id
+   */
   fastify.get('/getSimulationReport', async (request, reply) => {
-    const {title, workflow} = request.query;
-    const printJob = await database.collection('PrintJob').findOne({Title: title});
+    const {jobID, workflowID} = request.query;
+    const printJob = await database.collection('PrintJob').findOne({_id: jobID});
     if (!printJob) {
       reply.code(404).send("PrintJob not found");
       return;
     }
-    const workflowDoc = await database.collection('Workflow').findOne({Title: workflow});
-    if (!workflowDoc) {
+    const workflow = await database.collection('Workflow').findOne({_id: workflowID});
+    if (!workflow) {
       reply.code(404).send("WorkflowDoc not found");
       return;
     }
     const simulationReport = await database.collection('SimulationReport').findOne({PrintJobID: printJob._id, WorkflowID: workflowDoc._id});
     if (!simulationReport) reply.code(404).send("Simulation report not found");
     else reply.code(200).send({PrintJob: printJob, SimulationReport: simulationReport});
+  });
+
+  /**
+   * Generate a simulation report (see simulation.js)
+   * for a given PrintJob id and Workflow id
+   */
+  fastify.get('/generateSimulationReport', async (request, reply) => {
+    const {jobID, workflowID} = request.query;
+    
+    const printJob = await database.collection('PrintJob').findOne({_id: jobID});
+    if (!printJob) {
+      reply.code(404).send("PrintJob not found");
+      return;
+    }
+
+    const workflow = await database.collection('Workflow').findOne({_id: workflowID});
+    if (!workflow) {
+      reply.code(404).send("Workflow not found");
+      return;
+    }
+
+    const simulationReport = await simulate(printJob, workflow);
+    reply.code(200).send(simulationReport);
   });
 
   fastify.get('/getWorkflowList', async (request, reply) => {
@@ -100,18 +125,15 @@ function setupPosts(database) {
       [request.body.Title, request.body.PageCount, request.body.RasterizationProfile]);
   });
 
-
   fastify.post('/createWorkflow', async (request, reply) => {
     await fastifyPostHelper(reply, database, newWorkflow,
       [request.body.Title, request.body.WorkflowSteps]);
   });
 
-
   fastify.post('/createWorkflowStep', async (request, reply) => {
     await fastifyPostHelper(reply, database, newWorkflowStep,
       [request.body.Title, request.body.PreviousStep, request.body.NextStep, request.body.SetupTime, request.body.TimePerPage]);
   });
-
 
   fastify.post('/query', async (request, reply) => {
     // TODO: could the helper function be modified to support this?
@@ -125,7 +147,6 @@ function setupPosts(database) {
   });
 }
 
-
 async function fastifyPostHelper(reply, database, func, args) {
   let message = "Operation successful\n";
   let code = 200;
@@ -133,7 +154,6 @@ async function fastifyPostHelper(reply, database, func, args) {
   catch (err) { message = err; code = 500; }
   finally { reply.code(code).send(message); }
 }
-
 
 function main(){
   start();

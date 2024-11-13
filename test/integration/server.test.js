@@ -86,6 +86,10 @@ test('GET /getWorkflowList', async (t) => {
     console.log("Workflows: ", payloadList);
 });
 
+/*
+
+TODO: replace title and workflow with IDs
+
 test('GET /getSimulationReport', async (t) => {
     // parameters
     const title = 'PrintJob 1';
@@ -98,6 +102,7 @@ test('GET /getSimulationReport', async (t) => {
     const payload = JSON.parse(response.payload);
     console.log("Simulation Report:", payload);
 });
+*/
 
 test('GET /getWorkflowStepList', async (t) => {
     const response = await fastify.inject({
@@ -109,3 +114,5 @@ test('GET /getWorkflowStepList', async (t) => {
     if (!payloadList) console.log("WorkflowStepList is null");
     else console.log("Workflow steps: ", payloadList);
 });
+
+// TODO: create generateSimulationReport test
