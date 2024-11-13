@@ -11,7 +11,7 @@ const mongoUrl = "mongodb://db.wsuv-hp-capstone.com:27017/hp";
  * @param {string} host The host address
  * @param {number} port The port number
  */
-async function start(host = "0.0.0.0", port = 80){
+async function start(host = "0.0.0.0", port=80, url=mongoUrl){
   try {
     // Register the fastify-cors plugin
     fastify.register(cors, {
@@ -20,7 +20,7 @@ async function start(host = "0.0.0.0", port = 80){
     });
 
     // Connect to the Mongo database
-    const [_, database] = await dbConnect(mongoUrl);
+    const [_, database] = await dbConnect(url);
     await dbSetup(database); // TODO: get rid of once in mongodb.test.js?
     setupPosts(database);
 
@@ -191,7 +191,8 @@ async function fastifyPostHelper(reply, database, func, args) {
 
 // This allows passing in an alternate port as a command line argument
 if (require.main === module) {
-  if(process.argv.length > 2) start("0.0.0.0", process.argv[2]);
+  if(process.argv.length > 3 && process.argv[3] == "l") 
+    start("0.0.0.0", process.argv[2], "mongodb://localhost:27017/hp");
   else start();
 }
 
