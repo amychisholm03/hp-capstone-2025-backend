@@ -39,6 +39,7 @@ async function start(host = "0.0.0.0", port = 80){
   }
 }
 
+
 /**
  * Sets up the GETs for the server
  * @param {Db} database
@@ -48,11 +49,33 @@ function setupGets(database) {
     reply.code(200).send('Hello, client!');
   });
 
-  /**
+
+  fastify.get('/query', async (request, reply) => {
+    let message = "";
+    let code = 200;
+    const Query = JSON.parse(request.query.Query);
+    const Collection = database.collection(request.query.CollectionName);
+    try { message = await Collection.find(Query).toArray(); }
+    catch(err){ message = err; code = 500; }
+    reply.code(code).send(message);
+  });
+
+
+  fastify.get('/getPrintJob', async (request, reply) => {
+    let message = "";
+    let code = 200;
+    const Collection = database.collection("PrintJob");
+    try { message = await Collection.find({"Title": request.query.Title}).toArray(); }
+    catch(err){ message = err; code = 500; }
+    reply.code(code).send(message);
+  });
+
+
+   /**
    * Get an existing simulation report from a 
    * PrintJob id and Workflow id
    */
-  fastify.get('/getSimulationReport', async (request, reply) => {
+   fastify.get('/getSimulationReport', async (request, reply) => {
     const {jobID, workflowID} = request.query;
     const printJob = await database.collection('PrintJob').findOne({_id: jobID});
     if (!printJob) {
@@ -115,6 +138,7 @@ function setupGets(database) {
   });
 }
 
+
 /**
  * Sets up the POSTs for the server
  * @param {Db} database 
@@ -125,27 +149,19 @@ function setupPosts(database) {
       [request.body.Title, request.body.PageCount, request.body.RasterizationProfile]);
   });
 
+
   fastify.post('/createWorkflow', async (request, reply) => {
     await fastifyPostHelper(reply, database, newWorkflow,
       [request.body.Title, request.body.WorkflowSteps]);
   });
 
+
   fastify.post('/createWorkflowStep', async (request, reply) => {
     await fastifyPostHelper(reply, database, newWorkflowStep,
       [request.body.Title, request.body.PreviousStep, request.body.NextStep, request.body.SetupTime, request.body.TimePerPage]);
   });
-
-  fastify.post('/query', async (request, reply) => {
-    // TODO: could the helper function be modified to support this?
-    // TODO: reformat to a get instead of post?
-    let message = ""
-    let code = 200;
-    const collection = database.collection(request.body.CollectionName);
-    try { message = await collection.find(request.body.Query).toArray(); }
-    catch (err) { message = err; code = 500; }
-    reply.code(code).send(message);
-  });
 }
+
 
 async function fastifyPostHelper(reply, database, func, args) {
   let message = "Operation successful\n";
@@ -155,14 +171,11 @@ async function fastifyPostHelper(reply, database, func, args) {
   finally { reply.code(code).send(message); }
 }
 
-function main(){
-  start();
-}
 
-
-// This is needed so that server.test.js doesn't run main()
+// This allows passing in an alternate port as a command line argument
 if (require.main === module) {
-  main();
+  if(process.argv.length > 2) start("0.0.0.0", process.argv[2]);
+  else start();
 }
 
 
