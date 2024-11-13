@@ -9,8 +9,6 @@ async function main(){
     await dbSetup(database);
     workflow = await database.collection("Workflow").find().toArray();
     printJob = await database.collection("PrintJob").findOne();
-    console.log(printJob);
-    console.log(workflow[0]);
 	simulate(printJob, workflow[0], database);
 }
 
@@ -34,10 +32,33 @@ async function simulate(printJob, workflow, database){
 		};
 	}
 
-	await traverseGraph(printJob, workflowSteps, 
+	results = await traverseGraph(printJob, workflowSteps, 
 		Object.keys(workflowSteps)[0], 
 		Object.fromEntries(Object.keys(workflowSteps).map((k) => [k, false])), 	
 	);
+
+	totalTime = await Math.max(...Object.keys(results).map((k) => 
+		results[k].cumulative));
+
+	rastTime = await results[Object.keys(results).filter((k) => 
+		results[k].stepName === "Rasterization")].stepTime;
+
+	simulatedPrintJob = {
+		PrintJobID: printJob._id,
+		WorkflowID: workflow._id,
+		TotalTimeTaken: totalTime,
+		RasterizationTimeTaken: rastTime
+	};
+
+	inserted = await database.collection("SimulationReport").insertOne(simulatedPrintJob);
+	if (inserted.acknowledged === false) {
+		console.log("Insertion failed!");
+		return null;
+	}
+
+	console.log("Simulation completed and stored");
+
+	return inserted.insertedId;
 }
 
 
@@ -45,11 +66,10 @@ async function traverseGraph(printJob, workflowSteps, step, visited, mutex=new M
 	if(await isVisited(visited, step, mutex)) return;
 	await Promise.all(workflowSteps[step].prev.map((k) => 
 		traverseGraph(printJob, workflowSteps, k, visited, mutex, results)));
-	results[step] = {stepTime: await simulateStep(printJob, workflowSteps, step)};
-	results[step].cumulative = results[step].stepTime;
-	for (const item of workflowSteps[step].prev) {
-		console.log(`previous step: ${item}`);
-	}
+	simulatedTime =  await simulateStep(printJob, workflowSteps, step);
+	results[step] = {stepName: workflowSteps[step].func, stepTime: simulatedTime, cumulative: simulatedTime};
+	results[step].cumulative += await Math.max(workflowSteps[step].prev.map((k) =>
+		results[k].cumulative));
 	await Promise.all(workflowSteps[step].next.map((k) => 
 		traverseGraph(printJob, workflowSteps, k, visited, mutex, results)));
 	return results;
@@ -67,7 +87,7 @@ async function isVisited(visited, check, mutex){
 
 
 async function simulateStep(printJob, workflowSteps, step){
-	await new Promise(resolve => setTimeout(resolve, Math.random()*1000)); //TODO: Remove
+	// await new Promise(resolve => setTimeout(resolve, Math.random()*1000)); //TODO: Remove
 	const funcs = {
 		"Preflight": preflight,
 		"Metrics": metrics,
@@ -80,39 +100,38 @@ async function simulateStep(printJob, workflowSteps, step){
 }
 
 
-
 async function preflight(printJob){
-	console.log("preflight");
+	// console.log("step: preflight");
 	return 0.05 * printJob.PageCount;
 }
 
 
 async function metrics(printJob){
-	console.log("metrics");
+	// console.log("step: metrics");
 	return 0.01 * printJob.PageCount;
 }
 
 
 async function rasterization(printJob){
-	console.log("rasterization");
+	// console.log("step: rasterization");
 	return 0.1 * printJob.PageCount;
 }
 
 
 async function printing(printJob){
-	console.log("printing");
+	// console.log("step: printing");
 	return 0.5 * printJob.PageCount;
 }
 
 
 async function cutting(printJob){
-	console.log("cutting");
+	// console.log("step: cutting");
 	return 0.2 * printJob.PageCount;
 }
 
 
 async function laminating(printJob){
-	console.log("laminating");
+	// console.log("step: laminating");
 	return 0.3 * printJob.PageCount;
 }
 
