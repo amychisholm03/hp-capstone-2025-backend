@@ -3,7 +3,7 @@ const fastify = require('fastify')({ logger: true })
 const cors = require('@fastify/cors');
 
 // TODO: Where should we store this?
-const mongoUrl = "mongodb://localhost:27017/hp"; 
+const mongoUrl = "mongodb://db.wsuv-hp-capstone.com:27017/hp"; 
 
 
 /**
@@ -101,6 +101,15 @@ function setupGets(database) {
       workflowList.push({WorkflowID: doc._id, Title: doc.Title});
     }
     reply.code(200).send(workflowList);
+  });
+
+  fastify.get('/getWorkflowStepList', async (request, reply) => {
+    try {
+      const steps = await database.collection('WorkflowStep').find({}).toArray();
+      reply.code(200).send(steps);
+    } catch (err) {
+      reply.code(500).send({error: err.message});
+    }
   });
 }
 
