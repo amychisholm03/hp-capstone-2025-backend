@@ -23,17 +23,16 @@ async function main(){
  */
 
 async function simulate(printJob, workflow, database){
-	workflowSteps = {};
+	//Format workflowSteps correctly for traverseGraph
+	workflowSteps = {}
 	temp = workflow.WorkflowSteps;
 	for(i = 0; i < temp.length; i++){
-		workflowSteps[temp[i]] = {};
-		// console.log()
-		// console.log(await database.collection("WorkflowSteps").findOne({_id: temp[i]}));
-		workflowSteps[temp[i]].func = "Preflight";
-		workflowSteps[temp[i]].prev = i == 0 ? [] : [temp[i-1]];
-		workflowSteps[temp[i]].next = i == temp.length-1 ? [] : [temp[i+1]];
+		workflowSteps[temp[i]] = {
+			func: (await database.collection("WorkflowStep").findOne({_id: temp[i]})).Title,
+			prev: i == 0 ? [] : [temp[i-1]],
+			next: i == temp.length-1 ? [] : [temp[i+1]]
+		};
 	}
-	console.log(workflowSteps);
 
 	await traverseGraph(printJob, workflowSteps, 
 		Object.keys(workflowSteps)[0], 
@@ -46,7 +45,7 @@ async function traverseGraph(printJob, workflowSteps, step, visited, mutex=new M
 	if(await isVisited(visited, step, mutex)) return;
 	await Promise.all(workflowSteps[step].prev.map((k) => 
 		traverseGraph(printJob, workflowSteps, k, visited, mutex, results)));
-	results[step] = {stepTime: simulateStep(printJob, workflowSteps, step)};
+	results[step] = {stepTime: await simulateStep(printJob, workflowSteps, step)};
 	results[step].cumulative = results[step].stepTime;
 	for (const item of workflowSteps[step].prev) {
 		console.log(`previous step: ${item}`);
