@@ -61,7 +61,7 @@ async function isVisited(visited, check, mutex){
 }
 
 
-async function simulateStep(workflowStep, step){
+async function simulateStep(workflowSteps, step){
 	await new Promise(resolve => setTimeout(resolve, Math.random()*1000)); //TODO: Remove
 	const funcs = {
 		"Preflight": preflight,
@@ -74,6 +74,7 @@ async function simulateStep(workflowStep, step){
 	await funcs[workflowStep[step].func]();
 	console.log(step, ": Done");
 }
+
 
 
 async function preflight(){
