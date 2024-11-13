@@ -63,17 +63,27 @@ test('POST /createWorkflowStep', async (t) => {
     assert.strictEqual(response.payload, 'Operation successful\n');
 });
 
-test('POST /query', async (t) => {
+test('GET /query', async (t) => {
+    const CollectionName = encodeURIComponent('PrintJob');
+    const Query = encodeURIComponent(JSON.stringify({Title: "PrintJob 1"}))
     const response = await fastify.inject({
-        method: 'POST',
-        url: '/query',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: '{"CollectionName": "PrintJob", "Query": {"Title": "PrintJob 1"}}'
+        method: 'GET',
+        url:`/query?CollectionName=${CollectionName}&Query=${Query}`
     });
     assert.strictEqual(response.statusCode, 200);
-    console.log(response.payload);
+    console.log("Query Results:", JSON.parse(response.payload));
+});
+
+test('GET /getPrintJob', async (t) => {
+    const Title = encodeURIComponent("PrintJob 1");
+    const response = await fastify.inject({
+        method: 'GET',
+        url:`/getPrintJob?Title=${Title}`
+    });
+    payload = JSON.parse(response.payload);
+    assert.strictEqual(response.statusCode, 200);
+    assert(Array.isArray(payload));
+    console.log("getPrintJob Results:", JSON.parse(response.payload));
 });
 
 test('GET /getWorkflowList', async (t) => {
