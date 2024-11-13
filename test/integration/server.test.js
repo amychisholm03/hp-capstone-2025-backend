@@ -93,7 +93,8 @@ test('GET /getWorkflowList', async (t) => {
     });
     assert.strictEqual(response.statusCode, 200);
     const payloadList = response.payload;
-    console.log("Workflows: ", payloadList);
+    if (!payloadList) console.error("payload is null");
+    else console.log("All workflows: ", payloadList);
 });
 
 /*
@@ -115,6 +116,18 @@ test('GET /getSimulationReport', async (t) => {
 
 // TODO: create generateSimulationReport test
 
+test('GET /getSimulationReportList', async (t) => {
+    const response = await fastify.inject({
+        method: 'GET',
+        url: '/getSimulationReportList'
+    });
+    assert.strictEqual(response.statusCode, 200);
+    const payloadList = response.payload;
+    if (!payloadList) console.error("payload is null");
+    else console.log("All simulation reports: ", payloadList);
+});
+
+
 test('GET /getWorkflowStepList', async (t) => {
     const response = await fastify.inject({
         method: 'GET',
@@ -122,6 +135,6 @@ test('GET /getWorkflowStepList', async (t) => {
     });
     assert.strictEqual(response.statusCode, 200);
     const payloadList = response.payload;
-    if (!payloadList) console.log("WorkflowStepList is null");
-    else console.log("Workflow steps: ", payloadList);
+    if (!payloadList) console.error("payload is null");
+    else console.log("All workflow steps: ", payloadList);
 });

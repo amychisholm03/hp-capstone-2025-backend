@@ -71,6 +71,8 @@ function setupGets(database) {
   });
 
 
+   // SIMULATION REPORTS 
+
    /**
    * Get an existing simulation report from a 
    * PrintJob id and Workflow id
@@ -115,14 +117,29 @@ function setupGets(database) {
     reply.code(200).send(simulationReport);
   });
 
+  fastify.get('/getSimulationReportList', async (request, reply) => {
+    const simulationReports = await database.collection('SimulationReport').find();
+    if (!simulationReports) {
+      reply.code(404).send("No SimulationReports found");
+      return;
+    }
+    const reportList = [];
+    for await (const report of simulationReports) {
+      reportList.push(report);
+    }
+    reply.code(200).send(reportList);
+  });
+
+
+  // WORKFLOWS AND STEPS
   fastify.get('/getWorkflowList', async (request, reply) => {
-    const workflowDocs = await database.collection('Workflow').find();
-    if (!workflowDocs) {
+    const workflows = await database.collection('Workflow').find();
+    if (!workflows) {
       reply.code(404).send("WorkflowDocs not found");
       return;
     }
     const workflowList = [];
-    for await (const doc of workflowDocs) {
+    for await (const doc of workflows) {
       workflowList.push({WorkflowID: doc._id, Title: doc.Title});
     }
     reply.code(200).send(workflowList);
