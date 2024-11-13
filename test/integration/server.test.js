@@ -93,11 +93,15 @@ test('GET /getWorkflowList', async (t) => {
     });
     assert.strictEqual(response.statusCode, 200);
     const payloadList = response.payload;
-    console.log("Workflows: ", payloadList);
+    if (!payloadList) console.error("payload is null");
+    else console.log("All workflows: ", payloadList);
 });
 
+/*
+
+TODO: Make this word with IDs instead
+
 test('GET /getSimulationReport', async (t) => {
-    // parameters
     const title = 'PrintJob 1';
     const workflow = 'Workflow 1';
     const response = await fastify.inject({
@@ -108,6 +112,21 @@ test('GET /getSimulationReport', async (t) => {
     const payload = JSON.parse(response.payload);
     console.log("Simulation Report:", payload);
 });
+*/
+
+// TODO: create generateSimulationReport test
+
+test('GET /getSimulationReportList', async (t) => {
+    const response = await fastify.inject({
+        method: 'GET',
+        url: '/getSimulationReportList'
+    });
+    assert.strictEqual(response.statusCode, 200);
+    const payloadList = response.payload;
+    if (!payloadList) console.error("payload is null");
+    else console.log("All simulation reports: ", payloadList);
+});
+
 
 test('GET /getWorkflowStepList', async (t) => {
     const response = await fastify.inject({
@@ -116,6 +135,6 @@ test('GET /getWorkflowStepList', async (t) => {
     });
     assert.strictEqual(response.statusCode, 200);
     const payloadList = response.payload;
-    if (!payloadList) console.log("WorkflowStepList is null");
-    else console.log("Workflow steps: ", payloadList);
+    if (!payloadList) console.error("payload is null");
+    else console.log("All workflow steps: ", payloadList);
 });

@@ -1,10 +1,10 @@
 const { dbConnect, dbSetup, newPrintJob, newWorkflow, newWorkflowStep } = require("./mongodb.js");
 const fastify = require('fastify')({ logger: true })
 const cors = require('@fastify/cors');
+const { simulate } = require('./simulation.js');
 
 // TODO: Where should we store this?
 const mongoUrl = "mongodb://db.wsuv-hp-capstone.com:27017/hp"; 
-
 
 /**
  * Starts up the fastify server and connects to the Mongo database.
@@ -71,33 +71,75 @@ function setupGets(database) {
   });
 
 
-  fastify.get('/getSimulationReport', async (request, reply) => {
-    const {title, workflow} = request.query;
-    const printJob = await database.collection('PrintJob').findOne({Title: title});
+   // SIMULATION REPORTS 
+
+   /**
+   * Get an existing simulation report from a 
+   * PrintJob id and Workflow id
+   */
+   fastify.get('/getSimulationReport', async (request, reply) => {
+    const {jobID, workflowID} = request.query;
+    const printJob = await database.collection('PrintJob').findOne({_id: jobID});
     if (!printJob) {
       reply.code(404).send("PrintJob not found");
       return;
     }
-    const workflowDoc = await database.collection('Workflow').findOne({Title: workflow});
-    if (!workflowDoc) {
+    const workflow = await database.collection('Workflow').findOne({_id: workflowID});
+    if (!workflow) {
       reply.code(404).send("WorkflowDoc not found");
       return;
     }
-    const simulationReport = await database.collection('SimulationReport').findOne({PrintJobID: printJob._id, WorkflowID: workflowDoc._id});
+    const simulationReport = await database.collection('SimulationReport').findOne({PrintJobID: printJob._id, WorkflowID: workflow._id});
     if (!simulationReport) reply.code(404).send("Simulation report not found");
     else reply.code(200).send({PrintJob: printJob, SimulationReport: simulationReport});
-
-    
   });
 
+  /**
+   * Generate a simulation report (see simulation.js)
+   * for a given PrintJob id and Workflow id
+   */
+  fastify.get('/generateSimulationReport', async (request, reply) => {
+    const {jobID, workflowID} = request.query;
+
+    const printJob = await database.collection('PrintJob').findOne({_id: jobID});
+    if (!printJob) {
+      reply.code(404).send("PrintJob not found");
+      return;
+    }
+
+    const workflow = await database.collection('Workflow').findOne({_id: workflowID});
+    if (!workflow) {
+      reply.code(404).send("Workflow not found");
+      return;
+    }
+
+    const simulationReport = await simulate(printJob, workflow);
+    reply.code(200).send(simulationReport);
+  });
+
+  fastify.get('/getSimulationReportList', async (request, reply) => {
+    const simulationReports = await database.collection('SimulationReport').find();
+    if (!simulationReports) {
+      reply.code(404).send("No SimulationReports found");
+      return;
+    }
+    const reportList = [];
+    for await (const report of simulationReports) {
+      reportList.push(report);
+    }
+    reply.code(200).send(reportList);
+  });
+
+
+  // WORKFLOWS AND STEPS
   fastify.get('/getWorkflowList', async (request, reply) => {
-    const workflowDocs = await database.collection('Workflow').find();
-    if (!workflowDocs) {
+    const workflows = await database.collection('Workflow').find();
+    if (!workflows) {
       reply.code(404).send("WorkflowDocs not found");
       return;
     }
     const workflowList = [];
-    for await (const doc of workflowDocs) {
+    for await (const doc of workflows) {
       workflowList.push({WorkflowID: doc._id, Title: doc.Title});
     }
     reply.code(200).send(workflowList);
