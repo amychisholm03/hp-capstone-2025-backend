@@ -191,7 +191,7 @@ async function fastifyPostHelper(reply, database, func, args) {
 
 // This allows passing in an alternate port as a command line argument
 if (require.main === module) {
-  if(process.argv.length > 3 && process.argv[3] == "l") 
+  if(process.argv.length > 3 && process.argv[3] == "-l") 
     start("0.0.0.0", process.argv[2], "mongodb://localhost:27017/hp");
   else start();
 }
