@@ -114,9 +114,7 @@ function setupGets(database) {
     }
 
     const simulationReportId = await simulate(printJob, workflow);
-    print("Simulation report ID: " + simulationReportId);
-    // NOTE: This doesn return anything (according to Notion)
-    // reply.code(200).send(simulationReport);
+    reply.code(200).send("Operation successful");
   });
 
   fastify.get('/getSimulationReportList', async (request, reply) => {

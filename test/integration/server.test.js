@@ -1,6 +1,7 @@
 const { test, before, after } = require('node:test');
 const assert = require('node:assert');
-const { fastify, start } = require('../../server.js');
+const { fastify, start,  } = require('../../server.js');
+let testWorkflowId, testPrintJobId;
 
 before(async () => {
     await start("0.0.0.0", 8080);    
@@ -71,7 +72,7 @@ test('GET /query', async (t) => {
         url:`/query?CollectionName=${CollectionName}&Query=${Query}`
     });
     assert.strictEqual(response.statusCode, 200);
-    console.log("Query Results:", JSON.parse(response.payload));
+    console.log("Query Results: ", JSON.parse(response.payload));
 });
 
 test('GET /getPrintJob', async (t) => {
@@ -80,10 +81,10 @@ test('GET /getPrintJob', async (t) => {
         method: 'GET',
         url:`/getPrintJob?Title=${Title}`
     });
-    payload = JSON.parse(response.payload);
+    const payload = JSON.parse(response.payload);
     assert.strictEqual(response.statusCode, 200);
     assert(Array.isArray(payload));
-    console.log("getPrintJob Results:", JSON.parse(response.payload));
+    console.log("getPrintJob Results: ", JSON.parse(response.payload));
 });
 
 test('GET /getWorkflowList', async (t) => {
@@ -114,19 +115,38 @@ test('GET /getSimulationReport', async (t) => {
 });
 */
 
-// TODO: create generateSimulationReport test
-
 test('GET /getSimulationReportList', async (t) => {
     const response = await fastify.inject({
         method: 'GET',
         url: '/getSimulationReportList'
     });
     assert.strictEqual(response.statusCode, 200);
-    const payloadList = response.payload;
+    const payloadList = JSON.parse(response.payload);
     if (!payloadList) console.error("payload is null");
     else console.log("All simulation reports: ", payloadList);
+
+    // Predefined globals for testing..
+    testPrintJobId = payloadList[0].PrintJobID;
+    testWorkflowId = payloadList[0].WorkflowID;
 });
 
+test('GET /generateSimulationReport', async (t) => {
+    console.log(testPrintJobId, testWorkflowId);
+    const response = await fastify.inject({
+        method: 'GET',
+        url: '/generateSimulationReport',
+        body: {
+            jobID: testPrintJobId,
+            workflowID: testWorkflowId
+        }
+    });
+    if (response.statusCode !== 200) {
+        console.log("Error: ", response.payload);
+    }
+    assert.strictEqual(response.statusCode, 200);
+    assert.strictEqual(response.payload, 'Operation successful\n');
+    console.log("Generated simulation report Id: ", JSON.parse(response.payload));
+});
 
 test('GET /getWorkflowStepList', async (t) => {
     const response = await fastify.inject({
