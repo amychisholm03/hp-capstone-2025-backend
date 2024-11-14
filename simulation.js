@@ -4,11 +4,10 @@ const { dbConnect, dbSetup, newPrintJob, newWorkflow, newWorkflowStep } = requir
 
 
 async function main(){
-
 	const [_, database] = await dbConnect("mongodb://localhost:27017/hp");
     await dbSetup(database);
-    workflow = await database.collection("Workflow").find().toArray();
-    printJob = await database.collection("PrintJob").findOne();
+    const workflow = await database.collection("Workflow").find().toArray();
+    const printJob = await database.collection("PrintJob").findOne();
 	simulate(printJob, workflow[0], database);
 }
 
@@ -22,8 +21,8 @@ async function main(){
 
 async function simulate(printJob, workflow, database){
 	//Format workflowSteps correctly for traverseGraph
-	workflowSteps = {}
-	temp = workflow.WorkflowSteps;
+	let workflowSteps = {}
+	let temp = workflow.WorkflowSteps;
 	for(i = 0; i < temp.length; i++){
 		workflowSteps[temp[i]] = {
 			func: (await database.collection("WorkflowStep").findOne({_id: temp[i]})).Title,
@@ -32,25 +31,25 @@ async function simulate(printJob, workflow, database){
 		};
 	}
 
-	results = await traverseGraph(printJob, workflowSteps, 
+	const results = await traverseGraph(printJob, workflowSteps, 
 		Object.keys(workflowSteps)[0], 
 		Object.fromEntries(Object.keys(workflowSteps).map((k) => [k, false])), 	
 	);
 
-	totalTime = await Math.max(...Object.keys(results).map((k) => 
+	const totalTime = await Math.max(...Object.keys(results).map((k) => 
 		results[k].cumulative));
 
-	rastTime = await results[Object.keys(results).filter((k) => 
+	const rastTime = await results[Object.keys(results).filter((k) => 
 		results[k].stepName === "Rasterization")].stepTime;
 
-	simulatedPrintJob = {
+	const simulatedPrintJob = {
 		PrintJobID: printJob._id,
 		WorkflowID: workflow._id,
 		TotalTimeTaken: totalTime,
 		RasterizationTimeTaken: rastTime
 	};
 
-	inserted = await database.collection("SimulationReport").insertOne(simulatedPrintJob);
+	const inserted = await database.collection("SimulationReport").insertOne(simulatedPrintJob);
 	if (inserted.acknowledged === false) {
 		console.log("Insertion failed!");
 		return null;
@@ -66,8 +65,8 @@ async function traverseGraph(printJob, workflowSteps, step, visited, mutex=new M
 	if(await isVisited(visited, step, mutex)) return;
 	await Promise.all(workflowSteps[step].prev.map((k) => 
 		traverseGraph(printJob, workflowSteps, k, visited, mutex, results)));
-	simulatedTime =  await simulateStep(printJob, workflowSteps, step);
-	results[step] = {stepName: workflowSteps[step].func, stepTime: simulatedTime, cumulative: simulatedTime};
+	const simulatedTime =  await simulateStep(printJob, workflowSteps, step);
+	let results[step] = {stepName: workflowSteps[step].func, stepTime: simulatedTime, cumulative: simulatedTime};
 	results[step].cumulative += await Math.max(workflowSteps[step].prev.map((k) =>
 		results[k].cumulative));
 	await Promise.all(workflowSteps[step].next.map((k) => 
@@ -78,7 +77,7 @@ async function traverseGraph(printJob, workflowSteps, step, visited, mutex=new M
 
 async function isVisited(visited, check, mutex){
 	return await mutex.runExclusive(() => {
-		output = false
+		let output = false
         if (visited[check]) output = true;
         else visited[check] = true;
         return output;
