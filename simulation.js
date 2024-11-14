@@ -1,6 +1,5 @@
 const { Mutex } = require('async-mutex');
-const random = Math.random(); //TODO: Remove
-const { dbConnect, dbSetup, newPrintJob, newWorkflow, newWorkflowStep } = require("./mongodb.js"); //TODO: Remove
+const { dbConnect, dbSetup } = require("./mongodb.js"); //TODO: Remove
 
 
 async function main(){
@@ -23,7 +22,7 @@ async function simulate(printJob, workflow, database){
 	//Format workflowSteps correctly for traverseGraph
 	let workflowSteps = {}
 	let temp = workflow.WorkflowSteps;
-	for(i = 0; i < temp.length; i++){
+	for(let i = 0; i < temp.length; i++){
 		workflowSteps[temp[i]] = {
 			func: (await database.collection("WorkflowStep").findOne({_id: temp[i]})).Title,
 			prev: i == 0 ? [] : [temp[i-1]],
@@ -66,7 +65,7 @@ async function traverseGraph(printJob, workflowSteps, step, visited, mutex=new M
 	await Promise.all(workflowSteps[step].prev.map((k) => 
 		traverseGraph(printJob, workflowSteps, k, visited, mutex, results)));
 	const simulatedTime =  await simulateStep(printJob, workflowSteps, step);
-	let results[step] = {stepName: workflowSteps[step].func, stepTime: simulatedTime, cumulative: simulatedTime};
+	results[step] = {stepName: workflowSteps[step].func, stepTime: simulatedTime, cumulative: simulatedTime};
 	results[step].cumulative += await Math.max(workflowSteps[step].prev.map((k) =>
 		results[k].cumulative));
 	await Promise.all(workflowSteps[step].next.map((k) => 

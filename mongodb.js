@@ -1,4 +1,6 @@
-const { Db, Int32, ObjectId, MongoClient, Timestamp } = require("mongodb");
+// v Not needed? v
+// const { Db, Int32, ObjectId, MongoClient, Timestamp } = require("mongodb");
+const { MongoClient, Timestamp } = require("mongodb");
 
 /**
  * Connects to the MongoDB database and returns the client and database objects.
