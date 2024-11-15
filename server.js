@@ -1,5 +1,4 @@
 const { dbConnect, dbSetup, newPrintJob, newWorkflow, newWorkflowStep } = require("./mongodb.js");
-const { ObjectId } = require('bson');
 
 const fastify = require('fastify')({ logger: true })
 const cors = require('@fastify/cors');
