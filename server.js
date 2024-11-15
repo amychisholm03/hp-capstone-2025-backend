@@ -1,4 +1,6 @@
 const { dbConnect, dbSetup, newPrintJob, newWorkflow, newWorkflowStep } = require("./mongodb.js");
+const { ObjectId } = require('bson');
+
 const fastify = require('fastify')({ logger: true })
 const cors = require('@fastify/cors');
 const { simulate } = require('./simulation.js');
@@ -80,17 +82,17 @@ function setupGets(database) {
    */
    fastify.get('/getSimulationReport', async (request, reply) => {
     const {jobID, workflowID} = request.query;
-    const printJob = await database.collection('PrintJob').findOne({_id: jobID});
+    const printJob = await database.collection('PrintJob').findOne({_id: new ObjectId(jobID)});
     if (!printJob) {
       reply.code(404).send("PrintJob not found");
       return;
     }
-    const workflow = await database.collection('Workflow').findOne({_id: workflowID});
+    const workflow = await database.collection('Workflow').findOne({_id: new ObjectId(workflowID)});
     if (!workflow) {
       reply.code(404).send("WorkflowDoc not found");
       return;
     }
-    const simulationReport = await database.collection('SimulationReport').findOne({PrintJobID: printJob._id, WorkflowID: workflow._id});
+    const simulationReport = await database.collection('SimulationReport').findOne({PrintJobID: new ObjectId(printJob._id), WorkflowID: new ObjectId(workflow._id)});
     if (!simulationReport) reply.code(404).send("Simulation report not found");
     else reply.code(200).send({PrintJob: printJob, SimulationReport: simulationReport});
   });
@@ -102,7 +104,8 @@ function setupGets(database) {
   fastify.get('/generateSimulationReport', async (request, reply) => {
     //TODO: Should this really be a get?
     const {jobID, workflowID} = request.query;
-    const printJob = await database.collection('PrintJob').findOne(new ObjectId(jobID));
+
+    const printJob = await database.collection('PrintJob').findOne({_id: new ObjectId(jobID)});
     if (!printJob) {
       reply.code(404).send("PrintJob not found");
       return;

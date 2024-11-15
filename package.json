@@ -3,7 +3,8 @@
         "@fastify/cors": "^10.0.0",
         "async-mutex": "^0.5.0",
         "fastify": "^5.0.0",
-        "mongodb": "^6.10.0"
+        "mongodb": "^6.10.0",
+	"bson": "^6.0.0"
     },
     "devDependencies": {
         "@eslint/js": "^9.13.0",
