@@ -2,6 +2,7 @@ const { dbConnect, dbSetup, newPrintJob, newWorkflow, newWorkflowStep } = requir
 const fastify = require('fastify')({ logger: true })
 const cors = require('@fastify/cors');
 const { simulate } = require('./simulation.js');
+const { MongoClient, ObjectId } = require("mongodb");
 
 // TODO: Where should we store this?
 const mongoUrl = "mongodb://db.wsuv-hp-capstone.com:27017/hp"; 
@@ -99,24 +100,25 @@ function setupGets(database) {
    * for a given PrintJob id and Workflow id
    */
   fastify.get('/generateSimulationReport', async (request, reply) => {
+    //TODO: Should this really be a get?
     const {jobID, workflowID} = request.query;
-
-    const printJob = await database.collection('PrintJob').findOne({_id: jobID});
+    const printJob = await database.collection('PrintJob').findOne(new ObjectId(jobID));
     if (!printJob) {
       reply.code(404).send("PrintJob not found");
       return;
     }
 
-    const workflow = await database.collection('Workflow').findOne({_id: workflowID});
+    const workflow = await database.collection('Workflow').findOne({_id: new ObjectId(workflowID)});
     if (!workflow) {
       reply.code(404).send("Workflow not found");
       return;
     }
 
+    let code = 200;
     const simulationReportId = await simulate(printJob, workflow, database);
-    try { var message = await Collection.findOne(
-      {_id: simulate(printJob, workflow, database)});}
-    catch(err){ var message = err; var code = 500; }
+    try { var message = await database.collection('SimulationReport').findOne(
+      {_id: simulationReportId});}
+    catch(err){ var message = err; code = 500; }
     reply.code(code).send(message);
   });
 

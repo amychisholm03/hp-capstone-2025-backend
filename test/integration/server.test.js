@@ -1,10 +1,10 @@
 const { test, before, after } = require('node:test');
 const assert = require('node:assert');
 const { fastify, start,  } = require('../../server.js');
-let testWorkflowId, testPrintJobId;
+let testWorkflowId="blah", testPrintJobId="blah";
 
 before(async () => {
-    await start("0.0.0.0", 8080);    
+    await start("0.0.0.0", 8080, "mongodb://localhost:27017/hp");    
 });
 after(() => {
     fastify.close();
@@ -131,11 +131,10 @@ test('GET /getSimulationReportList', async (t) => {
 });
 
 test('GET /generateSimulationReport', async (t) => {
-    console.log(testPrintJobId, testWorkflowId);
     const response = await fastify.inject({
         method: 'GET',
         url: '/generateSimulationReport',
-        body: {
+        query: {
             jobID: testPrintJobId,
             workflowID: testWorkflowId
         }
@@ -144,8 +143,10 @@ test('GET /generateSimulationReport', async (t) => {
         console.log("Error: ", response.payload);
     }
     assert.strictEqual(response.statusCode, 200);
-    assert.strictEqual(response.payload, 'Operation successful\n');
-    console.log("Generated simulation report Id: ", JSON.parse(response.payload));
+    let simulationReport = await JSON.parse(response.payload);
+    assert.strictEqual(simulationReport.PrintJobID, testPrintJobId);
+    assert.strictEqual(simulationReport.WorkflowID, testWorkflowId);
+    console.log("Generated simulation report: ", simulationReport);
 });
 
 test('GET /getWorkflowStepList', async (t) => {
