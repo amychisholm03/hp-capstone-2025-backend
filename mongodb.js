@@ -152,5 +152,6 @@ module.exports = {
     dbSetup,
     newPrintJob,
     newWorkflow,
-    newWorkflowStep
+    newWorkflowStep,
+    newSimulationReport
 };

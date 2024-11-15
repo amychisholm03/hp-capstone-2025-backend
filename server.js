@@ -113,8 +113,11 @@ function setupGets(database) {
       return;
     }
 
-    const simulationReportId = await simulate(printJob, workflow);
-    reply.code(200).send("Operation successful");
+    const simulationReportId = await simulate(printJob, workflow, database);
+    try { var message = await Collection.findOne(
+      {_id: simulate(printJob, workflow, database)});}
+    catch(err){ var message = err; var code = 500; }
+    reply.code(code).send(message);
   });
 
   fastify.get('/getSimulationReportList', async (request, reply) => {

@@ -1,5 +1,5 @@
 const { Mutex } = require('async-mutex');
-const { dbConnect, dbSetup } = require("./mongodb.js"); //TODO: Remove
+const { dbConnect, dbSetup, newSimulationReport } = require("./mongodb.js"); //TODO: Remove
 
 
 async function main(){
@@ -15,7 +15,8 @@ async function main(){
  * Simulate a PrintJob through the given Workflow
  * @param {*} printJob 
  * @param {*} workflow 
- * @returns {*} the SimulationReport as a JSON 
+ * @param {*} database
+ * @returns {*} the ID of the Simulation Report
  */
 
 async function simulate(printJob, workflow, database){
@@ -35,28 +36,15 @@ async function simulate(printJob, workflow, database){
 		Object.fromEntries(Object.keys(workflowSteps).map((k) => [k, false])), 	
 	);
 
+	//Find times for report
+	//TODO: This could be done in a single loop
 	const totalTime = await Math.max(...Object.keys(results).map((k) => 
 		results[k].cumulative));
 
 	const rastTime = await results[Object.keys(results).filter((k) => 
 		results[k].stepName === "Rasterization")].stepTime;
 
-	const simulatedPrintJob = {
-		PrintJobID: printJob._id,
-		WorkflowID: workflow._id,
-		TotalTimeTaken: totalTime,
-		RasterizationTimeTaken: rastTime
-	};
-
-	const inserted = await database.collection("SimulationReport").insertOne(simulatedPrintJob);
-	if (inserted.acknowledged === false) {
-		console.log("Insertion failed!");
-		return null;
-	}
-
-	console.log("Simulation completed and stored");
-
-	return inserted.insertedId;
+	return await newSimulationReport(database, printJob._id, workflow._id, totalTime, rastTime);
 }
 
 
