@@ -118,7 +118,7 @@ function setupGets(database) {
     const simulationReportId = await simulate(printJob, workflow, database);
     try { var message = await database.collection('SimulationReport').findOne(
       {_id: simulationReportId});}
-    catch(err){ var message = err; code = 500; }
+    catch(err){ message = err; code = 500; }
     reply.code(code).send(message);
   });
 
