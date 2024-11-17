@@ -130,8 +130,27 @@ function setupGets(database) {
       reply.code(404).send("No SimulationReports found");
       return;
     }
+
     const reportList = [];
     for await (const report of simulationReports) {
+      report.PrintJobTitle = '';
+      report.WorkflowTitle = '';
+
+      const titles = await Promise.all([
+        database.collection('PrintJob').findOne({ _id: new ObjectId(report.PrintJobID)}),
+        database.collection('Workflow').findOne({ _id: new ObjectId(report.WorkflowID)}),
+      ]);
+
+      const printJob = titles[0];
+      if (printJob){
+        report.PrintJobTitle = printJob.Title;
+      }
+
+      const workflow = titles[1];
+      if (workflow) {
+        report.WorkflowTitle = workflow.Title;
+      }
+      
       reportList.push(report);
     }
     reply.code(200).send(reportList);
