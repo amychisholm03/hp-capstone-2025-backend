@@ -24,8 +24,10 @@ async function simulate(printJob, workflow, database){
 	let workflowSteps = {}
 	let temp = workflow.WorkflowSteps;
 	for(let i = 0; i < temp.length; i++){
+		const step = (await database.collection("WorkflowStep").findOne({_id: temp[i]}));
 		workflowSteps[temp[i]] = {
-			func: (await database.collection("WorkflowStep").findOne({_id: temp[i]})).Title,
+			func: step.Title,
+			time: step.TimePerPage,
 			prev: i == 0 ? [] : [temp[i-1]],
 			next: i == temp.length-1 ? [] : [temp[i+1]]
 		};
@@ -38,11 +40,11 @@ async function simulate(printJob, workflow, database){
 
 	//Find times for report
 	//TODO: This could be done in a single loop
-	const totalTime = await Math.max(...Object.keys(results).map((k) => 
-		results[k].cumulative));
-
-	const rastTime = await results[Object.keys(results).filter((k) => 
-		results[k].stepName === "Rasterization")].stepTime;
+	let rastTime;
+	const totalTime = await Math.max(...Object.keys(results).map((k) => {
+		if (results[k].stepName === "Rasterization") rastTime = results[k].stepTime;
+		return results[k].cumulative;
+	}));
 
 	return await newSimulationReport(database, printJob._id, workflow._id, totalTime, rastTime);
 }
@@ -82,43 +84,43 @@ async function simulateStep(printJob, workflowSteps, step){
 		"Cutting": cutting,
 		"Laminating": laminating,
 	}
-	return await funcs[workflowSteps[step].func](printJob)
+	return await funcs[workflowSteps[step].func](workflowSteps[step], printJob)
 }
 
 
-async function preflight(printJob){
+async function preflight(workflowStep, printJob){
 	// console.log("step: preflight");
-	return 0.05 * printJob.PageCount;
+	return workflowStep.time * printJob.PageCount;
 }
 
 
-async function metrics(printJob){
+async function metrics(workflowStep, printJob){
 	// console.log("step: metrics");
-	return 0.01 * printJob.PageCount;
+	return workflowStep.time * printJob.PageCount;
 }
 
 
-async function rasterization(printJob){
+async function rasterization(workflowStep, printJob){
 	// console.log("step: rasterization");
-	return 0.1 * printJob.PageCount;
+	return workflowStep.time * printJob.PageCount;
 }
 
 
-async function printing(printJob){
+async function printing(workflowStep, printJob){
 	// console.log("step: printing");
-	return 0.5 * printJob.PageCount;
+	return workflowStep.time * printJob.PageCount;
 }
 
 
-async function cutting(printJob){
+async function cutting(workflowStep, printJob){
 	// console.log("step: cutting");
-	return 0.2 * printJob.PageCount;
+	return workflowStep.time * printJob.PageCount;
 }
 
 
-async function laminating(printJob){
+async function laminating(workflowStep, printJob){
 	// console.log("step: laminating");
-	return 0.3 * printJob.PageCount;
+	return workflowStep.time * printJob.PageCount;
 }
 
 
