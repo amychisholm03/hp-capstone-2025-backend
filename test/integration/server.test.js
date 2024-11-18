@@ -60,17 +60,14 @@ test('Full simulation report flow', async (ctx) => {
 
     // Get the print job and workflow id
     await test('GET /getPrintJob', async () => {
+        console.log ("ctx.jobTitle: ", ctx.jobTitle);   
         const response = await fastify.inject({
             method: 'GET',
-            url: `/getPrintJob`,
-            query: {
-                Title: ctx.jobTitle 
-            }
+            url: `/getPrintJob?Title=${encodeURIComponent(ctx.jobTitle)}`,
         });
         assert.strictEqual(response.statusCode, 200);
         const payload = JSON.parse(response.payload);
         assert.ok(payload)
-        console.log("LOOK HERE: \n" + payload);
 
         ctx.workflowID = payload.WorkflowID;
         ctx.jobID = payload.PrintJobID; 
