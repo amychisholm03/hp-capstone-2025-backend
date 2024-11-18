@@ -142,7 +142,8 @@ async function newSimulationReport(database, print_job_id, workflow_id, total_ti
 		PrintJobID: print_job_id,
 		WorkflowID: workflow_id,
 		TotalTimeTaken: total_time_taken,
-		RasterizationTimeTaken: rasterization_time_taken
+		RasterizationTimeTaken: rasterization_time_taken,
+		CreationTime: Date.now()
 	});
 	// make sure that the return value of the query is not empty
 }

@@ -23,4 +23,5 @@ id: ObjectID (pk),
 PrintJobID: PrintJob ObjectID (fk),
 WorkflowID: Workflow ObjectID (fk),
 TotalTimeTaken: int,
-RasterizationTimeTaken: int
+RasterizationTimeTaken: int,
+CreationTime: int,
