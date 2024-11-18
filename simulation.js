@@ -13,10 +13,10 @@ async function main(){
 
 /**
  * Simulate a PrintJob through the given Workflow
- * @param {*} printJob 
- * @param {*} workflow 
- * @param {*} database
- * @returns {*} the ID of the Simulation Report
+ * @param {dictionary} printJob 
+ * @param {dictionary} workflow 
+ * @param {Db} database
+ * @returns {ObjectID} the ID of the Simulation Report
  */
 
 async function simulate(printJob, workflow, database){
@@ -77,49 +77,18 @@ async function isVisited(visited, check, mutex){
 async function simulateStep(printJob, workflowSteps, step){
 	// await new Promise(resolve => setTimeout(resolve, Math.random()*1000)); //TODO: Remove
 	const funcs = {
-		"Preflight": preflight,
-		"Metrics": metrics,
-		"Rasterization": rasterization,
-		"Printing": printing,
-		"Cutting": cutting,
-		"Laminating": laminating,
+		"Preflight": placeholder,
+		"Metrics": placeholder,
+		"Rasterization": placeholder,
+		"Printing": placeholder,
+		"Cutting": placeholder,
+		"Laminating": placeholder,
 	}
 	return await funcs[workflowSteps[step].func](workflowSteps[step], printJob)
 }
 
 
-async function preflight(workflowStep, printJob){
-	// console.log("step: preflight");
-	return workflowStep.time * printJob.PageCount;
-}
-
-
-async function metrics(workflowStep, printJob){
-	// console.log("step: metrics");
-	return workflowStep.time * printJob.PageCount;
-}
-
-
-async function rasterization(workflowStep, printJob){
-	// console.log("step: rasterization");
-	return workflowStep.time * printJob.PageCount;
-}
-
-
-async function printing(workflowStep, printJob){
-	// console.log("step: printing");
-	return workflowStep.time * printJob.PageCount;
-}
-
-
-async function cutting(workflowStep, printJob){
-	// console.log("step: cutting");
-	return workflowStep.time * printJob.PageCount;
-}
-
-
-async function laminating(workflowStep, printJob){
-	// console.log("step: laminating");
+async function placeholder(workflowStep, printJob){
 	return workflowStep.time * printJob.PageCount;
 }
 
