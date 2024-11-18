@@ -13,7 +13,7 @@ after(() => {
 
 // SEQUENCED TEST
 test('Full simulation report flow', async (ctx) => {
-    const jobTitle = "Test Job";
+    ctx.jobTitle = "Test Job";
     ctx.jobID = "";
     ctx.workflowID = "";
 
@@ -23,7 +23,7 @@ test('Full simulation report flow', async (ctx) => {
             method: 'POST',
             url: '/createJob',
             body: {
-                Title: jobTitle,
+                Title: ctx.jobTitle,
                 PageCount: 10,
                 RasterizationProfile: 'Black'
             }
@@ -60,10 +60,12 @@ test('Full simulation report flow', async (ctx) => {
 
     // Get the print job and workflow id
     await test('GET /getPrintJob', async () => {
-        const title = encodeURIComponent(jobTitle);
         const response = await fastify.inject({
             method: 'GET',
-            url: `/getPrintJob?Title=${title}`
+            url: `/getPrintJob`,
+            query: {
+                Title: ctx.jobTitle 
+            }
         });
         assert.strictEqual(response.statusCode, 200);
         const payload = JSON.parse(response.payload);
