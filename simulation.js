@@ -23,7 +23,8 @@ async function simulate(printJob, workflow, database) {
 	let workflowSteps = {}
 	let temp = workflow.WorkflowSteps;
 	for (let i = 0; i < temp.length; i++) {
-		const step = (await database.collection("WorkflowStep").findOne({ _id: temp[i] }));
+		const step = await database.collection("WorkflowStep").findOne({ _id: temp[i] });
+		if (!step) throw new Error("WorkflowStep not found");
 		workflowSteps[temp[i]] = {
 			func: step.Title,
 			time: step.TimePerPage,
@@ -55,7 +56,7 @@ async function traverseGraph(printJob, workflowSteps, step, visited, mutex = new
 		traverseGraph(printJob, workflowSteps, k, visited, mutex, results)));
 	const simulatedTime = await simulateStep(printJob, workflowSteps, step);
 	results[step] = { stepName: workflowSteps[step].func, stepTime: simulatedTime, cumulative: simulatedTime };
-	results[step].cumulative += await Math.max(workflowSteps[step].prev.map((k) =>
+	results[step].cumulative += Math.max(workflowSteps[step].prev.map((k) =>
 		results[k].cumulative));
 	await Promise.all(workflowSteps[step].next.map((k) =>
 		traverseGraph(printJob, workflowSteps, k, visited, mutex, results)));
