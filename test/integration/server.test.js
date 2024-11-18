@@ -59,7 +59,7 @@ test('Full simulation report flow', async (ctx) => {
     });
 
     // Get the print job and workflow id
-    test('GET /getPrintJob', async (t) => {
+    await test('GET /getPrintJob', async (t) => {
         const title = encodeURIComponent(jobTitle);
         const response = await fastify.inject({
             method: 'GET',
@@ -74,7 +74,7 @@ test('Full simulation report flow', async (ctx) => {
     });
 
     // Generate the simulation report
-    test('GET /generateSimulationReport', async (t) => {
+    await test('GET /generateSimulationReport', async (t) => {
         response = await fastify.inject({
             method: 'GET',
             url: '/generateSimulationReport',
@@ -94,7 +94,7 @@ test('Full simulation report flow', async (ctx) => {
         console.log("Generated simulation report: ", simulationReport);
     });
 
-    test('GET /getSimulationReport', async (t) => {
+    await test('GET /getSimulationReport', async (t) => {
         // Make sure that the simulation report 
         // can be retrieved
         response = await fastify.inject({
