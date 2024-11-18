@@ -70,7 +70,7 @@ test('Full simulation report flow', async (ctx) => {
         assert.strictEqual(response.statusCode, 200);
         const payload = JSON.parse(response.payload);
         assert.ok(payload)
-        console.log(payload);
+        console.log("LOOK HERE: \n" + payload);
 
         ctx.workflowID = payload.WorkflowID;
         ctx.jobID = payload.PrintJobID; 
