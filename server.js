@@ -88,7 +88,7 @@ function setupGets(database) {
     }
     const workflow = await database.collection('Workflow').findOne({ _id: new ObjectId(workflowID) });
     if (!workflow) {
-      reply.code(404).send("WorkflowDoc not found");
+      reply.code(404).send("Workflow not found");
       return;
     }
     const simulationReport = await database.collection('SimulationReport').findOne({ PrintJobID: new ObjectId(printJob._id), WorkflowID: new ObjectId(workflow._id) });
@@ -196,8 +196,11 @@ function setupPosts(database) {
 
 
   fastify.post('/createWorkflow', async (request, reply) => {
+    // Map each WorkflowStep to a ObjectID
+    const workflowSteps = request.body.WorkflowSteps.map(step => new ObjectId(step));
+
     await fastifyPostHelper(reply, database, newWorkflow,
-      [request.body.Title, request.body.WorkflowSteps]);
+      [request.body.Title, workflowSteps]);
   });
 
 
