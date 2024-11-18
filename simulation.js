@@ -23,7 +23,8 @@ async function simulate(printJob, workflow, database) {
 	let workflowSteps = {}
 	let temp = workflow.WorkflowSteps;
 	for (let i = 0; i < temp.length; i++) {
-		const step = (await database.collection("WorkflowStep").findOne({ _id: temp[i] }));
+		const step = await database.collection("WorkflowStep").findOne({ _id: temp[i] });
+		if (!step) throw new Error("WorkflowStep not found");
 		workflowSteps[temp[i]] = {
 			func: step.Title,
 			time: step.TimePerPage,
