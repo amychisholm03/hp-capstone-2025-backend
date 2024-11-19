@@ -1,4 +1,4 @@
-const { test, before, after, describe } = require('node:test');
+const { test, before, after } = require('node:test');
 const assert = require('node:assert');
 const { fastify, start, } = require('../../server.js');
 
@@ -11,14 +11,14 @@ after(() => {
 }
 );
 
-const ctx = {};
+test('Full simulation report flow', async (ctx) => {
+    ctx.jobTitle = "Test Job";
+    ctx.jobID = "";
+    ctx.stepID = "";
+    ctx.workflowID = "";
 
-describe('Print Job and Workflow Tests', () => {
-    before(async (ctx) => {
-        ctx.jobTitle = 'Test Job';
-    });
-
-    test('Create a new print job', async () => {
+    // 1. Create a new print job
+    await test('POST /createJob', async () => {
         const response = await fastify.inject({
             method: 'POST',
             url: '/createJob',
@@ -31,8 +31,9 @@ describe('Print Job and Workflow Tests', () => {
         assert.strictEqual(response.statusCode, 200);
         assert.ok(response.payload);
     });
-
-    test('Create a new workflow step', async () => {
+    
+    // 2. Create a new workflow step
+    await test('POST /createWorkflowStep', async () => {
         const response = await fastify.inject({
             method: 'POST',
             url: '/createWorkflowStep',
@@ -46,15 +47,18 @@ describe('Print Job and Workflow Tests', () => {
         });
         assert.strictEqual(response.statusCode, 200);
         assert.ok(response.payload);
+        assert.equal(typeof(response.payload), 'ObjectID', "Expected an ObjectID");
         const stepID = response.payload.toString();
         ctx.stepID = stepID;
     });
 
-    test('Create a new workflow with the above step', async () => {
+    // 3. Create a new workflow with the above step
+    await test('POST /createWorkflow', async () => {
         const data = {
             Title: "Test Workflow",
             WorkflowSteps: [ ctx.stepID ]
         }
+        console.log("HERE: ", JSON.stringify(data));
         const response = await fastify.inject({
             method: 'POST',
             url: '/createWorkflow',
@@ -65,7 +69,8 @@ describe('Print Job and Workflow Tests', () => {
         assert.ok(response.payload);
     });
 
-    test('Get the print job and workflow id', async () => {
+    // 4. Get the print job and workflow id
+    await test('GET /getPrintJob', async () => {
         const response = await fastify.inject({
             method: 'GET',
             url: `/getPrintJob?Title=${encodeURIComponent(ctx.jobTitle)}`,
@@ -78,8 +83,9 @@ describe('Print Job and Workflow Tests', () => {
         ctx.jobID = payload.PrintJobID; 
     });
 
-    test('Generate the simulation report from the print job and workflow', async () => {
-        const response = await fastify.inject({
+    // 5. Generate the simulation report from the print job and workflow
+    await test('GET /generateSimulationReport', async () => {
+        response = await fastify.inject({
             method: 'GET',
             url: '/generateSimulationReport',
             query: {
@@ -98,8 +104,11 @@ describe('Print Job and Workflow Tests', () => {
         console.log("Generated simulation report: ", simulationReport);
     });
 
-    test('Make sure that the simulation report can be retrieved', async () => {
-        const response = await fastify.inject({
+    // 6. Make sure that the simulation report can be retrieved
+    await test('GET /getSimulationReport', async () => {
+        // Make sure that the simulation report 
+        // can be retrieved
+        response = await fastify.inject({
             method: 'GET',
             url: `/getSimulationReport?jobID=${encodeURIComponent(ctx.jobID)}&workflowID=${encodeURIComponent(ctx.workflowID)}`
         });
@@ -107,7 +116,7 @@ describe('Print Job and Workflow Tests', () => {
         const payload = JSON.parse(response.payload);
         assert.ok(payload);
     });
-});
+})
 
 // GET API CALLS
 test('GET /', async () => {
