@@ -82,7 +82,7 @@ test('Full simulation report flow', async (ctx) => {
         });
         assert.strictEqual(response.statusCode, 200);
         const payload = JSON.parse(response.payload);
-        //console.log("payload: ", payload);  
+        console.log("getPrintJob payload: ", payload);  
         assert.ok(payload)
         assert.strictEqual(payload.Title, ctx.jobTitle);
         assert.strictEqual(payload._id, ctx.jobID);
