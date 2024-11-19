@@ -91,6 +91,7 @@ async function newWorkflow(database, title, workflow_steps) {
 	if (!database || !title || !workflow_steps || workflow_steps.length == 0) {
 		throw new Error("Invalid parameters for newWorkflow");
 	}
+	console.log("HERE: ", workflow_steps);
 	return await insert(database, "Workflow", {
 		Title: title,
 		WorkflowSteps: workflow_steps

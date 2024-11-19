@@ -48,7 +48,6 @@ test('Full simulation report flow', async (ctx) => {
         assert.strictEqual(response.statusCode, 200);
         assert.ok(response.payload);
         const stepID = response.payload.toString();
-        console.log("HERE: ", stepID);
         ctx.stepID = stepID;
     });
 
