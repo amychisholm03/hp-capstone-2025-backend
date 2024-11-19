@@ -77,7 +77,7 @@ async function isVisited(visited, check, mutex) {
  * 
  * @param {*} printJob 
  * @param {*} workflowSteps 
- * @param {string} step 
+ * @param {string} step The name of the workflow step
  * @returns 
  */
 async function simulateStep(printJob, workflowSteps, step) {
@@ -91,12 +91,11 @@ async function simulateStep(printJob, workflowSteps, step) {
 		"Cutting": placeholder,
 		"Laminating": placeholder,
 	}
-	try {
+	// Testing steps do not exist in funcs, so they will just
+	// use the simple calculation
+	if (workflowSteps[step] && typeof funcs[workflowSteps[step].func] === 'function') {
 		return await funcs[workflowSteps[step].func](workflowSteps[step], printJob);
-	}
-	catch {
-		// Testing steps do not exist in the funcs table
-		// so this is their substitute
+	} else {
 		return workflowSteps[step].time * printJob.PageCount;
 	}
 }
