@@ -54,10 +54,9 @@ test('Full simulation report flow', async (ctx) => {
 
     // 3. Create a new workflow with the above step
     await test('POST /createWorkflow', async () => {
-        console.log("ctx.stepID: ", ctx.stepID);    
         const data = {
             Title: "Test Workflow",
-            WorkflowSteps: [ ctx.stepID ]
+            WorkflowSteps: [ new ObjectId(ctx.stepID).toString() ]
         }
         const response = await fastify.inject({
             method: 'POST',
@@ -71,7 +70,6 @@ test('Full simulation report flow', async (ctx) => {
 
     // 4. Get the print job and workflow id
     await test('GET /getPrintJob', async () => {
-        console.log ("ctx.jobTitle: ", ctx.jobTitle);   
         const response = await fastify.inject({
             method: 'GET',
             url: `/getPrintJob?Title=${encodeURIComponent(ctx.jobTitle)}`,
