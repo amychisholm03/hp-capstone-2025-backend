@@ -135,8 +135,8 @@ async function newWorkflowStep(database, title, previous_step=null, next_step=nu
  * @param {Int32} rasterization_time_taken 
  * @returns {ObjectId} The ID of the inserted report or an Error if it failed
  */
-async function newSimulationReport(database, print_job_id, workflow_id, total_time_taken, rasterization_time_taken) {
-	if (!database || !print_job_id || !workflow_id || !total_time_taken || !rasterization_time_taken) {
+async function newSimulationReport(database, print_job_id, workflow_id, total_time_taken=0, rasterization_time_taken=0) {
+	if (!database || !print_job_id || !workflow_id) {
 		throw new Error("Invalid parameters for newSimulationReport");
 	}
 	return await insert(database, "SimulationReport", {

@@ -120,6 +120,7 @@ describe('Full simulation report flow', async () => {
     });
 })
 
+
 // GET API CALLS
 test('GET /', async () => {
     const response = await fastify.inject({
@@ -138,7 +139,7 @@ test('GET /query', async () => {
         url: `/query?CollectionName=${CollectionName}&Query=${Query}`
     });
     assert.strictEqual(response.statusCode, 200);
-    console.log("Query Results: ", JSON.parse(response.payload));
+    //console.log("Query Results: ", JSON.parse(response.payload));
 });
 
 test('GET /getWorkflowStepList', async () => {
@@ -150,7 +151,7 @@ test('GET /getWorkflowStepList', async () => {
     const payloadList = response.payload;
     assert.ok(payloadList);
     assert.notEqual(payloadList.length, 0);
-    console.log("All workflow steps: ", payloadList);
+    //console.log("All workflow steps: ", payloadList);
 });
 
 test('GET /getSimulationReportList', async () => {
@@ -162,5 +163,5 @@ test('GET /getSimulationReportList', async () => {
     const payloadList = JSON.parse(response.payload);
     assert.ok(payloadList);
     assert.notEqual(payloadList.length, 0);
-    console.log("All simulation reports: ", payloadList);
+    //console.log("All simulation reports: ", payloadList);
 });
