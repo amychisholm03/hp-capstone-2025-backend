@@ -54,13 +54,15 @@ test('Full simulation report flow', async (ctx) => {
 
     // 3. Create a new workflow with the above step
     await test('POST /createWorkflow', async () => {
+        const data = {
+            Title: "Test Workflow",
+            WorkflowSteps: [ ctx.stepID ]
+        }
         const response = await fastify.inject({
             method: 'POST',
             url: '/createWorkflow',
-            body: {
-                Title: 'Test Workflow',
-                WorkflowSteps: [ctx.stepID]
-            }
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
         });
         assert.strictEqual(response.statusCode, 200);
         assert.ok(response.payload);
