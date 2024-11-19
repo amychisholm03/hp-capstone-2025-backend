@@ -88,10 +88,14 @@ async function newPrintJob(database, title, page_count, rasterization_profile) {
  * @returns {ObjectId} The ID of the inserted workflow or an Error if it failed
  */
 async function newWorkflow(database, title, workflow_steps) {
+	// Validate parameters
 	if (!database || !title || !workflow_steps || workflow_steps.length == 0) {
 		throw new Error("Invalid parameters for newWorkflow");
 	}
-	console.log("HERE: ", workflow_steps);
+	if (!Array.isArray(workflow_steps) || !workflow_steps.every(id => ObjectId.isValid(id))) {
+		throw new Error("newWorkflow: workflow_steps must be an array of valid ObjectIds");
+	}
+
 	return await insert(database, "Workflow", {
 		Title: title,
 		WorkflowSteps: workflow_steps

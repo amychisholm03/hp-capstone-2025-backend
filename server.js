@@ -238,21 +238,10 @@ function setupPosts(database) {
   fastify.post('/createWorkflow', async (request, reply) => {
 
     // Map each WorkflowStep to a ObjectID
-    console.log("HERE: ", request.body.WorkflowSteps);
-    let workflowSteps = [];
-    try {
-      workflowSteps = request.body.WorkflowSteps.map(stepID => new ObjectId(stepID));
-    }
-    catch (err) {
-      reply.code(500).send("Could not map step IDs to ObjectIDs: ", err.message);
-      return;
-    }
-    if (workflowSteps.length == 0) {
-      reply.code(500).send("No valid WorkflowSteps provided");
-      return;
-    }
+    const workflowSteps = await request.body.WorkflowSteps.map(stepID => new ObjectId(stepID));
+
     // Create a new workflow
-    console.log("HERE: ", workflowSteps);
+    console.log("AFTER MAPPING: ", workflowSteps);
     const result = await newWorkflow(database, request.body.Title, workflowSteps);
     reply.code(200).send(result);
 
