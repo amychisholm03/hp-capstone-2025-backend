@@ -116,7 +116,8 @@ function setupGets(database) {
   fastify.get('/generateSimulationReport', async (request, reply) => {
     //TODO: Change to a POST
     const { jobID, workflowID } = request.query;
-
+    console.log("jobID: ", jobID);
+    console.log("workflowID: ", workflowID);
     const printJob = await database.collection('PrintJob').findOne({ _id: new ObjectId(jobID) });
     if (!printJob) {
       reply.code(404).send("PrintJob not found");

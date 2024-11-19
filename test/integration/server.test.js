@@ -91,17 +91,9 @@ describe('Full simulation report flow', async () => {
 
     // 5. Generate the simulation report from the print job and workflow
     await test('GET /generateSimulationReport', async () => {
-        const data =
-        {
-            jobID: ctx.jobID,
-            workflowID: ctx.workflowID
-        };
-        //console.log("data: ", data);
         const response = await fastify.inject({
             method: 'GET',
-            url: '/generateSimulationReport',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+            url: "/generateSimulationReport?jobID=" + ctx.jobID + "&workflowID=" + ctx.workflowID,
         });
         assert.strictEqual(response.statusCode, 200);
         const simulationReport = await JSON.parse(response.payload);
@@ -118,7 +110,7 @@ describe('Full simulation report flow', async () => {
         // can be retrieved
         response = await fastify.inject({
             method: 'GET',
-            url: `/getSimulationReport?jobID=${encodeURIComponent(ctx.jobID)}&workflowID=${encodeURIComponent(ctx.workflowID)}`
+            url: "/getSimulationReport?jobID=" + ctx.jobID + "&workflowID=" + ctx.workflowID
         });
         assert.strictEqual(response.statusCode, 200);
         const payload = JSON.parse(response.payload);
