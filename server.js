@@ -187,16 +187,12 @@ function setupGets(database) {
    * Get a list of all workflows
    */
   fastify.get('/getWorkflowList', async (request, reply) => {
-    const workflows = await database.collection('Workflow').find();
+    const workflows = await database.collection('Workflow').find().toArray();
     if (!workflows) {
       reply.code(404).send("No workflows found");
       return;
     }
-    const workflowList = [];
-    for await (const w of workflows) {
-      workflowList.push({ WorkflowID: w._id, Title: w.Title });
-    }
-    reply.code(200).send(workflowList);
+    reply.code(200).send(workflows);
   });
 
 
