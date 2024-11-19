@@ -254,8 +254,8 @@ function setupPosts(database) {
    */
   fastify.post('/createWorkflowStep', async (request, reply) => {
     try {
-      // Create a new workflow step
       const result = newWorkflowStep(database, request.body.Title, request.body.PreviousStep, request.body.NextStep, request.body.SetupTime, request.body.TimePerPage);
+      console.log("HERE returning ", result);
       reply.code(200).send(result);
     }
     catch (err) {

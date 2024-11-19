@@ -1,4 +1,5 @@
 // Db, Int32, and ObjectId are needed for IDE support to know what the types are
+// eslint-disable-next-line no-unused-vars
 const { Db, Int32, ObjectId, MongoClient, Timestamp } = require("mongodb"); 
 
 /**
@@ -71,7 +72,7 @@ async function newPrintJob(database, title, page_count, rasterization_profile) {
 	if (!database || !title || !page_count || !rasterization_profile || rasterization_profile.length == 0) {
 		throw new Error("Invalid parameters for newPrintJob");
 	}
-	return await insert(database, "PrintJob", {
+	return insert(database, "PrintJob", {
 		Title: title,
 		DateCreated: new Timestamp(),
 		PageCount: page_count,
@@ -90,7 +91,7 @@ async function newWorkflow(database, title, workflow_steps) {
 	if (!database || !title || !workflow_steps || workflow_steps.length == 0) {
 		throw new Error("Invalid parameters for newWorkflow");
 	}
-	return await insert(database, "Workflow", {
+	return insert(database, "Workflow", {
 		Title: title,
 		WorkflowSteps: workflow_steps
 	});
@@ -111,15 +112,13 @@ async function newWorkflowStep(database, title, previous_step=null, next_step=nu
 	if (!database || !title || !setup_time || !time_per_page) {
 		throw new Error("Invalid parameters for newWorkflowStep");
 	}
-	const result = await insert(database, "WorkflowStep", {
+	return insert(database, "WorkflowStep", {
 		Title: title,
 		PreviousStep: previous_step,
 		NextStep: next_step,
 		SetupTime: setup_time,
 		TimePerPage: time_per_page
 	});
-	console.log("newWorkflowStep returning: ", result);	
-	return result;
 }
 
 /**
@@ -135,7 +134,7 @@ async function newSimulationReport(database, print_job_id, workflow_id, total_ti
 	if (!database || !print_job_id || !workflow_id || !total_time_taken || !rasterization_time_taken) {
 		throw new Error("Invalid parameters for newSimulationReport");
 	}
-	return await insert(database, "SimulationReport", {
+	return insert(database, "SimulationReport", {
 		PrintJobID: print_job_id,
 		WorkflowID: workflow_id,
 		TotalTimeTaken: total_time_taken,
