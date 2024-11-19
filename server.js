@@ -218,7 +218,9 @@ function setupGets(database) {
  * @param {Db} database 
  */
 function setupPosts(database) {
-  // Create a new print job
+  /**
+   * Create a new print job
+   */
   fastify.post('/createJob', async (request, reply) => {
     try {
       const result = newPrintJob(database, request.body.Title, request.body.PageCount, request.body.RasterizationProfile);

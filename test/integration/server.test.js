@@ -39,8 +39,8 @@ test('Full simulation report flow', async (ctx) => {
             url: '/createWorkflowStep',
             body: {
                 Title: 'Test Step 1',
-                PreviousStep: '',
-                NextStep: '',
+                PreviousStep: null,
+                NextStep: null,
                 SetupTime: 5,
                 TimePerPage: 2
             }

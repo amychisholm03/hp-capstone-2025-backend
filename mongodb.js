@@ -112,13 +112,15 @@ async function newWorkflowStep(database, title, previous_step=null, next_step=nu
 	if (!database || !title || !setup_time || !time_per_page) {
 		throw new Error("Invalid parameters for newWorkflowStep");
 	}
-	return await insert(database, "WorkflowStep", {
+	const result = await insert(database, "WorkflowStep", {
 		Title: title,
 		PreviousStep: previous_step,
 		NextStep: next_step,
 		SetupTime: setup_time,
 		TimePerPage: time_per_page
 	});
+	console.log("newWorkflowStep returning: ", result);	
+	return result;
 }
 
 /**
