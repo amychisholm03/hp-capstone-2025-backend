@@ -161,16 +161,12 @@ function setupGets(database) {
 
   // WORKFLOWS AND STEPS
   fastify.get('/getWorkflowList', async (request, reply) => {
-    const workflows = await database.collection('Workflow').find();
+    const workflows = await database.collection('Workflow').find().toArray();
     if (!workflows) {
       reply.code(404).send("WorkflowDocs not found");
       return;
     }
-    const workflowList = [];
-    for await (const doc of workflows) {
-      workflowList.push({ WorkflowID: doc._id, Title: doc.Title });
-    }
-    reply.code(200).send(workflowList);
+    reply.code(200).send(workflows);
   });
 
   fastify.get('/getWorkflowStepList', async (request, reply) => {
