@@ -95,6 +95,7 @@ describe('Full simulation report flow', async () => {
             method: 'GET',
             url: "/generateSimulationReport?jobID=" + ctx.jobID + "&workflowID=" + ctx.workflowID,
         });
+        console.log(response.payload);
         assert.strictEqual(response.statusCode, 200);
         const simulationReport = await JSON.parse(response.payload);
         console.log("Generated simulation report: ", simulationReport);
@@ -112,6 +113,7 @@ describe('Full simulation report flow', async () => {
             method: 'GET',
             url: "/getSimulationReport?jobID=" + ctx.jobID + "&workflowID=" + ctx.workflowID
         });
+        console.log(response.payload);
         assert.strictEqual(response.statusCode, 200);
         const payload = JSON.parse(response.payload);
         assert.ok(payload);

@@ -81,8 +81,32 @@ async function isVisited(visited, check, mutex) {
  * @returns 
  */
 async function simulateStep(printJob, workflowSteps, step) {
-	if (!workflowSteps[step]) throw new Error("Step not found");
-	return workflowSteps[step].time * printJob.PageCount;
+	if(!workflowSteps[step]){
+		throw new Error("Step not found");
+	}
+
+	// TODO: in the future, steps will have different functions
+	// to simulate how long they take
+	const funcs = {
+		"Preflight": placeholder,
+		"Metrics": placeholder,
+		"Rasterization": placeholder,
+		"Printing": placeholder,
+		"Cutting": placeholder,
+		"Laminating": placeholder,
+	}
+	// Testing steps do not exist in funcs, so they will just
+	// use the simple calculation
+	if (typeof funcs[workflowSteps[step].func] === 'function') {
+		return await funcs[workflowSteps[step].func](workflowSteps[step], printJob);
+	} else {
+		return workflowSteps[step].time * printJob.PageCount;
+	}
+}
+
+
+async function placeholder(workflowStep, printJob) {
+	return workflowStep.time * printJob.PageCount;
 }
 
 
