@@ -46,10 +46,9 @@ test('Full simulation report flow', async (ctx) => {
             }
         });
         assert.strictEqual(response.statusCode, 200);
-        const payload = JSON.parse(response.payload);
-        assert.ok(payload);
         // TODO: testing this
-        console.log("HERE: ", payload);
+        console.log("HERE: ", response.payload);
+        ctx.stepID = response.payload;
     });
 
     // 3. Create a new workflow with the above step
