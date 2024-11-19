@@ -29,10 +29,11 @@ describe('Full simulation report flow', async () => {
                 RasterizationProfile: 'Black'
             }
         });
+        console.log(response.payload);
         assert.strictEqual(response.statusCode, 200);
         assert.ok(response.payload);
         const jobID = response.payload.toString().replace(/"/g, '');
-        console.log("ctx.jobID: ", jobID);
+        //console.log("ctx.jobID: ", jobID);
         ctx.jobID = jobID;
     });
 
@@ -49,6 +50,7 @@ describe('Full simulation report flow', async () => {
                 TimePerPage: 2
             }
         });
+        console.log(response.payload);
         assert.strictEqual(response.statusCode, 200);
         assert.ok(response.payload);
         const stepID = response.payload.toString().replace(/"/g, '');
@@ -68,10 +70,11 @@ describe('Full simulation report flow', async () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
+        console.log(response.payload);
         assert.strictEqual(response.statusCode, 200);
         assert.ok(response.payload);
         const workflowID = response.payload.toString().replace(/"/g, '');
-        console.log("ctx.workflowID: ", workflowID);
+        //console.log("ctx.workflowID: ", workflowID);
         ctx.workflowID = workflowID;
     });
 
@@ -81,9 +84,9 @@ describe('Full simulation report flow', async () => {
             method: 'GET',
             url: `/getPrintJob?Title=${encodeURIComponent(ctx.jobTitle)}`,
         });
+        console.log(response.payload);
         assert.strictEqual(response.statusCode, 200);
         const payload = JSON.parse(response.payload)[0];
-        //console.log("getPrintJob payload: ", payload);
         assert.ok(payload)
         assert.equal(payload.Title, ctx.jobTitle);
         assert.equal(payload._id, ctx.jobID);
@@ -98,7 +101,6 @@ describe('Full simulation report flow', async () => {
         console.log(response.payload);
         assert.strictEqual(response.statusCode, 200);
         const simulationReport = await JSON.parse(response.payload);
-        console.log("Generated simulation report: ", simulationReport);
         assert.ok(simulationReport);
         assert.strictEqual(simulationReport.PrintJobID, ctx.jobID);
         assert.strictEqual(simulationReport.WorkflowID, ctx.workflowID);

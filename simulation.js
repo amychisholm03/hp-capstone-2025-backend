@@ -82,7 +82,7 @@ async function isVisited(visited, check, mutex) {
  */
 async function simulateStep(printJob, workflowSteps, step) {
 	if(!workflowSteps[step]){
-		throw new Error("Step not found");
+		throw new Error("simulateStep: Step not found");
 	}
 
 	// TODO: in the future, steps will have different functions
@@ -95,6 +95,7 @@ async function simulateStep(printJob, workflowSteps, step) {
 		"Cutting": placeholder,
 		"Laminating": placeholder,
 	}
+
 	// Testing steps do not exist in funcs, so they will just
 	// use the simple calculation
 	if (typeof funcs[workflowSteps[step].func] === 'function') {
