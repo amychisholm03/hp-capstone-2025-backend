@@ -238,6 +238,7 @@ function setupPosts(database) {
   fastify.post('/createWorkflow', async (request, reply) => {
     try {
       // Map each WorkflowStep to a ObjectID
+      console.log(request.body.WorkflowSteps[0]);
       const workflowSteps = request.body.WorkflowSteps.map(stepID => new ObjectId(stepID));
       // Create a new workflow
       const result = await newWorkflow(database, request.body.Title, workflowSteps);

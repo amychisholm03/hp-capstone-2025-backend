@@ -56,7 +56,7 @@ test('Full simulation report flow', async (ctx) => {
     await test('POST /createWorkflow', async () => {
         const data = {
             Title: "Test Workflow",
-            WorkflowSteps: [ new ObjectId(ctx.stepID).toString() ]
+            WorkflowSteps: [ ctx.stepID ]
         }
         const response = await fastify.inject({
             method: 'POST',
