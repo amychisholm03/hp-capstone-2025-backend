@@ -34,7 +34,7 @@ test('Full simulation report flow', async (ctx) => {
         //console.log("ctx.jobID: ", jobID);
         ctx.jobID = jobID;
     });
-    
+
     // 2. Create a new workflow step
     await test('POST /createWorkflowStep', async () => {
         const response = await fastify.inject({
@@ -59,12 +59,12 @@ test('Full simulation report flow', async (ctx) => {
     await test('POST /createWorkflow', async () => {
         const data = {
             Title: "Test Workflow",
-            WorkflowSteps: [ ctx.stepID ]
+            WorkflowSteps: [ctx.stepID]
         }
         const response = await fastify.inject({
             method: 'POST',
             url: '/createWorkflow',
-            headers: {'Content-Type': 'application/json'},
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
         assert.strictEqual(response.statusCode, 200);
@@ -81,28 +81,33 @@ test('Full simulation report flow', async (ctx) => {
             url: `/getPrintJob?Title=${encodeURIComponent(ctx.jobTitle)}`,
         });
         assert.strictEqual(response.statusCode, 200);
-        const payload = JSON.parse(response.payload);
-        console.log("getPrintJob payload: ", payload);  
+        const payload = JSON.parse(response.payload[0]);
+        console.log("getPrintJob payload: ", payload);
         assert.ok(payload)
-        assert.strictEqual(payload.Title, ctx.jobTitle);
-        assert.strictEqual(payload._id, ctx.jobID);
+        assert.equal(payload.Title, ctx.jobTitle);
+        assert.equal(payload._id, ctx.jobID);
     });
 
     // 5. Generate the simulation report from the print job and workflow
     await test('GET /generateSimulationReport', async () => {
-        response = await fastify.inject({
+        const data =
+        {
+            jobID: ctx.jobID,
+            workflowID: ctx.workflowID
+        };
+        console.log("data: ", data);
+        const response = await fastify.inject({
             method: 'GET',
             url: '/generateSimulationReport',
-            query: {
-                jobID: ctx.jobID,
-                workflowID: ctx.workflowID
-            }
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
         });
         if (response.statusCode !== 200) {
             console.log("Error: ", response.payload);
         }
         assert.strictEqual(response.statusCode, 200);
-        const simulationReport = await JSON.parse(response.payload);
+        const simulationReport = await JSON.parse(response.payload[0]);
+        console.log("Simulation Report: ", simulationReport);
         assert.ok(simulationReport);
         assert.strictEqual(simulationReport.PrintJobID, ctx.jobID);
         assert.strictEqual(simulationReport.WorkflowID, ctx.workflowID);
