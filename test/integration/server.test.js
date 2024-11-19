@@ -127,7 +127,7 @@ describe('Full simulation report flow', async () => {
 })
 
 // GET API CALLS
-describe('GET /', async () => {
+test('GET /', async () => {
     const response = await fastify.inject({
         method: 'GET',
         url: '/'
@@ -136,7 +136,7 @@ describe('GET /', async () => {
     assert.strictEqual(response.payload, 'Hello, client!');
 });
 
-describe('GET /query', async () => {
+test('GET /query', async () => {
     const CollectionName = encodeURIComponent('PrintJob');
     const Query = encodeURIComponent(JSON.stringify({ Title: "PrintJob 1" }))
     const response = await fastify.inject({
@@ -147,7 +147,7 @@ describe('GET /query', async () => {
     console.log("Query Results: ", JSON.parse(response.payload));
 });
 
-describe('GET /getWorkflowStepList', async () => {
+test('GET /getWorkflowStepList', async () => {
     const response = await fastify.inject({
         method: 'GET',
         url: '/getWorkflowStepList'
@@ -159,7 +159,7 @@ describe('GET /getWorkflowStepList', async () => {
     console.log("All workflow steps: ", payloadList);
 });
 
-describe('GET /getSimulationReportList', async () => {
+test('GET /getSimulationReportList', async () => {
     const response = await fastify.inject({
         method: 'GET',
         url: '/getSimulationReportList'
