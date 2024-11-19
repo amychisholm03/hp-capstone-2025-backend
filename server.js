@@ -223,7 +223,7 @@ function setupPosts(database) {
    */
   fastify.post('/createJob', async (request, reply) => {
     try {
-      const result = newPrintJob(database, request.body.Title, request.body.PageCount, request.body.RasterizationProfile);
+      const result = await newPrintJob(database, request.body.Title, request.body.PageCount, request.body.RasterizationProfile);
       reply.code(200).send(result);
     }
     catch (err) {
@@ -240,7 +240,7 @@ function setupPosts(database) {
       // Map each WorkflowStep to a ObjectID
       const workflowSteps = request.body.WorkflowSteps.map(stepID => new ObjectId(stepID));
       // Create a new workflow
-      const result = newWorkflow(database, request.body.Title, workflowSteps);
+      const result = await newWorkflow(database, request.body.Title, workflowSteps);
       reply.code(200).send(result);
     }
     catch (err) {
@@ -254,8 +254,7 @@ function setupPosts(database) {
    */
   fastify.post('/createWorkflowStep', async (request, reply) => {
     try {
-      const result = newWorkflowStep(database, request.body.Title, request.body.PreviousStep, request.body.NextStep, request.body.SetupTime, request.body.TimePerPage);
-      console.log("HERE returning ", result);
+      const result = await newWorkflowStep(database, request.body.Title, request.body.PreviousStep, request.body.NextStep, request.body.SetupTime, request.body.TimePerPage);
       reply.code(200).send(result);
     }
     catch (err) {
