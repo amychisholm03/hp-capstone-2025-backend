@@ -69,6 +69,9 @@ async function insert(database, collection_name, doc) {
  */
 async function newPrintJob(database, title, page_count, rasterization_profile) {
 	// TODO: Check the validity of foreign keys
+	if (!db || !title || !page_count || !rasterization_profile || rasterization_profile.length == 0) {
+		throw new Error("Invalid parameters for newPrintJob");
+	}
 	return await insert(database, "PrintJob", {
 		Title: title,
 		DateCreated: new Timestamp(),
@@ -85,7 +88,9 @@ async function newPrintJob(database, title, page_count, rasterization_profile) {
  * @returns {*} The ID of the inserted workflow or an Error if it failed
  */
 async function newWorkflow(database, title, workflow_steps) {
-	checkNull([database, title, workflow_steps]);
+	if (!db || !title || !workflow_steps || workflow_steps.length == 0) {
+		throw new Error("Invalid parameters for newWorkflow");
+	}
 	return await insert(database, "Workflow", {
 		Title: title,
 		WorkflowSteps: workflow_steps
@@ -102,8 +107,11 @@ async function newWorkflow(database, title, workflow_steps) {
  * @param {Int32} time_per_page 
  * @returns {*} The ID of the inserted step or an Error if it failed
  */
-async function newWorkflowStep(database, title, previous_step, next_step, setup_time, time_per_page) {
-	checkNull([database, title, setup_time, time_per_page]);
+async function newWorkflowStep(database, title, previous_step=null, next_step=null, setup_time=0, time_per_page=1) {
+	// previous_step and next_step are ok to be null
+	if (!db || !title || !setup_time || !time_per_page) {
+		throw new Error("Invalid parameters for newWorkflowStep");
+	}
 	return await insert(database, "WorkflowStep", {
 		Title: title,
 		PreviousStep: previous_step,
@@ -123,7 +131,9 @@ async function newWorkflowStep(database, title, previous_step, next_step, setup_
  * @returns {*} The ID of the inserted report or an Error if it failed
  */
 async function newSimulationReport(database, print_job_id, workflow_id, total_time_taken, rasterization_time_taken) {
-	checkNull([database, print_job_id, workflow_id, total_time_taken, rasterization_time_taken]);
+	if (!db || !print_job_id || !workflow_id || !total_time_taken || !rasterization_time_taken) {
+		throw new Error("Invalid parameters for newSimulationReport");
+	}
 	return await insert(database, "SimulationReport", {
 		PrintJobID: print_job_id,
 		WorkflowID: workflow_id,
@@ -134,10 +144,10 @@ async function newSimulationReport(database, print_job_id, workflow_id, total_ti
 }
 
 module.exports = {
-    dbConnect,
-    dbSetup,
-    newPrintJob,
-    newWorkflow,
-    newWorkflowStep,
-    newSimulationReport
+	dbConnect,
+	dbSetup,
+	newPrintJob,
+	newWorkflow,
+	newWorkflowStep,
+	newSimulationReport
 };

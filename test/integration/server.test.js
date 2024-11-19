@@ -11,13 +11,13 @@ after(() => {
 }
 );
 
-// SEQUENCED TEST
 test('Full simulation report flow', async (ctx) => {
     ctx.jobTitle = "Test Job";
     ctx.jobID = "";
+    ctx.stepID = "";
     ctx.workflowID = "";
 
-    // Create a test print job and workflow
+    // 1. Create a new print job
     await test('POST /createJob', async () => {
         const response = await fastify.inject({
             method: 'POST',
@@ -29,8 +29,10 @@ test('Full simulation report flow', async (ctx) => {
             }
         });
         assert.strictEqual(response.statusCode, 200);
+        assert.ok(response.payload);
     });
     
+    // 2. Create a new workflow step
     await test('POST /createWorkflowStep', async () => {
         const response = await fastify.inject({
             method: 'POST',
@@ -44,21 +46,27 @@ test('Full simulation report flow', async (ctx) => {
             }
         });
         assert.strictEqual(response.statusCode, 200);
+        const payload = JSON.parse(response.payload);
+        assert.ok(payload);
+        // TODO: testing this
+        console.log("HERE: ", payload);
     });
 
+    // 3. Create a new workflow with the above step
     await test('POST /createWorkflow', async () => {
         const response = await fastify.inject({
             method: 'POST',
             url: '/createWorkflow',
             body: {
                 Title: 'Test Workflow',
-                WorkflowSteps: ['Test Step 1']
+                WorkflowSteps: [ctx.stepID]
             }
         });
         assert.strictEqual(response.statusCode, 200);
+        assert.ok(response.payload);
     });
 
-    // Get the print job and workflow id
+    // 4. Get the print job and workflow id
     await test('GET /getPrintJob', async () => {
         console.log ("ctx.jobTitle: ", ctx.jobTitle);   
         const response = await fastify.inject({
@@ -73,7 +81,7 @@ test('Full simulation report flow', async (ctx) => {
         ctx.jobID = payload.PrintJobID; 
     });
 
-    // Generate the simulation report
+    // 5. Generate the simulation report from the print job and workflow
     await test('GET /generateSimulationReport', async () => {
         response = await fastify.inject({
             method: 'GET',
@@ -87,13 +95,14 @@ test('Full simulation report flow', async (ctx) => {
             console.log("Error: ", response.payload);
         }
         assert.strictEqual(response.statusCode, 200);
-        let simulationReport = await JSON.parse(response.payload);
+        const simulationReport = await JSON.parse(response.payload);
         assert.ok(simulationReport);
         assert.strictEqual(simulationReport.PrintJobID, ctx.jobID);
         assert.strictEqual(simulationReport.WorkflowID, ctx.workflowID);
         console.log("Generated simulation report: ", simulationReport);
     });
 
+    // 6. Make sure that the simulation report can be retrieved
     await test('GET /getSimulationReport', async () => {
         // Make sure that the simulation report 
         // can be retrieved
@@ -104,7 +113,6 @@ test('Full simulation report flow', async (ctx) => {
         assert.strictEqual(response.statusCode, 200);
         const payload = JSON.parse(response.payload);
         assert.ok(payload);
-        console.log("Simulation Report: ", payload);
     });
 })
 
