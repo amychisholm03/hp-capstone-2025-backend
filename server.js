@@ -236,15 +236,16 @@ function setupPosts(database) {
    * Create a new workflow
    */
   fastify.post('/createWorkflow', async (request, reply) => {
+    try {
+      // Map each WorkflowStep to a ObjectID
+      const workflowSteps = await request.body.WorkflowSteps.map(stepID => new ObjectId(stepID));
 
-    // Map each WorkflowStep to a ObjectID
-    const workflowSteps = await request.body.WorkflowSteps.map(stepID => new ObjectId(stepID));
-
-    // Create a new workflow
-    console.log("AFTER MAPPING: ", workflowSteps);
-    const result = await newWorkflow(database, request.body.Title, workflowSteps);
-    reply.code(200).send(result);
-
+      // Create a new workflow
+      const result = await newWorkflow(database, request.body.Title, workflowSteps);
+      reply.code(200).send(result);
+    } catch (err) {
+      reply.code(500).send(err.message);
+    }
   });
 
 

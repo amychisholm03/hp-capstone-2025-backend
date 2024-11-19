@@ -48,7 +48,7 @@ test('Full simulation report flow', async (ctx) => {
         assert.strictEqual(response.statusCode, 200);
         assert.ok(response.payload);
         const stepID = response.payload.toString().replace(/"/g, '');
-        console.log("ctx.stepID: ", stepID);
+        //console.log("ctx.stepID: ", stepID);
         ctx.stepID = stepID;
     });
 
@@ -58,7 +58,6 @@ test('Full simulation report flow', async (ctx) => {
             Title: "Test Workflow",
             WorkflowSteps: [ ctx.stepID ]
         }
-        console.log("HERE: ", JSON.stringify(data));
         const response = await fastify.inject({
             method: 'POST',
             url: '/createWorkflow',
@@ -77,10 +76,14 @@ test('Full simulation report flow', async (ctx) => {
         });
         assert.strictEqual(response.statusCode, 200);
         const payload = JSON.parse(response.payload);
+        console.log("payload: ", payload);  
         assert.ok(payload)
 
         ctx.workflowID = payload.WorkflowID;
         ctx.jobID = payload.PrintJobID; 
+
+        console.log("ctx.workflowID: ", ctx.workflowID);
+        console.log("ctx.jobID: ", ctx.jobID);
     });
 
     // 5. Generate the simulation report from the print job and workflow
