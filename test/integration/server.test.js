@@ -81,7 +81,7 @@ test('Full simulation report flow', async (ctx) => {
             url: `/getPrintJob?Title=${encodeURIComponent(ctx.jobTitle)}`,
         });
         assert.strictEqual(response.statusCode, 200);
-        const payload = JSON.parse(response.payload[0]);
+        const payload = JSON.parse(response.payload)[0];
         console.log("getPrintJob payload: ", payload);
         assert.ok(payload)
         assert.equal(payload.Title, ctx.jobTitle);
@@ -106,12 +106,12 @@ test('Full simulation report flow', async (ctx) => {
             console.log("Error: ", response.payload);
         }
         assert.strictEqual(response.statusCode, 200);
-        const simulationReport = await JSON.parse(response.payload[0]);
-        console.log("Simulation Report: ", simulationReport);
+        const simulationReport = await JSON.parse(response.payload);
+        console.log("Generated simulation report: ", simulationReport);
         assert.ok(simulationReport);
         assert.strictEqual(simulationReport.PrintJobID, ctx.jobID);
         assert.strictEqual(simulationReport.WorkflowID, ctx.workflowID);
-        console.log("Generated simulation report: ", simulationReport);
+    
     });
 
     // 6. Make sure that the simulation report can be retrieved
