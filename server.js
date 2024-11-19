@@ -190,8 +190,13 @@ function setupGets(database) {
  */
 function setupPosts(database) {
   fastify.post('/createJob', async (request, reply) => {
-    await fastifyPostHelper(reply, database, newPrintJob,
-      [request.body.Title, request.body.PageCount, request.body.RasterizationProfile]);
+    try {
+      const result = newPrintJob(database, request.body.Title, request.body.PageCount, request.body.RasterizationProfile);
+      reply.code(200).send(result);
+    }
+    catch (err) {
+      reply.code(err.code).send(err.message);
+    }
   });
 
 

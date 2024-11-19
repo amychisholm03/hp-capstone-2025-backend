@@ -43,31 +43,19 @@ async function dbSetup(database) {
 }
 
 /**
- * 
- * @param {Db} database 
- * @param {*} collection_name 
- * @param {*} doc 
- * @returns 
+ * Inserts a document (i.e. instance/row) into the given collection (i.e. table).
+ * @param {Db} database The Mongo database object
+ * @param {*} collection_name The collection name
+ * @param {*} doc The document to insert into the database
+ * @returns {*} The ID of the inserted document or an Error if it failed
  */
 async function insert(database, collection_name, doc) {
 	const collection = database.collection(collection_name);
 	const insert = await collection.insertOne(doc);
 	if (insert.acknowledged) {
-		// TODO: Do Stuff
+		return insert.insertedId;
 	} else {
-		// TODO: Do other stuff
-	}
-	return insert.insertedId;
-}
-
-/**
- * Checks if the given array contains any null values.
- * @param {*[]} args 
- */
-function checkNull(args) {
-	for (const arg of args) {
-		// TODO: are we sure about throwing an error here?
-		if (arg === null) throw new Error("Invalid argument");
+		throw new Error("Insert into " + collection_name + " failed");
 	}
 }
 
@@ -77,12 +65,10 @@ function checkNull(args) {
  * @param {string} title 
  * @param {Int32} page_count 
  * @param {string[]} rasterization_profile 
- * @returns 
+ * @returns {*} The ID of the inserted print job or an Error if it failed
  */
 async function newPrintJob(database, title, page_count, rasterization_profile) {
 	// TODO: Check the validity of foreign keys
-	// TODO: Is there a way to place type constraints on a function?
-	checkNull([database, title, page_count, rasterization_profile]);
 	return await insert(database, "PrintJob", {
 		Title: title,
 		DateCreated: new Timestamp(),
@@ -96,7 +82,7 @@ async function newPrintJob(database, title, page_count, rasterization_profile) {
  * @param {Db} database 
  * @param {string} title 
  * @param {ObjectId[]} workflow_steps 
- * @returns 
+ * @returns {*} The ID of the inserted workflow or an Error if it failed
  */
 async function newWorkflow(database, title, workflow_steps) {
 	checkNull([database, title, workflow_steps]);
@@ -114,7 +100,7 @@ async function newWorkflow(database, title, workflow_steps) {
  * @param {ObjectId} next_step 
  * @param {Int32} setup_time 
  * @param {Int32} time_per_page 
- * @returns 
+ * @returns {*} The ID of the inserted step or an Error if it failed
  */
 async function newWorkflowStep(database, title, previous_step, next_step, setup_time, time_per_page) {
 	checkNull([database, title, setup_time, time_per_page]);
@@ -134,7 +120,7 @@ async function newWorkflowStep(database, title, previous_step, next_step, setup_
  * @param {ObjectId} workflow_id 
  * @param {Int32} total_time_taken 
  * @param {Int32} rasterization_time_taken 
- * @returns 
+ * @returns {*} The ID of the inserted report or an Error if it failed
  */
 async function newSimulationReport(database, print_job_id, workflow_id, total_time_taken, rasterization_time_taken) {
 	checkNull([database, print_job_id, workflow_id, total_time_taken, rasterization_time_taken]);
@@ -145,7 +131,6 @@ async function newSimulationReport(database, print_job_id, workflow_id, total_ti
 		RasterizationTimeTaken: rasterization_time_taken,
 		CreationTime: Date.now()
 	});
-	// make sure that the return value of the query is not empty
 }
 
 module.exports = {

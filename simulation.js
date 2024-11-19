@@ -40,8 +40,8 @@ async function simulate(printJob, workflow, database) {
 
 	// Find times for report
 	// TODO: This could be done in a single loop
-	let rastTime;
-	const totalTime = await Math.max(...Object.keys(results).map((k) => {
+	let rastTime = 0;
+	const totalTime = Math.max(...Object.keys(results).map((k) => {
 		if (results[k].stepName === "Rasterization") rastTime = results[k].stepTime;
 		return results[k].cumulative;
 	}));
@@ -75,7 +75,8 @@ async function isVisited(visited, check, mutex) {
 
 
 async function simulateStep(printJob, workflowSteps, step) {
-	// await new Promise(resolve => setTimeout(resolve, Math.random()*1000)); //TODO: Remove
+	// TODO: in the future, steps will have different functions
+	// to simulate how long they take
 	const funcs = {
 		"Preflight": placeholder,
 		"Metrics": placeholder,
