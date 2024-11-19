@@ -73,7 +73,13 @@ async function isVisited(visited, check, mutex) {
 	});
 }
 
-
+/**
+ * 
+ * @param {*} printJob 
+ * @param {*} workflowSteps 
+ * @param {string} step 
+ * @returns 
+ */
 async function simulateStep(printJob, workflowSteps, step) {
 	// TODO: in the future, steps will have different functions
 	// to simulate how long they take
@@ -85,7 +91,14 @@ async function simulateStep(printJob, workflowSteps, step) {
 		"Cutting": placeholder,
 		"Laminating": placeholder,
 	}
-	return await funcs[workflowSteps[step].func](workflowSteps[step], printJob)
+	try {
+		return await funcs[workflowSteps[step].func](workflowSteps[step], printJob);
+	}
+	catch {
+		// Testing steps do not exist in the funcs table
+		// so this is their substitute
+		return workflowSteps[step].time * printJob.PageCount;
+	}
 }
 
 
