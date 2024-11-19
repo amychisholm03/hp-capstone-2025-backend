@@ -54,6 +54,7 @@ test('Full simulation report flow', async (ctx) => {
 
     // 3. Create a new workflow with the above step
     await test('POST /createWorkflow', async () => {
+        console.log("ctx.stepID: ", ctx.stepID);    
         const data = {
             Title: "Test Workflow",
             WorkflowSteps: [ ctx.stepID ]
