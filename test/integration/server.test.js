@@ -144,6 +144,18 @@ test('GET /query', async () => {
     //console.log("Query Results: ", JSON.parse(response.payload));
 });
 
+test('GET /getWorkflowList', async () => {
+    const response = await fastify.inject({
+        method: 'GET',
+        url: '/getWorkflowList'
+    });
+    assert.strictEqual(response.statusCode, 200);
+    const payloadList = response.payload;
+    assert.ok(payloadList);
+    assert.notEqual(payloadList.length, 0);
+    //console.log("All workflows: ", payloadList);
+});
+
 test('GET /getWorkflowStepList', async () => {
     const response = await fastify.inject({
         method: 'GET',
