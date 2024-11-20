@@ -31,15 +31,14 @@ async function dbSetup(database) {
 	await Promise.all(collections.map((c) => database.createCollection(c)));
 
 	// Insert dummy data
-	const pj_id = await newPrintJob(database, "PrintJob 1", 5, ["RP 1"]);
+	const pj_id = await newPrintJob(database, "ACME Package Labels", 5, ["RP 1"]);
 	const wk_id1 = await newWorkflowStep(database, "Preflight", null, null, 10, 7);
 	const wk_id2 = await newWorkflowStep(database, "Metrics", wk_id1, null, 2, 1);
 	const wk_id3 = await newWorkflowStep(database, "Rasterization", wk_id2, null, 50, 16);
 	const wk_id4 = await newWorkflowStep(database, "Printing", wk_id3, null, 10, 7);
 	const wk_id5 = await newWorkflowStep(database, "Cutting", wk_id4, null, 10, 7);
 	const wk_id6 = await newWorkflowStep(database, "Laminating", wk_id5, null, 10, 7);
-	const wf_id = await newWorkflow(database, "Workflow 1", [wk_id1, wk_id2, wk_id3, wk_id4, wk_id5, wk_id6]);
-	await newSimulationReport(database, pj_id, wf_id, 3, 4);
+	const wf_id = await newWorkflow(database, "Printerizer 5000", [wk_id1, wk_id2, wk_id3, wk_id4, wk_id5, wk_id6]);
 }
 
 /**
