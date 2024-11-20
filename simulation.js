@@ -40,8 +40,8 @@ async function simulate(printJob, workflow, database) {
 
 	// Find times for report
 	// TODO: This could be done in a single loop
-	let rastTime;
-	const totalTime = await Math.max(...Object.keys(results).map((k) => {
+	let rastTime = 0;
+	const totalTime = Math.max(...Object.keys(results).map((k) => {
 		if (results[k].stepName === "Rasterization") rastTime = results[k].stepTime;
 		return results[k].cumulative;
 	}));
@@ -73,9 +73,20 @@ async function isVisited(visited, check, mutex) {
 	});
 }
 
-
+/**
+ * 
+ * @param {*} printJob 
+ * @param {*} workflowSteps 
+ * @param {string} step The name of the workflow step
+ * @returns 
+ */
 async function simulateStep(printJob, workflowSteps, step) {
-	// await new Promise(resolve => setTimeout(resolve, Math.random()*1000)); //TODO: Remove
+	if(!workflowSteps[step]){
+		throw new Error("simulateStep: Step not found");
+	}
+
+	// TODO: in the future, steps will have different functions
+	// to simulate how long they take
 	const funcs = {
 		"Preflight": placeholder,
 		"Metrics": placeholder,
@@ -84,7 +95,14 @@ async function simulateStep(printJob, workflowSteps, step) {
 		"Cutting": placeholder,
 		"Laminating": placeholder,
 	}
-	return await funcs[workflowSteps[step].func](workflowSteps[step], printJob)
+
+	// Testing steps do not exist in funcs, so they will just
+	// use the simple calculation
+	if (typeof funcs[workflowSteps[step].func] === 'function') {
+		return await funcs[workflowSteps[step].func](workflowSteps[step], printJob);
+	} else {
+		return workflowSteps[step].time * printJob.PageCount;
+	}
 }
 
 

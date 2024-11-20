@@ -1,6 +1,6 @@
-// v Not needed? v
-// const { Db, Int32, ObjectId, MongoClient, Timestamp } = require("mongodb");
-const { MongoClient, Timestamp } = require("mongodb");
+// Db, Int32, and ObjectId are needed for IDE support to know what the types are
+// eslint-disable-next-line no-unused-vars
+const { Db, Int32, ObjectId, MongoClient, Timestamp } = require("mongodb"); 
 
 /**
  * Connects to the MongoDB database and returns the client and database objects.
@@ -43,31 +43,19 @@ async function dbSetup(database) {
 }
 
 /**
- * 
- * @param {Db} database 
- * @param {*} collection_name 
- * @param {*} doc 
- * @returns 
+ * Inserts a document (i.e. instance/row) into the given collection (i.e. table).
+ * @param {Db} database The Mongo database object
+ * @param {string} collection_name The collection name
+ * @param {*} doc The document to insert into the database
+ * @returns {ObjectId} The ID of the inserted document or an Error if it failed
  */
 async function insert(database, collection_name, doc) {
 	const collection = database.collection(collection_name);
 	const insert = await collection.insertOne(doc);
 	if (insert.acknowledged) {
-		// TODO: Do Stuff
+		return insert.insertedId;
 	} else {
-		// TODO: Do other stuff
-	}
-	return insert.insertedId;
-}
-
-/**
- * Checks if the given array contains any null values.
- * @param {*[]} args 
- */
-function checkNull(args) {
-	for (const arg of args) {
-		// TODO: are we sure about throwing an error here?
-		if (arg === null) throw new Error("Invalid argument");
+		throw new Error("Insert into " + collection_name + " failed");
 	}
 }
 
@@ -77,12 +65,13 @@ function checkNull(args) {
  * @param {string} title 
  * @param {Int32} page_count 
  * @param {string[]} rasterization_profile 
- * @returns 
+ * @returns {ObjectId} The ID of the inserted print job or an Error if it failed
  */
 async function newPrintJob(database, title, page_count, rasterization_profile) {
 	// TODO: Check the validity of foreign keys
-	// TODO: Is there a way to place type constraints on a function?
-	checkNull([database, title, page_count, rasterization_profile]);
+	if (!database || !title || !page_count || !rasterization_profile || rasterization_profile.length == 0) {
+		throw new Error("Invalid parameters for newPrintJob");
+	}
 	return await insert(database, "PrintJob", {
 		Title: title,
 		DateCreated: new Timestamp(),
@@ -96,10 +85,17 @@ async function newPrintJob(database, title, page_count, rasterization_profile) {
  * @param {Db} database 
  * @param {string} title 
  * @param {ObjectId[]} workflow_steps 
- * @returns 
+ * @returns {ObjectId} The ID of the inserted workflow or an Error if it failed
  */
 async function newWorkflow(database, title, workflow_steps) {
-	checkNull([database, title, workflow_steps]);
+	// Validate parameters
+	if (!database || !title || !workflow_steps || workflow_steps.length == 0) {
+		throw new Error("Invalid parameters for newWorkflow");
+	}
+	if (!Array.isArray(workflow_steps) || !workflow_steps.every(id => ObjectId.isValid(id))) {
+		throw new Error("newWorkflow: workflow_steps must be an array of valid ObjectIds");
+	}
+
 	return await insert(database, "Workflow", {
 		Title: title,
 		WorkflowSteps: workflow_steps
@@ -114,10 +110,13 @@ async function newWorkflow(database, title, workflow_steps) {
  * @param {ObjectId} next_step 
  * @param {Int32} setup_time 
  * @param {Int32} time_per_page 
- * @returns 
+ * @returns {ObjectId} The ID of the inserted step or an Error if it failed
  */
-async function newWorkflowStep(database, title, previous_step, next_step, setup_time, time_per_page) {
-	checkNull([database, title, setup_time, time_per_page]);
+async function newWorkflowStep(database, title, previous_step=null, next_step=null, setup_time=0, time_per_page=1) {
+	// previous_step and next_step are ok to be null
+	if (!database || !title || !setup_time || !time_per_page) {
+		throw new Error("Invalid parameters for newWorkflowStep");
+	}
 	return await insert(database, "WorkflowStep", {
 		Title: title,
 		PreviousStep: previous_step,
@@ -134,10 +133,12 @@ async function newWorkflowStep(database, title, previous_step, next_step, setup_
  * @param {ObjectId} workflow_id 
  * @param {Int32} total_time_taken 
  * @param {Int32} rasterization_time_taken 
- * @returns 
+ * @returns {ObjectId} The ID of the inserted report or an Error if it failed
  */
-async function newSimulationReport(database, print_job_id, workflow_id, total_time_taken, rasterization_time_taken) {
-	checkNull([database, print_job_id, workflow_id, total_time_taken, rasterization_time_taken]);
+async function newSimulationReport(database, print_job_id, workflow_id, total_time_taken=0, rasterization_time_taken=0) {
+	if (!database || !print_job_id || !workflow_id) {
+		throw new Error("Invalid parameters for newSimulationReport");
+	}
 	return await insert(database, "SimulationReport", {
 		PrintJobID: print_job_id,
 		WorkflowID: workflow_id,
@@ -145,14 +146,13 @@ async function newSimulationReport(database, print_job_id, workflow_id, total_ti
 		RasterizationTimeTaken: rasterization_time_taken,
 		CreationTime: Date.now()
 	});
-	// make sure that the return value of the query is not empty
 }
 
 module.exports = {
-    dbConnect,
-    dbSetup,
-    newPrintJob,
-    newWorkflow,
-    newWorkflowStep,
-    newSimulationReport
+	dbConnect,
+	dbSetup,
+	newPrintJob,
+	newWorkflow,
+	newWorkflowStep,
+	newSimulationReport
 };
