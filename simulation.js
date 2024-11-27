@@ -39,10 +39,11 @@ async function simulate(printJob, workflow, database) {
 	);
 
 	// Find times for report
-	// TODO: This could be done in a single loop
 	let rastTime = 0;
+	let stepTimes = {};
 	const totalTime = Math.max(...Object.keys(results).map((k) => {
-		if (results[k].stepName === "Rasterization") rastTime = results[k].stepTime;
+		if (results[k].stepName === "Rasterization") rastTime = results[k].stepTime; //TODO: Remove
+		stepTimes[results[k].stepName] = results[k].stepTime;
 		return results[k].cumulative;
 	}));
 
