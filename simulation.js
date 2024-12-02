@@ -1,6 +1,41 @@
 const { Mutex } = require('async-mutex');
 const { dbConnect, dbSetup, newSimulationReport } = require("./mongodb.js"); //TODO: Remove
 
+/**
+ * @typedef {Object} PrintJob
+ * @prop {ObjectId} _id
+ * @prop {string} title
+ * @prop {Timestamp} DateCreated
+ * @prop {int} PageCount
+ * @prop {string} RasterizationProfile
+ */
+
+/**
+ * @typedef {Object} WorkflowStep
+ * @prop {ObjectId} _id
+ * @prop {string} Title
+ * @prop {ObjectId} PreviousStep
+ * @prop {ObjectId} NextStep
+ * @prop {int} SetupTime
+ * @prop {int} TimePerPage
+ */
+
+/** 
+ * @typedef {Object} Workflow
+ * @prop {ObjectId} _id
+ * @prop {string} Title
+ * @prop {[WorkflowStep]} WorkflowSteps
+ */
+
+/**
+ * @typedef {Object} SimulationReport
+ * @prop {ObjectId} _id
+ * @prop {ObjectId} PrintJobID
+ * @prop {ObjectId} WorkflowID
+ * @prop {int} TotalTimeTaken
+ * @prop {int} RasterizationTimeTaken
+ * @prop {int} CreationTime
+ */
 
 async function main() {
 	const [_, database] = await dbConnect("mongodb://localhost:27017/hp");
@@ -12,12 +47,11 @@ async function main() {
 
 /**
  * Simulate a PrintJob through the given Workflow
- * @param {dictionary} printJob 
- * @param {dictionary} workflow 
+ * @param {PrintJob} printJob 
+ * @param {Workflow} workflow 
  * @param {Db} database
  * @returns {ObjectID} the ID of the Simulation Report
  */
-
 async function simulate(printJob, workflow, database) {
 	// Format workflowSteps correctly for traverseGraph
 	let workflowSteps = {}
@@ -33,6 +67,7 @@ async function simulate(printJob, workflow, database) {
 		};
 	}
 
+	// Get all workflow steps from graph along with corresponding times
 	const results = await traverseGraph(printJob, workflowSteps,
 		Object.keys(workflowSteps)[0],
 		Object.fromEntries(Object.keys(workflowSteps).map((k) => [k, false])),
@@ -76,11 +111,11 @@ async function isVisited(visited, check, mutex) {
 }
 
 /**
- * 
- * @param {*} printJob 
- * @param {*} workflowSteps 
- * @param {string} step The name of the workflow step
- * @returns 
+ * Simulate a step and determine the time it takes to run
+ * @param {PrintJob} printJob 
+ * @param {[WorkflowStep]} workflowSteps 
+ * @param {string} step (The name of the workflow step)
+ * @returns {int} the time taken for the step
  */
 async function simulateStep(printJob, workflowSteps, step) {
 	if(!workflowSteps[step]){
