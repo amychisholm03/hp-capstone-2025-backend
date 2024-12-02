@@ -43,11 +43,12 @@ async function simulate(printJob, workflow, database) {
 	let stepTimes = {};
 	const totalTime = Math.max(...Object.keys(results).map((k) => {
 		if (results[k].stepName === "Rasterization") rastTime = results[k].stepTime; //TODO: Remove
+		//TODO: This doesn't properly support multiple steps of the same type
 		stepTimes[results[k].stepName] = results[k].stepTime;
 		return results[k].cumulative;
 	}));
 
-	return await newSimulationReport(database, printJob._id, workflow._id, totalTime, rastTime);
+	return await newSimulationReport(database, printJob._id, workflow._id, totalTime, stepTimes, rastTime);
 }
 
 
