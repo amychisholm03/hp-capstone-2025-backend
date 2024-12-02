@@ -131,10 +131,11 @@ async function newWorkflowStep(database, title, previous_step=null, next_step=nu
  * @param {ObjectId} print_job_id 
  * @param {ObjectId} workflow_id 
  * @param {Int32} total_time_taken 
+ * @param {Dictionary} step_times
  * @param {Int32} rasterization_time_taken 
  * @returns {ObjectId} The ID of the inserted report or an Error if it failed
  */
-async function newSimulationReport(database, print_job_id, workflow_id, total_time_taken=0, rasterization_time_taken=0) {
+async function newSimulationReport(database, print_job_id, workflow_id, total_time_taken=0, step_times, rasterization_time_taken=0) {
 	if (!database || !print_job_id || !workflow_id) {
 		throw new Error("Invalid parameters for newSimulationReport");
 	}
@@ -142,6 +143,7 @@ async function newSimulationReport(database, print_job_id, workflow_id, total_ti
 		PrintJobID: print_job_id,
 		WorkflowID: workflow_id,
 		TotalTimeTaken: total_time_taken,
+		StepTimes: step_times,
 		RasterizationTimeTaken: rasterization_time_taken,
 		CreationTime: Date.now()
 	});
