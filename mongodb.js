@@ -1,6 +1,12 @@
 // Db, Int32, and ObjectId are needed for IDE support to know what the types are
 // eslint-disable-next-line no-unused-vars
 const { Db, Int32, ObjectId, MongoClient, Timestamp } = require("mongodb"); 
+/** @type {
+ * typedefs.PrintJob,
+ * typedefs.WorkflowStep,
+ * typedefs.Workflow,
+ * typedefs.SimulationReport
+ * } */
 
 /**
  * Connects to the MongoDB database and returns the client and database objects.
