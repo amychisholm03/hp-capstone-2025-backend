@@ -113,7 +113,13 @@ async function simulateStep(printJob, workflowSteps, step) {
 	}
 }
 
-
+/** 
+ * A placeholder function to be replaced with specific step functions
+ * in the future
+ * @param {WorkflowStep} workflowStep
+ * @param {PrintJob} printJob
+ * @returns
+ */
 async function placeholder(workflowStep, printJob) {
 	return workflowStep.time * printJob.PageCount;
 }
