@@ -6,13 +6,17 @@ const { dbConnect, newPrintJob, newWorkflow, newWorkflowStep, newSimulationRepor
 let database;
 
 before(async () => {
+	// Setup and connect to mongodb
 	const [_, db] = await dbConnect("mongodb://localhost:27017");
+	await dbSetup(db);
 	database = db;
 });
 
 after(async () => {
+	// Clear all collections
 	const collections = await database.listCollections().toArray();
 	await Promise.all(collections.map(c => database.collection(c.name).deleteMany({})));
+    process.exit(0);
 });
 
 test('newPrintJob - valid', async () => {
