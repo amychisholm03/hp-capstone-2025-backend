@@ -1,9 +1,9 @@
 const { test, before, after } = require('node:test');
 const assert = require('node:assert');
 const { Int32, ObjectId } = require("mongodb");
-const { dbConnect, newPrintJob, newWorkflow, newWorkflowStep, newSimulationReport } = require("../../mongodb.js");
+const { dbConnect, dbSetup, newPrintJob, newWorkflow, newWorkflowStep, newSimulationReport } = require("../../mongodb.js");
 
-let database;
+let database = null;
 
 before(async () => {
 	// Setup and connect to mongodb
@@ -13,9 +13,8 @@ before(async () => {
 });
 
 after(async () => {
-	// Clear all collections
-	const collections = await database.listCollections().toArray();
-	await Promise.all(collections.map(c => database.collection(c.name).deleteMany({})));
+	// The next dbSetup call will drop the database
+	// so no need to do it here
     process.exit(0);
 });
 
