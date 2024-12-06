@@ -152,6 +152,9 @@ async function newSimulationReport(database, print_job_id, workflow_id, total_ti
 module.exports = {
 	dbConnect,
 	dbSetup,
+	// Ideally, we wouldn't expose these functions
+	// below, but for testing purposes, we need to.
+	// TODO: is there a better way to do this?
 	newPrintJob,
 	newWorkflow,
 	newWorkflowStep,
