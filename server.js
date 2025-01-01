@@ -1,12 +1,13 @@
 const { dbConnect, dbSetup, newPrintJob, newWorkflow, newWorkflowStep } = require("./mongodb.js");
-
 const fastify = require('fastify')({ logger: true })
 const cors = require('@fastify/cors');
 const { simulate } = require('./simulation.js');
 const { ObjectId } = require("mongodb");
 
+
 // TODO: Where should we store this?
 const mongoUrl = "mongodb://db.wsuv-hp-capstone.com:27017/hp";
+
 
 /**
  * Starts up the fastify server and connects to the Mongo database.
@@ -16,19 +17,21 @@ const mongoUrl = "mongodb://db.wsuv-hp-capstone.com:27017/hp";
  */
 async function start(host = "0.0.0.0", port = 80, url = mongoUrl) {
     try {
-        // Register the fastify-cors plugin
+        // Connect to the Mongo database
+        const [_, database] = await dbConnect(url);
+        await dbSetup(database); // TODO: get rid of once in mongodb.test.js?
+
+        // Register the fastify-cors plugin 
         fastify.register(cors, {
             origin: '*', // Allow all origins
             methods: ['GET', 'POST'], // Allow specific methods
         });
-
-        // Connect to the Mongo database
-        const [_, database] = await dbConnect(url);
-        await dbSetup(database); // TODO: get rid of once in mongodb.test.js?
         setupPosts(database);
+        legacy_gets(database);
+        for(const coll of ["PrintJob", "Workflow", "WorkflowStep", "SimulationReport"])
+            setupGets(database, coll);
 
         // Start the server
-        setupGets(database);
         const address = await fastify.listen({ host: host, port: port });
         console.log(`Server listening at ${address}`);
         
@@ -40,11 +43,24 @@ async function start(host = "0.0.0.0", port = 80, url = mongoUrl) {
 
 
 /**
- * Sets up the GETs for the server
+ * Sets up the GETs for a collection
  * @param {Db} database
+ * @param {string} coll collection name
  */
-function setupGets(database) {
-    legacy_gets(database);
+function setupGets(database, coll){
+    fastify.get(`/${coll}`, async (_, reply) => {
+        const docs = await database.collection(coll).find().toArray();
+        reply.code(200).send(docs);
+    });
+
+    fastify.get(`/${coll}/:ID`, async (request, reply) => {
+        try {
+            const doc = await database.collection(coll).findOne(
+                { _id: new ObjectId(request.params.ID) });
+            if(!doc) reply.code(404);
+            else reply.code(200).send(doc);
+        } catch (err) { reply.code(400).send(err.message); }
+    });
 }
 
 
@@ -57,6 +73,10 @@ function setupPosts(database) {
 }
 
 
+/**
+ * Old Gets
+ * @param {Db} database 
+ */
 function legacy_gets(database){
     fastify.get('/', async (_, reply) => {
         reply.code(200).send('Hello, client!');
@@ -220,6 +240,10 @@ function legacy_gets(database){
 }
 
 
+/**
+ * Old Posts
+ * @param {Db} database 
+ */
 function legacy_posts(database){
     /**
      * Create a new print job
