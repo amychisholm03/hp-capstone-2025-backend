@@ -1,9 +1,9 @@
 <h5>Files</h5>
-src/api.rs    		Sets up REST API routes  
-src/database.rs    	Interfaces with the database and defines the data structures  
-src/main.rs    		Runs the server  
-src/simulation.rs   Simulates a printjob going through a workflow  
-tests/    			Tests  
+src/api.rs    		Sets up REST API routes<br>
+src/database.rs    	Interfaces with the database and defines the data structures<br>
+src/main.rs    		Runs the server<br>
+src/simulation.rs   Simulates a printjob going through a workflow<br>
+tests/    			Tests<br>
 
 
 <h5>Database Schemas</h5>
@@ -45,7 +45,7 @@ tests/    			Tests
 
 
 <h5>REST API</h5>
-https://restfulapi.net/  
+https://restfulapi.net/<br>
 https://restfulapi.net/http-methods/
 	
 	GET
@@ -94,9 +94,9 @@ https://restfulapi.net/http-methods/
 
 
 <h5>API calls to consider</h5>:
-	Bulk operations (eg. POST /PrintJob/bulk, GET /PrintJob/bulk): Creates or retrieves multiple documents at once.  
-	Pagination (eg. GET /PrintJob?page=1&limit=20): May be a good idea if data set gets large  
-	Health (GET /health): Checks if the API is running  
+	Bulk operations (eg. POST /PrintJob/bulk, GET /PrintJob/bulk): Creates or retrieves multiple documents at once.<br>
+	Pagination (eg. GET /PrintJob?page=1&limit=20): May be a good idea if data set gets large<br>
+	Health (GET /health): Checks if the API is running<br>
 
 
 <h5>Not Implementing</h5>
