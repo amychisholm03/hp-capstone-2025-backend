@@ -1,12 +1,13 @@
 <h5>Files</h5>
-src/api.rs    		Sets up REST API routes
-src/database.rs    	Interfaces with the database and defines the data structures
-src/main.rs    		Runs the server
-src/simulation.rs   Simulates a printjob going through a workflow
-tests/    			Tests
+src/api.rs    		Sets up REST API routes  
+src/database.rs    	Interfaces with the database and defines the data structures  
+src/main.rs    		Runs the server  
+src/simulation.rs   Simulates a printjob going through a workflow  
+tests/    			Tests  
 
 
 <h5>Database Schemas</h5>
+
 	PrintJob
 		id (pk)
 		Title: string
@@ -44,7 +45,7 @@ tests/    			Tests
 
 
 <h5>REST API</h5>
-https://restfulapi.net/
+https://restfulapi.net/  
 https://restfulapi.net/http-methods/
 	
 	GET
@@ -93,14 +94,14 @@ https://restfulapi.net/http-methods/
 
 
 <h5>API calls to consider</h5>:
-	Bulk operations (eg. POST /PrintJob/bulk, GET /PrintJob/bulk): Creates or retrieves multiple documents at once.
-	Pagination (eg. GET /PrintJob?page=1&limit=20): May be a good idea if data set gets large
-	Health (GET /health): Checks if the API is running
+	Bulk operations (eg. POST /PrintJob/bulk, GET /PrintJob/bulk): Creates or retrieves multiple documents at once.  
+	Pagination (eg. GET /PrintJob?page=1&limit=20): May be a good idea if data set gets large  
+	Health (GET /health): Checks if the API is running  
 
 
 <h5>Not Implementing</h5>
 	PUT/PATCH: Replaces an existing document/some of its fields. I don't think these makes sense for our use case as updating PrintJobs and Workflows would invalidate any simulation reports that rely on them. If the frontend wants to "update" one of these, it should first delete the old one, then send the new one with POST. For SimulationReports and WorkflowSteps, the frontend shouldn't be able to modify these.
-
-
-
+  
+  
+  
 *from RESTful API: the response SHOULD be HTTP response code 201 (Created) and contain an entity that describes the status of the request and refers to the new resource, and a Location header.
