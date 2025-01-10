@@ -1,9 +1,15 @@
-const { dbConnect, dbSetup, newPrintJob, newWorkflow, newWorkflowStep } = require("./mongodb.js");
-const fastify = require('fastify')({ logger: true })
+const { dbConnect, dbSetup, insert, PrintJobSchema, newPrintJob, newWorkflow, newWorkflowStep } = require("./mongodb.js");
+const fastify = require('fastify')({
+    logger: true, 
+    ajv: {customOptions: {
+        strict: true,
+        removeAdditional: 'all',
+        coerceTypes: false
+    }}
+})
 const cors = require('@fastify/cors');
 const { simulate } = require('./simulation.js');
 const { ObjectId } = require("mongodb");
-
 
 // TODO: Where should we store this?
 const mongoUrl = "mongodb://db.wsuv-hp-capstone.com:27017/hp";
@@ -26,6 +32,8 @@ async function start(host = "0.0.0.0", port = 80, url = mongoUrl) {
             origin: '*', // Allow all origins
             methods: ['GET', 'POST'], // Allow specific methods
         });
+
+        // Set up API
         setupPosts(database);
         legacy_gets(database);
         for(const coll of ["PrintJob", "Workflow", "WorkflowStep", "SimulationReport"])
@@ -48,8 +56,14 @@ async function start(host = "0.0.0.0", port = 80, url = mongoUrl) {
  * @param {string} coll collection name
  */
 function setupGets(database, coll){
-    fastify.get(`/${coll}`, async (_, reply) => {
-        const docs = await database.collection(coll).find().toArray();
+    // search: optional json dictionary containing search terms
+    // fields: optional json data that contains a list of fields to return
+    fastify.get(`/${coll}`, async (request, reply) => {
+        //TODO: JSON.parse() safety?
+        const search = (request.query.search) ? JSON.parse(request.query.search) : {};
+        let docs = await database.collection(coll).find(search).toArray();
+        if(request.query.fields) 
+            docs = await docs.map((x) => requestedFields(x, request.query.fields));
         reply.code(200).send(docs);
     });
 
@@ -64,12 +78,29 @@ function setupGets(database, coll){
 }
 
 
+async function requestedFields(doc, fields){
+    //TODO: JSON.parse() safety?
+    return Object.fromEntries(Object.entries(doc).filter(([key]) => 
+        new Set(JSON.parse(fields)).has(key)));//);
+}
+
+
 /**
  * Sets up the POSTs for the server
  * @param {Db} database 
  */
 function setupPosts(database) {
     legacy_posts(database);
+
+    fastify.post("/PrintJob", {schema: PrintJobSchema}, async (request, reply) => {
+        try {
+            const result = await newPrintJob(database, request.body.Title, request.body.PageCount, request.body.RasterizationProfile);
+            reply.code(200).send(result);
+        }
+        catch (err) {
+            reply.code(500).send(err.message);
+        }
+    });
 }
 
 

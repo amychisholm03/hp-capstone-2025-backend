@@ -2,6 +2,21 @@
 // eslint-disable-next-line no-unused-vars
 const { Db, Int32, ObjectId, MongoClient, Timestamp } = require("mongodb"); 
 
+
+const PrintJobSchema = {
+    body: {
+        type: 'object',
+        required: ['Title', 'PageCount', 'RasterizationProfile'],
+        properties: {
+            Title: {type: 'string'},
+            PageCount: {type: 'integer'},
+            RasterizationProfile: {type: 'array', items: {type: 'string'}},
+        },
+		additionalProperties: false
+    },
+};
+
+
 /**
  * Connects to the MongoDB database and returns the client and database objects.
  * @param {string} url The URL of the MongoDB database connection
@@ -32,6 +47,8 @@ async function dbSetup(database) {
 
 	// Insert dummy data
 	const pj_id = await newPrintJob(database, "ACME Package Labels", 5, ["RP 1"]);
+	const pj_id2 = await newPrintJob(database, "ACME Package Labels 2", 5, ["RP 1"]);
+	const pj_id3 = await newPrintJob(database, "ACME Package Labels 3", 5, ["RP 1"]);
 	const wk_id1 = await newWorkflowStep(database, "Preflight", null, null, 10, 7);
 	const wk_id2 = await newWorkflowStep(database, "Metrics", wk_id1, null, 2, 1);
 	const wk_id3 = await newWorkflowStep(database, "Rasterization", wk_id2, null, 50, 16);
@@ -57,6 +74,8 @@ async function insert(database, collection_name, doc) {
 		throw new Error("Insert into " + collection_name + " failed");
 	}
 }
+
+// async function new_insert(database, collection_name, doc)
 
 /**
  * Inserts a new print job into the database.
@@ -152,9 +171,11 @@ async function newSimulationReport(database, print_job_id, workflow_id, total_ti
 module.exports = {
 	dbConnect,
 	dbSetup,
+	PrintJobSchema,
 	// Ideally, we wouldn't expose these functions
 	// below, but for testing purposes, we need to.
 	// TODO: is there a better way to do this?
+	insert,
 	newPrintJob,
 	newWorkflow,
 	newWorkflowStep,
