@@ -93,7 +93,7 @@ https://restfulapi.net/http-methods/
 			404(Not Found): 404 Not Found
 
 
-<h5>API calls to consider</h5>:
+<h5>API calls to consider</h5>
 	Bulk operations (eg. POST /PrintJob/bulk, GET /PrintJob/bulk): Creates or retrieves multiple documents at once.<br>
 	Pagination (eg. GET /PrintJob?page=1&limit=20): May be a good idea if data set gets large<br>
 	Health (GET /health): Checks if the API is running<br>
@@ -101,7 +101,6 @@ https://restfulapi.net/http-methods/
 
 <h5>Not Implementing</h5>
 	PUT/PATCH: Replaces an existing document/some of its fields. I don't think these makes sense for our use case as updating PrintJobs and Workflows would invalidate any simulation reports that rely on them. If the frontend wants to "update" one of these, it should first delete the old one, then send the new one with POST. For SimulationReports and WorkflowSteps, the frontend shouldn't be able to modify these.
-  
-  
-  
+<br>
+<br>  
 *from RESTful API: the response SHOULD be HTTP response code 201 (Created) and contain an entity that describes the status of the request and refers to the new resource, and a Location header.
