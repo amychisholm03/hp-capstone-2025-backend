@@ -1,5 +1,5 @@
 <h5>Run</h5>
-run `cargo run` in root directory for default(server) parameters
+run `cargo run` in root directory for default(server) parameters<br>
 `cargo run l` to run on localhost:5040
 
 <h5>Files</h5>
