@@ -1,3 +1,7 @@
+<h5>Run</h5>
+run `cargo run` in root directory for default(server) parameters
+`cargo run l` to run on localhost:5040
+
 <h5>Files</h5>
 src/api.rs    		Sets up REST API routes<br>
 src/database.rs    	Interfaces with the database and defines the data structures<br>
