@@ -24,69 +24,75 @@ use crate::simulation::{*};
  */
 
 
+#[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PrintJob {
 	#[serde(default)]
 	id: Option<u32>,
-	title: String,
+	Title: String,
 	#[serde(default)]
-	date_created: Option<u32>,
-	page_count: u32,
-	rasterization_profile: String
+	DateCreated: Option<u32>,
+	PageCount: u32,
+	RasterizationProfile: String
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize)]
 //TODO: Different name?
 struct WFS {
 	id: u32,
-	prev: Vec<u32>,
-	next: Vec<u32>
+	Prev: Vec<u32>,
+	Next: Vec<u32>
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Workflow {
 	#[serde(default)]
 	id: Option<u32>,
-	title: String,
-	workflow_steps: Vec<WFS>
+	Title: String,
+	WorkflowSteps: Vec<WFS>
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WorkflowStep {
 	#[serde(default)]
 	id: Option<u32>,
-	title: String,
-	setup_time: u32,
-	time_per_page: u32
+	Title: String,
+	SetupTime: u32,
+	TimePerPage: u32
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SimulationReport {
 	#[serde(default)]
 	id: Option<u32>,
-	pj_id: u32,
-	wf_id: u32,
-	creation_time: u32,
-	total_time: u32,
-	step_times: HashMap<u32,u32> //Key: WorkflowStep ID; Value: Total time for that step
+	PrintJobID: u32,
+	WorkflowID: u32,
+	CreationTime: u32,
+	TotalTimeTaken: u32,
+	StepTimes: HashMap<u32,u32> //Key: WorkflowStep ID; Value: Total time for that step
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SimulationReportArgs {
-	pub pj_id: u32,
-	pub wf_id: u32,
+	pub PrintJobID: u32,
+	pub WorkflowID: u32,
 }
 
 
 impl SimulationReport {
-	pub fn new(pj_id: u32, wf_id: u32, creation_time: u32, total_time: u32, step_times: HashMap<u32,u32>) -> SimulationReport {
+	pub fn new(print_job_id: u32, workflow_id: u32, creation_time: u32, total_time_taken: u32, step_times: HashMap<u32,u32>) -> SimulationReport {
 		return SimulationReport{
 			id: None,
-			pj_id: pj_id,
-			wf_id: wf_id,
-			creation_time: creation_time,
-			total_time: total_time,
-			step_times: step_times
+			PrintJobID: print_job_id,
+			WorkflowID: workflow_id,
+			CreationTime: creation_time,
+			TotalTimeTaken: total_time_taken,
+			StepTimes: step_times
 		}
 	}
 }
@@ -116,35 +122,35 @@ pub fn database_init(){
 	let id = next_id();
 	print_jobs.lock().unwrap().insert(id, PrintJob{
 		id: Some(id), 
-		title: "PrintJob1".to_string(), 
-		date_created: Some(0), 
-		page_count: 5, 
-		rasterization_profile: "CMYK".to_string()
+		Title: "PrintJob1".to_string(), 
+		DateCreated: Some(0), 
+		PageCount: 5, 
+		RasterizationProfile: "CMYK".to_string()
 	});
 
 	let id = next_id();
 	workflows.lock().unwrap().insert(id, Workflow{
 		id: Some(id),
-		title: "Workflow 1".to_string(),
-		workflow_steps: vec![WFS{id:2, next:vec![], prev:vec![]}]
+		Title: "Workflow 1".to_string(),
+		WorkflowSteps: vec![WFS{id:2, Next:vec![], Prev:vec![]}]
 	});
 
 	let id = next_id();
 	workflow_steps.lock().unwrap().insert(id, WorkflowStep{
 		id: Some(id),
-		title: "WorkflowStep 1".to_string(),
-		setup_time: 7,
-		time_per_page: 3
+		Title: "WorkflowStep 1".to_string(),
+		SetupTime: 7,
+		TimePerPage: 3
 	});
 
 	let id = next_id();
 	simulation_reports.lock().unwrap().insert(id, SimulationReport{
 		id: Some(id),
-		pj_id: 0,
-		wf_id: 1,
-		creation_time: 6,
-		total_time: 25,
-		step_times: HashMap::from([(2, 15)])
+		PrintJobID: 0,
+		WorkflowID: 1,
+		CreationTime: 6,
+		TotalTimeTaken: 25,
+		StepTimes: HashMap::from([(2, 15)])
 	});
 }
 
@@ -183,11 +189,11 @@ pub fn find_simulation_report(id: u32) -> Option<String> {
 
 
 pub fn insert_print_job(mut data: PrintJob) -> Option<u32> {
-	if data.id != None || data.date_created != None { return None }
+	if data.id != None || data.DateCreated != None { return None }
 	let print_jobs = PRINT_JOBS.get_or_init(|| Mutex::new(HashMap::new()));
 	let id = next_id();
 	data.id = Some(id);
-	data.date_created = Some(0);
+	data.DateCreated = Some(0);
 	print_jobs.lock().unwrap().insert(id, data);
 	return Some(id);
 }
