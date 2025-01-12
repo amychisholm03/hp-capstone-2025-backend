@@ -4,6 +4,7 @@ use crate::api::{*};
 use crate::database::{*};
 pub mod api;
 pub mod database;
+pub mod simulation;
 
 const HOST: &str = "0.0.0.0";
 const PORT: &str = "80";

@@ -6,6 +6,8 @@ use serde::{Serialize, Deserialize};
 use serde_json::json;
 use std::fmt::Debug;
 
+use crate::simulation::{*};
+
 
 /**
  * This file has a lot of placeholder stuff to allow for development 
@@ -24,9 +26,11 @@ use std::fmt::Debug;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PrintJob {
-	id: u32,
+	#[serde(default)]
+	id: Option<u32>,
 	title: String,
-	date_created: u32,
+	#[serde(default)]
+	date_created: Option<u32>,
 	page_count: u32,
 	rasterization_profile: String
 }
@@ -41,14 +45,16 @@ struct WFS {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Workflow {
-	id: u32,
+	#[serde(default)]
+	id: Option<u32>,
 	title: String,
 	workflow_steps: Vec<WFS>
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WorkflowStep {
-	id: u32,
+	#[serde(default)]
+	id: Option<u32>,
 	title: String,
 	setup_time: u32,
 	time_per_page: u32
@@ -56,12 +62,33 @@ pub struct WorkflowStep {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SimulationReport {
-	id: u32,
+	#[serde(default)]
+	id: Option<u32>,
 	pj_id: u32,
 	wf_id: u32,
 	creation_time: u32,
 	total_time: u32,
 	step_times: HashMap<u32,u32> //Key: WorkflowStep ID; Value: Total time for that step
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SimulationReportArgs {
+	pub pj_id: u32,
+	pub wf_id: u32,
+}
+
+
+impl SimulationReport {
+	pub fn new(pj_id: u32, wf_id: u32, creation_time: u32, total_time: u32, step_times: HashMap<u32,u32>) -> SimulationReport {
+		return SimulationReport{
+			id: None,
+			pj_id: pj_id,
+			wf_id: wf_id,
+			creation_time: creation_time,
+			total_time: total_time,
+			step_times: step_times
+		}
+	}
 }
 
 
@@ -71,6 +98,13 @@ static WORKFLOWS: OnceLock<Mutex<HashMap<u32, Workflow>>> = OnceLock::new();
 static WORKFLOW_STEPS: OnceLock<Mutex<HashMap<u32, WorkflowStep>>> = OnceLock::new();
 static SIMULATION_REPORTS: OnceLock<Mutex<HashMap<u32, SimulationReport>>> = OnceLock::new();
 
+static ID_COUNTER: OnceLock<Mutex<u32>> = OnceLock::new();
+pub fn next_id() -> u32 {
+	let mut out = ID_COUNTER.get_or_init(|| Mutex::new(0)).lock().unwrap();
+	*out += 1;
+	return *out-1;
+}
+
 
 pub fn database_init(){
 	let print_jobs = PRINT_JOBS.get_or_init(|| Mutex::new(HashMap::new()));
@@ -79,29 +113,33 @@ pub fn database_init(){
 	let simulation_reports = SIMULATION_REPORTS.get_or_init(|| Mutex::new(HashMap::new()));
 
 	//Insert some dummy data
-	print_jobs.lock().unwrap().insert(0, PrintJob{
-		id: 0, 
+	let id = next_id();
+	print_jobs.lock().unwrap().insert(id, PrintJob{
+		id: Some(id), 
 		title: "PrintJob1".to_string(), 
-		date_created: 0, 
+		date_created: Some(0), 
 		page_count: 5, 
 		rasterization_profile: "CMYK".to_string()
 	});
 
-	workflows.lock().unwrap().insert(1, Workflow{
-		id: 1,
+	let id = next_id();
+	workflows.lock().unwrap().insert(id, Workflow{
+		id: Some(id),
 		title: "Workflow 1".to_string(),
 		workflow_steps: vec![WFS{id:2, next:vec![], prev:vec![]}]
 	});
 
-	workflow_steps.lock().unwrap().insert(2, WorkflowStep{
-		id: 2,
+	let id = next_id();
+	workflow_steps.lock().unwrap().insert(id, WorkflowStep{
+		id: Some(id),
 		title: "WorkflowStep 1".to_string(),
 		setup_time: 7,
 		time_per_page: 3
 	});
 
-	simulation_reports.lock().unwrap().insert(3, SimulationReport{
-		id: 3,
+	let id = next_id();
+	simulation_reports.lock().unwrap().insert(id, SimulationReport{
+		id: Some(id),
 		pj_id: 0,
 		wf_id: 1,
 		creation_time: 6,
@@ -111,33 +149,92 @@ pub fn database_init(){
 }
 
 
-pub fn get_from_coll(coll: String, id: u32) -> String {
-	match coll.as_str() {
-		"PrintJob" => {
-			let print_jobs = PRINT_JOBS.get_or_init(|| Mutex::new(HashMap::new()));
-			match print_jobs.lock().unwrap().get(&id) {
-				Some(data) => return json!(data).to_string(),
-				None => return "id not found".to_string()
-			}
-		}, "Workflow" => {
-			let workflows = WORKFLOWS.get_or_init(|| Mutex::new(HashMap::new()));
-			match workflows.lock().unwrap().get(&id) {
-				Some(data) => return json!(data).to_string(),
-				None => return "id not found".to_string()
-			}
-		}, "WorkflowStep" => {
-			let workflow_steps = WORKFLOW_STEPS.get_or_init(|| Mutex::new(HashMap::new()));
-			match workflow_steps.lock().unwrap().get(&id) {
-				Some(data) => return json!(data).to_string(),
-				None => return "id not found".to_string()
-			}
-		}, "SimulationReport" => {
-			let simulation_reports = SIMULATION_REPORTS.get_or_init(|| Mutex::new(HashMap::new()));
-			match simulation_reports.lock().unwrap().get(&id) {
-				Some(data) => return json!(data).to_string(),
-				None => return "id not found".to_string()
-			}
-		},
-		_ => return "Collection Not Found".to_string()
-	};
+pub fn find_print_job(id: u32) -> Option<String> {
+	let print_jobs = PRINT_JOBS.get_or_init(|| Mutex::new(HashMap::new()));
+	return match print_jobs.lock().unwrap().get(&id) {
+		Some(data) => Some(json!(data).to_string()),
+		None => None
+	}
+}
+
+pub fn find_workflow(id: u32) -> Option<String> {
+	let workflows = WORKFLOWS.get_or_init(|| Mutex::new(HashMap::new()));
+	return match workflows.lock().unwrap().get(&id) {
+		Some(data) => Some(json!(data).to_string()),
+		None => None
+	}
+}
+
+pub fn find_workflow_step(id: u32) -> Option<String> {
+	let workflow_steps = WORKFLOW_STEPS.get_or_init(|| Mutex::new(HashMap::new()));
+	return match workflow_steps.lock().unwrap().get(&id) {
+		Some(data) => Some(json!(data).to_string()),
+		None => None
+	}
+}
+
+pub fn find_simulation_report(id: u32) -> Option<String> {
+	let simulation_reports = SIMULATION_REPORTS.get_or_init(|| Mutex::new(HashMap::new()));
+	return match simulation_reports.lock().unwrap().get(&id) {
+		Some(data) => Some(json!(data).to_string()),
+		None => None
+	}
+}
+
+
+pub fn insert_print_job(mut data: PrintJob) -> Option<u32> {
+	if data.id != None || data.date_created != None { return None }
+	let print_jobs = PRINT_JOBS.get_or_init(|| Mutex::new(HashMap::new()));
+	let id = next_id();
+	data.id = Some(id);
+	data.date_created = Some(0);
+	print_jobs.lock().unwrap().insert(id, data);
+	return Some(id);
+}
+
+
+pub fn insert_workflow(mut data: Workflow) -> Option<u32> {
+	if data.id != None { return None }
+	let workflows = WORKFLOWS.get_or_init(|| Mutex::new(HashMap::new()));
+	let id = next_id();
+	data.id = Some(id);
+	workflows.lock().unwrap().insert(id, data);
+	return Some(id);
+}
+
+
+pub fn insert_simulation_report(data: SimulationReportArgs) -> Option<u32> {
+	let simulation_reports = SIMULATION_REPORTS.get_or_init(|| Mutex::new(HashMap::new()));
+	let mut new_report = simulate(data);
+	let id = next_id();
+	new_report.id = Some(id);
+	simulation_reports.lock().unwrap().insert(id, new_report);
+	return Some(id);
+}
+
+
+pub fn remove_print_job(id: u32) -> Option<String> {
+	let print_jobs = PRINT_JOBS.get_or_init(|| Mutex::new(HashMap::new()));
+	return match print_jobs.lock().unwrap().remove(&id) {
+		Some(data) => Some(json!(data).to_string()),
+		None => None
+	}
+}
+
+
+pub fn remove_workflow(id: u32) -> Option<String> {
+	let workflows = WORKFLOWS.get_or_init(|| Mutex::new(HashMap::new()));
+	return match workflows.lock().unwrap().remove(&id) {
+		Some(data) => Some(json!(data).to_string()),
+		None => None
+	}
+}
+
+
+pub fn remove_simulation_report(id: u32) -> Option<String> {
+	let simulation_reports = SIMULATION_REPORTS.get_or_init(|| Mutex::new(HashMap::new()));
+	return match simulation_reports.lock().unwrap().remove(&id) {
+		Some(data) => Some(json!(data).to_string()),
+		None => None
+	}
 }
