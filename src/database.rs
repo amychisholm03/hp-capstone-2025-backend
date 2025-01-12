@@ -29,11 +29,9 @@ pub type DocID = u32;
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrintJob {
-	#[serde(default)]
-	id: Option<DocID>,
+	#[serde(default)] id: Option<DocID>,
+	#[serde(default)] DateCreated: Option<u32>,
 	Title: String,
-	#[serde(default)]
-	DateCreated: Option<u32>,
 	PageCount: u32,
 	RasterizationProfile: String
 }
@@ -50,8 +48,7 @@ struct WFS {
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Workflow {
-	#[serde(default)]
-	id: Option<DocID>,
+	#[serde(default)] id: Option<DocID>,
 	Title: String,
 	WorkflowSteps: Vec<WFS>
 }
@@ -59,8 +56,7 @@ pub struct Workflow {
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkflowStep {
-	#[serde(default)]
-	id: Option<DocID>,
+	#[serde(default)] id: Option<DocID>,
 	Title: String,
 	SetupTime: u32,
 	TimePerPage: u32
@@ -69,8 +65,7 @@ pub struct WorkflowStep {
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimulationReport {
-	#[serde(default)]
-	id: Option<DocID>,
+	#[serde(default)] id: Option<DocID>,
 	PrintJobID: DocID,
 	WorkflowID: DocID,
 	CreationTime: u32,
@@ -124,8 +119,8 @@ pub fn database_init(){
 	let id = next_id();
 	print_jobs.lock().unwrap().insert(id, PrintJob{
 		id: Some(id), 
-		Title: "PrintJob1".to_string(), 
 		DateCreated: Some(0), 
+		Title: "PrintJob1".to_string(), 
 		PageCount: 5, 
 		RasterizationProfile: "CMYK".to_string()
 	});
