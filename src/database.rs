@@ -25,7 +25,7 @@ use crate::simulation::{*};
 
 
 #[allow(non_snake_case)]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrintJob {
 	#[serde(default)]
 	id: Option<u32>,
@@ -37,7 +37,7 @@ pub struct PrintJob {
 }
 
 #[allow(non_snake_case)]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 //TODO: Different name?
 struct WFS {
 	id: u32,
@@ -46,7 +46,7 @@ struct WFS {
 }
 
 #[allow(non_snake_case)]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Workflow {
 	#[serde(default)]
 	id: Option<u32>,
@@ -55,7 +55,7 @@ pub struct Workflow {
 }
 
 #[allow(non_snake_case)]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkflowStep {
 	#[serde(default)]
 	id: Option<u32>,
@@ -65,7 +65,7 @@ pub struct WorkflowStep {
 }
 
 #[allow(non_snake_case)]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimulationReport {
 	#[serde(default)]
 	id: Option<u32>,
@@ -155,6 +155,38 @@ pub fn database_init(){
 }
 
 
+// TODO: Update to allow for querying
+pub fn query_print_jobs() -> Option<String> {
+	let print_jobs = PRINT_JOBS.get_or_init(|| Mutex::new(HashMap::new()));
+	let vals: Vec<PrintJob> = print_jobs.lock().unwrap().values().cloned().collect();
+	return Some(json!(vals).to_string());
+}
+
+
+// TODO: Update to allow for querying
+pub fn query_workflows() -> Option<String> {
+	let workflows = WORKFLOWS.get_or_init(|| Mutex::new(HashMap::new()));
+	let vals: Vec<Workflow> = workflows.lock().unwrap().values().cloned().collect();
+	return Some(json!(vals).to_string());
+}
+
+
+// TODO: Update to allow for querying
+pub fn query_workflow_steps() -> Option<String> {
+	let workflow_steps = WORKFLOW_STEPS.get_or_init(|| Mutex::new(HashMap::new()));
+	let vals: Vec<WorkflowStep> = workflow_steps.lock().unwrap().values().cloned().collect();
+	return Some(json!(vals).to_string());
+}
+
+
+// TODO: Update to allow for querying
+pub fn query_simulation_reports() -> Option<String> {
+	let simulation_reports = SIMULATION_REPORTS.get_or_init(|| Mutex::new(HashMap::new()));
+	let vals: Vec<SimulationReport> = simulation_reports.lock().unwrap().values().cloned().collect();
+	return Some(json!(vals).to_string());
+}
+
+
 pub fn find_print_job(id: u32) -> Option<String> {
 	let print_jobs = PRINT_JOBS.get_or_init(|| Mutex::new(HashMap::new()));
 	return match print_jobs.lock().unwrap().get(&id) {
@@ -162,6 +194,7 @@ pub fn find_print_job(id: u32) -> Option<String> {
 		None => None
 	}
 }
+
 
 pub fn find_workflow(id: u32) -> Option<String> {
 	let workflows = WORKFLOWS.get_or_init(|| Mutex::new(HashMap::new()));
@@ -171,6 +204,7 @@ pub fn find_workflow(id: u32) -> Option<String> {
 	}
 }
 
+
 pub fn find_workflow_step(id: u32) -> Option<String> {
 	let workflow_steps = WORKFLOW_STEPS.get_or_init(|| Mutex::new(HashMap::new()));
 	return match workflow_steps.lock().unwrap().get(&id) {
@@ -178,6 +212,7 @@ pub fn find_workflow_step(id: u32) -> Option<String> {
 		None => None
 	}
 }
+
 
 pub fn find_simulation_report(id: u32) -> Option<String> {
 	let simulation_reports = SIMULATION_REPORTS.get_or_init(|| Mutex::new(HashMap::new()));

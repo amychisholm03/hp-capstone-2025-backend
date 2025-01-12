@@ -36,23 +36,39 @@ async fn hello_world() -> String {
 }
 
 
+// TODO: Update to allow for querying
 async fn get_print_jobs() -> String {
-    return "PrintJob".to_string();
+    return match query_print_jobs() {
+        Some(data) => data,
+        None => "Invalid Query".to_string()
+    }
 }
 
 
+// TODO: Update to allow for querying
 async fn get_workflows() -> String {
-    return "Workflow".to_string();
+    return match query_workflows() {
+        Some(data) => data,
+        None => "Invalid Query".to_string()
+    }
 }
 
 
+// TODO: Update to allow for querying
 async fn get_workflow_steps() -> String {
-    return "WorkflowStep".to_string();
+    return match query_workflow_steps() {
+        Some(data) => data,
+        None => "Invalid Query".to_string()
+    }
 }
 
 
+// TODO: Update to allow for querying
 async fn get_simulation_reports() -> String {
-    return "SimulationReport".to_string();
+    return match query_simulation_reports() {
+        Some(data) => data,
+        None => "Invalid Query".to_string()
+    }
 }
 
 
