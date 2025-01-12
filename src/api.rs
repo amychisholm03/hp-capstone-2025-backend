@@ -72,57 +72,57 @@ async fn get_simulation_reports() -> String {
 }
 
 
-async fn get_print_job_by_id(Path(id): Path<String>) -> String {
-    let id_u32: u32 = match id.parse() {
-        Ok(val) => val,
-        Err(_) => return format!("ID {id} invalid")
+async fn get_print_job_by_id(Path(id_str): Path<String>) -> String {
+    let id: DocID = match id_str.parse() {
+        Ok(data) => data,
+        Err(_) => return format!("ID {id_str} invalid")
     };
-    return match find_print_job(id_u32) {
-        Some(val) => val,
-        None => format!("PrintJob {id} not found")
-    };
-}
-
-
-async fn get_workflow_by_id(Path(id): Path<String>) -> String {
-    let id_u32: u32 = match id.parse() {
-        Ok(val) => val,
-        Err(_) => return format!("ID {id} invalid")
-    };
-    return match find_workflow(id_u32) {
-        Some(val) => val,
-        None => format!("Workflow {id} not found")
+    return match find_print_job(id) {
+        Some(data) => data,
+        None => format!("PrintJob {id_str} not found")
     };
 }
 
 
-async fn get_workflow_step_by_id(Path(id): Path<String>) -> String {
-    let id_u32: u32 = match id.parse() {
-        Ok(val) => val,
-        Err(_) => return format!("ID {id} invalid")
+async fn get_workflow_by_id(Path(id_str): Path<String>) -> String {
+    let id: DocID = match id_str.parse() {
+        Ok(data) => data,
+        Err(_) => return format!("ID {id_str} invalid")
     };
-    return match find_workflow_step(id_u32) {
-        Some(val) => val,
-        None => format!("WorkflowStep {id} not found")
+    return match find_workflow(id) {
+        Some(data) => data,
+        None => format!("Workflow {id_str} not found")
     };
 }
 
 
-async fn get_simulation_report_by_id(Path(id): Path<String>) -> String {
-    let id_u32: u32 = match id.parse() {
-        Ok(val) => val,
-        Err(_) => return format!("ID {id} invalid")
+async fn get_workflow_step_by_id(Path(id_str): Path<String>) -> String {
+    let id: DocID = match id_str.parse() {
+        Ok(data) => data,
+        Err(_) => return format!("ID {id_str} invalid")
     };
-    return match find_simulation_report(id_u32) {
-        Some(val) => val,
-        None => format!("SimulationReport {id} not found")
+    return match find_workflow_step(id) {
+        Some(data) => data,
+        None => format!("WorkflowStep {id_str} not found")
+    };
+}
+
+
+async fn get_simulation_report_by_id(Path(id_str): Path<String>) -> String {
+    let id: DocID = match id_str.parse() {
+        Ok(data) => data,
+        Err(_) => return format!("ID {id_str} invalid")
+    };
+    return match find_simulation_report(id) {
+        Some(data) => data,
+        None => format!("SimulationReport {id_str} not found")
     };
 }
 
 
 async fn post_print_job(Json(payload): Json<PrintJob>) -> String {
     return match insert_print_job(payload) {
-        Some(val) => val.to_string(),
+        Some(data) => data.to_string(),
         None => "Did not insert".to_string()
     }
 }
@@ -130,7 +130,7 @@ async fn post_print_job(Json(payload): Json<PrintJob>) -> String {
 
 async fn post_workflow(Json(payload): Json<Workflow>) -> String {
     return match insert_workflow(payload) {
-        Some(val) => val.to_string(),
+        Some(data) => data.to_string(),
         None => "Did not insert".to_string()
     }
 }
@@ -138,42 +138,42 @@ async fn post_workflow(Json(payload): Json<Workflow>) -> String {
 
 async fn post_simulation_report(Json(payload): Json<SimulationReportArgs>) -> String {
     return match insert_simulation_report(payload) {
-        Some(val) => val.to_string(),
+        Some(data) => data.to_string(),
         None => "Did not insert".to_string()
     }
 }
 
 
-async fn delete_print_job(Path(id): Path<String>) -> String {
-    let id_u32: u32 = match id.parse() {
-        Ok(val) => val,
-        Err(_) => return format!("ID {id} invalid")
+async fn delete_print_job(Path(id_str): Path<String>) -> String {
+    let id: DocID = match id_str.parse() {
+        Ok(data) => data,
+        Err(_) => return format!("ID {id_str} invalid")
     };
-    return match remove_print_job(id_u32) {
+    return match remove_print_job(id) {
         Some(data) => data,
         None => "Failed to delete".to_string()
     }
 }
 
 
-async fn delete_workflow(Path(id): Path<String>) -> String {
-    let id_u32: u32 = match id.parse() {
-        Ok(val) => val,
-        Err(_) => return format!("ID {id} invalid")
+async fn delete_workflow(Path(id_str): Path<String>) -> String {
+    let id: DocID = match id_str.parse() {
+        Ok(data) => data,
+        Err(_) => return format!("ID {id_str} invalid")
     };
-    return match remove_workflow(id_u32) {
+    return match remove_workflow(id) {
         Some(data) => data,
         None => "Failed to delete".to_string()
     }
 }
 
 
-async fn delete_simulation_report(Path(id): Path<String>) -> String {
-    let id_u32: u32 = match id.parse() {
-        Ok(val) => val,
-        Err(_) => return format!("ID {id} invalid")
+async fn delete_simulation_report(Path(id_str): Path<String>) -> String {
+    let id: DocID = match id_str.parse() {
+        Ok(data) => data,
+        Err(_) => return format!("ID {id_str} invalid")
     };
-    return match remove_simulation_report(id_u32) {
+    return match remove_simulation_report(id) {
         Some(data) => data,
         None => "Failed to delete".to_string()
     }
