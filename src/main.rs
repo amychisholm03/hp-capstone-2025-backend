@@ -17,7 +17,6 @@ async fn main() {
         { ("localhost", "5040") } else { (HOST, PORT) };
 
     // Initialize database
-    // let db = Database::new();
     database_init();
 
     // Build Routes

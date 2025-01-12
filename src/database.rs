@@ -87,20 +87,20 @@ pub fn database_init(){
 		rasterization_profile: "CMYK".to_string()
 	});
 
-	workflows.lock().unwrap().insert(0, Workflow{
+	workflows.lock().unwrap().insert(1, Workflow{
 		id: 1,
 		title: "Workflow 1".to_string(),
 		workflow_steps: vec![WFS{id:2, next:vec![], prev:vec![]}]
 	});
 
-	workflow_steps.lock().unwrap().insert(0, WorkflowStep{
+	workflow_steps.lock().unwrap().insert(2, WorkflowStep{
 		id: 2,
 		title: "WorkflowStep 1".to_string(),
 		setup_time: 7,
 		time_per_page: 3
 	});
 
-	simulation_reports.lock().unwrap().insert(0, SimulationReport{
+	simulation_reports.lock().unwrap().insert(3, SimulationReport{
 		id: 3,
 		pj_id: 0,
 		wf_id: 1,
