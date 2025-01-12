@@ -61,6 +61,7 @@ https://restfulapi.net/http-methods/
 		/[COLL]/:id
 			Retrieves the document with the specified ID
 			200(OK): Returns the document
+			400(BAD REQUEST): ID is invalid
 			404(Not Found): Document doesn't exist
 
 	POST
@@ -82,18 +83,21 @@ https://restfulapi.net/http-methods/
 	DELETE
 		/PrintJob/:id
 			204(No Content): Successful deletion, no additional data returned
+			400(BAD REQUEST): ID is invalid
 			404(Not Found): 404 Not Found
 			409(Conflict): Existing SimulationReports rely on this PrintJob, can't delete
 				//TODO: Should this return a list of SimulationReport IDs? Or should the frontend do a seperate GET?
 
 		/Workflow/:id
 			204(No Content): Successful deletion, no additional data returned
+			400(BAD REQUEST): ID is invalid
 			404(Not Found): 404 Not Found
 			409(Conflict): Existing SimulationReports rely on this PrintJob, can't delete
 				//TODO: Should this return a list of SimulationReport IDs? Or should the frontend do a seperate GET?
 
 		/SimulationReport/:id
 			204(No Content): Successful deletion, no additional data returned
+			400(BAD REQUEST): ID is invalid
 			404(Not Found): 404 Not Found
 
 

@@ -251,6 +251,7 @@ pub fn insert_simulation_report(data: SimulationReportArgs) -> Option<DocID> {
 }
 
 
+//TODO: Removing a print job should fail if any simulation reports refer to it
 pub fn remove_print_job(id: DocID) -> Option<String> {
 	let print_jobs = PRINT_JOBS.get_or_init(|| Mutex::new(HashMap::new()));
 	return match print_jobs.lock().unwrap().remove(&id) {
@@ -260,6 +261,7 @@ pub fn remove_print_job(id: DocID) -> Option<String> {
 }
 
 
+//TODO: Removing a workflow should fail if any simulation reports refer to it
 pub fn remove_workflow(id: DocID) -> Option<String> {
 	let workflows = WORKFLOWS.get_or_init(|| Mutex::new(HashMap::new()));
 	return match workflows.lock().unwrap().remove(&id) {
