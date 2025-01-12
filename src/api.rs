@@ -3,6 +3,7 @@ use axum::{
     routing::{get, post, delete},
     Router,
 };
+use crate::database::{*};
 
 
 pub fn build_routes() -> Router {
@@ -14,7 +15,6 @@ pub fn build_routes() -> Router {
         .route("/Workflow/{id}", delete(delete_workflow))
         .route("/SimulationReport", post(post_simulation_report))
         .route("/SimulationReport/{id}", delete(delete_simulation_report));
-
     
     let collections = ["PrintJob", "Workflow", "WorkflowStep", "SimulationReport"];
     for coll in collections {
@@ -39,7 +39,11 @@ async fn get_coll(coll: &str) -> String {
 
 
 async fn get_id(Path(id): Path<String>, coll: &str) -> String {
-    return format!("{coll} {id}");
+    let id_u32: u32 = match id.parse() {
+        Ok(val) => val,
+        Err(_) => return format!("id {id} invalid")
+    };
+    return get_from_coll(coll.to_string(), id_u32);
 }
 
 
