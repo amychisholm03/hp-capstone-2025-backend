@@ -1,7 +1,6 @@
 use std::env;
-
-use crate::api::{*};
-use crate::database::{*};
+use crate::api::*;
+use crate::database::*;
 pub mod api;
 pub mod database;
 pub mod simulation;
@@ -9,9 +8,8 @@ pub mod simulation;
 const HOST: &str = "0.0.0.0";
 const PORT: &str = "80";
 
-
 #[tokio::main]
-async fn main() {
+pub async fn main() {
     // Use 'l' as an argument for local testing
     let args: Vec<String> = env::args().collect();
     let (host, port) = if args.len() > 1 && args[1] == "l" 

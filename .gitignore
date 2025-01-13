@@ -11,6 +11,6 @@ actions-runner
 # MacOS
 .DS_Store
 
-# Added by cargo
-
+# Rust/cargo
+Cargo.lock
 /target
