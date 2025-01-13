@@ -1,12 +1,14 @@
 use std::env;
-use crate::api::*;
-use crate::database::*;
+use std::process;
+use crate::api::{*};
+use crate::database::{*};
 pub mod api;
 pub mod database;
 pub mod simulation;
 
 const HOST: &str = "0.0.0.0";
 const PORT: &str = "80";
+
 
 #[tokio::main]
 pub async fn main() {
@@ -24,6 +26,16 @@ pub async fn main() {
 
     // Run Server
     println!("Starting server on {host}:{port}");
-    let listener = tokio::net::TcpListener::bind(format!("{host}:{port}")).await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    let listener = match tokio::net::TcpListener::bind(format!("{host}:{port}")).await {
+        Ok(listener) => listener,
+        Err(e) => {
+            eprintln!("Failed to bind TCP listener: {}", e);
+            process::exit(1);
+        }
+    };
+    
+    if let Err(e) = axum::serve(listener, app).await {
+        eprintln!("Failed to serve: {}", e);
+        process::exit(1);
+    }
 }

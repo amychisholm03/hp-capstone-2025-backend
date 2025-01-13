@@ -1,0 +1,18 @@
+# This service file is used for running the server.js once the backend instance has been started
+# to check the log for this file run "journalctl -u server.service"
+
+[Unit]
+Description=Server service for HP capstone project
+After=network.target
+
+
+[Service]
+ExecStart=sudo /home/admin/.cargo/bin/cargo /home/admin/src/main.rs
+WorkingDirectory=/home/admin/src
+Type=simple
+Restart=always
+
+
+[Install]
+WantedBy=default.target
+RequiredBy=network.target

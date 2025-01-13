@@ -51,7 +51,7 @@ jobs:
                 script: |
                   cd ~/test
                   sudo rm -rf target
-                  cargo install
+                  cargo build
                   cargo test
 
     clean_up_test_folder_on_ec2:
