@@ -14,10 +14,10 @@ mod tests {
         });
 
         // Give the server a moment to start up
-        sleep(Duration::from_secs(1)).await;
+        sleep(Duration::from_secs(5)).await;
 
         // Try to connect to the server
-        let addr = "127.0.0.1:5040";
+        let addr = "0.0.0.0:80";
         let stream = TcpStream::connect(addr).await;
 
         // Assert that the connection was successful
