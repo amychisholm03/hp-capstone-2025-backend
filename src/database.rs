@@ -141,6 +141,22 @@ pub fn database_init(){
 	});
 
 	let id = next_id();
+	workflow_steps.lock().unwrap().insert(id, WorkflowStep{
+		id: Some(id),
+		Title: "WorkflowStep 2".to_string(),
+		SetupTime: 7,
+		TimePerPage: 3
+	});
+
+	let id = next_id();
+	workflow_steps.lock().unwrap().insert(id, WorkflowStep{
+		id: Some(id),
+		Title: "WorkflowStep 3".to_string(),
+		SetupTime: 7,
+		TimePerPage: 3
+	});
+
+	let id = next_id();
 	simulation_reports.lock().unwrap().insert(id, SimulationReport{
 		id: Some(id),
 		PrintJobID: 0,

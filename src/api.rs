@@ -16,7 +16,8 @@ pub fn build_routes() -> Router {
     // https://dev.to/amaendeepm/api-development-in-rust-cors-tower-middleware-and-the-power-of-axum-397k
     let cors_layer = CorsLayer::new()
         .allow_origin(Any)
-        .allow_methods([Method::GET, Method::POST, Method::DELETE]);
+        .allow_methods([Method::GET, Method::POST, Method::DELETE])
+        .allow_headers(Any);
 
     return Router::new()
         .route("/", get(hello_world))
@@ -90,6 +91,7 @@ async fn get_simulation_reports() -> impl IntoResponse {
 
 
 async fn get_print_job_by_id(Path(id_str): Path<String>) -> impl IntoResponse {
+    println!("Here");
     let id: DocID = match id_str.parse() {
         Ok(data) => data,
         Err(_) => return response(400, format!("Invalid ID: {id_str}"))
