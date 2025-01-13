@@ -5,11 +5,19 @@ use axum::{
     Router,
     Json
 };
+use http::Method;
+use tower::ServiceBuilder;
+use tower_http::cors::{CorsLayer, Any};
 use hyper::StatusCode;
 use crate::database::{*};
 
 
 pub fn build_routes() -> Router {
+    // https://dev.to/amaendeepm/api-development-in-rust-cors-tower-middleware-and-the-power-of-axum-397k
+    let cors_layer = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods([Method::GET, Method::POST, Method::DELETE]);
+
     return Router::new()
         .route("/", get(hello_world))
         // PrintJob Routes
@@ -29,7 +37,9 @@ pub fn build_routes() -> Router {
         .route("/SimulationReport", get(get_simulation_reports))
         .route("/SimulationReport", post(post_simulation_report))
         .route("/SimulationReport/{id}", get(get_simulation_report_by_id))
-        .route("/SimulationReport/{id}", delete(delete_simulation_report));
+        .route("/SimulationReport/{id}", delete(delete_simulation_report))
+        // CORS
+        .layer(ServiceBuilder::new().layer(cors_layer));
 }
 
 
