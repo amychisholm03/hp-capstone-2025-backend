@@ -42,7 +42,7 @@ jobs:
             - name: Checkout the code
               uses: actions/checkout@v1
 
-            - name: SSH into EC2 and run unit tests
+            - name: SSH into EC2 and run tests
               uses: appleboy/ssh-action@master
               with:
                 host: ${{ secrets.EC2_HOST }}
@@ -51,8 +51,8 @@ jobs:
                 script: |
                   cd ~/test
                   sudo rm -rf target
-                  sudo cargo install
-                  sudo cargo test
+                  cargo install
+                  cargo test
 
     clean_up_test_folder_on_ec2:
         needs: run_tests
