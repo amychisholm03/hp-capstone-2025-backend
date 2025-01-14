@@ -243,6 +243,7 @@ pub fn insert_print_job(mut data: PrintJob) -> Result<DocID,String> {
 
 
 pub fn insert_workflow(mut data: Workflow) -> Result<DocID,String> {
+	// TODO: it would be a good idea to check that all the prev and next indices are valid
 	if data.id != None { return Err("Error".to_string()) }
 	let workflows = WORKFLOWS.get_or_init(|| Mutex::new(HashMap::new()));
 	let id = next_id();
