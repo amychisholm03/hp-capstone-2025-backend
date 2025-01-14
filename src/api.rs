@@ -57,7 +57,7 @@ async fn hello_world() -> String {
 
 // TODO: Update to allow for querying
 async fn get_print_jobs() -> impl IntoResponse {
-    return match query_print_jobs() {
+    return match query_print_jobs().await {
         Ok(data) => response(200, json!(data).to_string()),
         Err(_) => response(400, "Invalid Query".to_string())
     }
@@ -66,7 +66,7 @@ async fn get_print_jobs() -> impl IntoResponse {
 
 // TODO: Update to allow for querying
 async fn get_workflows() -> impl IntoResponse {
-    return match query_workflows() {
+    return match query_workflows().await {
         Ok(data) => response(200, json!(data).to_string()),
         Err(_) => response(400, "Invalid Query".to_string())
     }
@@ -75,7 +75,7 @@ async fn get_workflows() -> impl IntoResponse {
 
 // TODO: Update to allow for querying
 async fn get_workflow_steps() -> impl IntoResponse {
-    return match query_workflow_steps() {
+    return match query_workflow_steps().await {
         Ok(data) => response(200, json!(data).to_string()),
         Err(_) => response(400, "Invalid Query".to_string())
     }
@@ -84,7 +84,7 @@ async fn get_workflow_steps() -> impl IntoResponse {
 
 // TODO: Update to allow for querying
 async fn get_simulation_reports() -> impl IntoResponse {
-    return match query_simulation_reports() {
+    return match query_simulation_reports().await {
         Ok(data) => response(200, json!(data).to_string()),
         Err(_) => response(400, "Invalid Query".to_string())
     }
@@ -96,7 +96,7 @@ async fn get_print_job_by_id(Path(id_str): Path<String>) -> impl IntoResponse {
         Ok(data) => data,
         Err(_) => return response(400, format!("Invalid ID: {id_str}"))
     };
-    return match find_print_job(id) {
+    return match find_print_job(id).await {
         Ok(data) => response(200, json!(data).to_string()),
         Err(_) => response(404, format!("PrintJob not found: {id_str}"))
     };
@@ -108,7 +108,7 @@ async fn get_workflow_by_id(Path(id_str): Path<String>) -> impl IntoResponse {
         Ok(data) => data,
         Err(_) => return response(400, format!("Invalid ID: {id_str}"))
     };
-    return match find_workflow(id) {
+    return match find_workflow(id).await {
         Ok(data) => response(200, json!(data).to_string()),
         Err(_) => response(404, format!("Workflow not found: {id_str}"))
     };
@@ -120,7 +120,7 @@ async fn get_workflow_step_by_id(Path(id_str): Path<String>) -> impl IntoRespons
         Ok(data) => data,
         Err(_) => return response(400, format!("Invalid ID: {id_str}"))
     };
-    return match find_workflow_step(id) {
+    return match find_workflow_step(id).await {
         Ok(data) => response(200, json!(data).to_string()),
         Err(_) => response(404, format!("WorkflowStep not found: {id_str}"))
     };
@@ -132,7 +132,7 @@ async fn get_simulation_report_by_id(Path(id_str): Path<String>) -> impl IntoRes
         Ok(data) => data,
         Err(_) => return response(400, format!("Invalid ID: {id_str}"))
     };
-    return match find_simulation_report(id) {
+    return match find_simulation_report(id).await {
         Ok(data) => response(200, json!(data).to_string()),
         Err(_) => response(404, format!("SimulationReport not found: {id_str}"))
     };
@@ -140,7 +140,7 @@ async fn get_simulation_report_by_id(Path(id_str): Path<String>) -> impl IntoRes
 
 
 async fn post_print_job(Json(payload): Json<PrintJob>) -> impl IntoResponse {
-    return match insert_print_job(payload) {
+    return match insert_print_job(payload).await {
         Ok(data) => response(201, data.to_string()),
         Err(_) => response(500, "Failed to insert".to_string()) //TODO: Better error code/message? What would cause this?
     }
@@ -148,7 +148,7 @@ async fn post_print_job(Json(payload): Json<PrintJob>) -> impl IntoResponse {
 
 
 async fn post_workflow(Json(payload): Json<Workflow>) -> impl IntoResponse {
-    return match insert_workflow(payload) {
+    return match insert_workflow(payload).await {
         Ok(data) => response(201, data.to_string()),
         Err(_) => response(500, "Failed to insert".to_string()) //TODO: Better error code/message? What would cause this?
     }
@@ -156,7 +156,7 @@ async fn post_workflow(Json(payload): Json<Workflow>) -> impl IntoResponse {
 
 
 async fn post_simulation_report(Json(payload): Json<SimulationReportArgs>) -> impl IntoResponse {
-    return match insert_simulation_report(payload) {
+    return match insert_simulation_report(payload).await {
         Ok(data) => response(201, data.to_string()),
         Err(_) => response(500, "Failed to insert".to_string()) //TODO: Better error code/message? What would cause this?
     }
@@ -168,7 +168,7 @@ async fn delete_print_job(Path(id_str): Path<String>) -> impl IntoResponse {
         Ok(data) => data,
         Err(_) => return response(400, format!("Invalid ID: {id_str}"))
     };
-    return match remove_print_job(id) {
+    return match remove_print_job(id).await {
         Ok(_data) => response(204, "".to_string()), //TODO: Return the deleted data?
         Err(_) => response(404, format!("PrintJob not found: {id_str}"))
         //TODO: Need to handle error 409(conflict) if the printjob can't be deleted
@@ -181,7 +181,7 @@ async fn delete_workflow(Path(id_str): Path<String>) -> impl IntoResponse {
         Ok(data) => data,
         Err(_) => return response(400, format!("Invalid ID: {id_str}"))
     };
-    return match remove_workflow(id) {
+    return match remove_workflow(id).await {
         Ok(_data) => response(204, "".to_string()), //TODO: Return the deleted data?
         Err(_) => response(404, format!("Workflow not found: {id_str}"))
         //TODO: Need to handle error 409(conflict) if the workflow can't be deleted
@@ -194,7 +194,7 @@ async fn delete_simulation_report(Path(id_str): Path<String>) -> impl IntoRespon
         Ok(data) => data,
         Err(_) => return response(400, format!("Invalid ID: {id_str}"))
     };
-    return match remove_simulation_report(id) {
+    return match remove_simulation_report(id).await {
         Ok(_data) => response(204, "".to_string()), //TODO: Return the deleted data?
         Err(_) => response(404, format!("SimulationReport not found: {id_str}"))
     }
