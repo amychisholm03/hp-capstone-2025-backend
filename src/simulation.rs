@@ -2,7 +2,7 @@ use std::{
 	sync::RwLock,
 	collections::HashMap
 };
-use tokio::join;
+use futures::future::join_all;
 
 use crate::database::{*};
 
@@ -58,11 +58,13 @@ async fn static_testing() -> DocID {
 
 
 struct Visited { 
-	data: RwLock<(Vec<bool>,usize)>
+	data: RwLock<(Vec<bool>,usize,HashMap<DocID,u32>)>,
 }
 impl Visited {
 	fn new(workflow_steps: usize) -> Visited {
-		return Visited { data: RwLock::new((vec![false; workflow_steps], 0)) }
+		return Visited { 
+			data: RwLock::new((vec![false; workflow_steps], 0, HashMap::new())),
+		}
 	}
 
 	fn visit(&self, index: usize) -> bool {
@@ -75,6 +77,17 @@ impl Visited {
 
 	fn can_visit(&self) -> bool {
 		return self.data.read().unwrap().1 < self.data.read().unwrap().0.len();
+	}
+
+	fn add_result(&self, id: &DocID, result: u32){
+		match self.data.read().unwrap().2.get(id) {
+			Some(data) => self.data.write().unwrap().2.insert(*id, result+data),
+			None => self.data.write().unwrap().2.insert(*id, result)
+		};
+	}
+
+	fn get_result(&self, id: &DocID) -> u32 {
+		return *self.data.read().unwrap().2.get(id).expect("ID not in HashMap");
 	}
 }
 
@@ -98,26 +111,32 @@ pub async fn simulate(data: SimulationReportArgs) -> Result<SimulationReport,Str
 
 	// Graph Search
 	let visited = Visited::new(workflow.WorkflowSteps.len());
-	let _results = traverse_graph(&printjob, &visited, &workflow.WorkflowSteps.clone(), 0).await;
+	traverse_graph(&printjob, &visited, &workflow.WorkflowSteps.clone(), 0).await;
 
 
 	return Ok(SimulationReport::new(data.PrintJobID, data.WorkflowID, 6, 25, HashMap::from([(2, 15)])));
 }
 
 
-async fn traverse_graph(print_job: &PrintJob, visited: &Visited, steps: &Vec<WFS>, step: usize) -> bool {
-	if !(visited.visit(step)) || !(visited.can_visit()) { return false; }
-
-	// let previouses = steps[step].Prev.iter().map(|&i| traverse_graph(print_job, visited, steps, i)).collect();
-	// join!(previouses);
+async fn traverse_graph(print_job: &PrintJob, visited: &Visited, steps: &Vec<WFS>, step: usize) {
+	if !(visited.visit(step)) || !(visited.can_visit()) { return; }
 	
-	// for i in &steps[step].Prev {
-	// 	traverse_graph(print_job, visited, steps, *i);
-	// }
-	// TODO: Simulate step
-	// for i in &steps[step].Next {
-	// 	traverse_graph(print_job, visited, steps, *i);
-	// }
+	// Visit all previous nodes first
+	join_all(steps[step].Prev.iter().map(|&i| 
+		traverse_graph(print_job, visited, steps, i)
+	).collect::<Vec<_>>()).await;
 
-	return true;
+	// Simulate the current step
+	visited.add_result(&steps[step].id, simulate_step(print_job, &steps[step]).await);
+	Iterator::max(steps[step].Prev.iter().map(|&i| visited.get_result(&steps[i].id)));
+
+	// Visit next nodes
+	join_all(steps[step].Next.iter().map(|&i| 
+		traverse_graph(print_job, visited, steps, i)
+	).collect::<Vec<_>>()).await;
+}
+
+
+async fn simulate_step(_printjob: &PrintJob, _workflow_step: &WFS) -> u32 {
+	return 0;
 }
