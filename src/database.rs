@@ -259,7 +259,10 @@ pub fn insert_workflow(mut data: Workflow) -> Option<DocID> {
 
 pub fn insert_simulation_report(data: SimulationReportArgs) -> Option<DocID> {
 	let simulation_reports = SIMULATION_REPORTS.get_or_init(|| Mutex::new(HashMap::new()));
-	let mut new_report = simulate(data);
+	let mut new_report = match simulate(data) {
+		Some(data) => data,
+		None => return None
+	};
 	let id = next_id();
 	new_report.id = Some(id);
 	simulation_reports.lock().unwrap().insert(id, new_report);
