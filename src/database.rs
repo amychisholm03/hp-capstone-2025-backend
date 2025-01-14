@@ -38,10 +38,10 @@ pub struct PrintJob {
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 //TODO: Different name?
-struct WFS {
-	id: DocID,
-	Prev: Vec<u32>,
-	Next: Vec<u32>
+pub struct WFS {
+	pub id: DocID,
+	pub Prev: Vec<u32>,
+	pub Next: Vec<u32>
 }
 
 #[allow(non_snake_case)]
@@ -49,7 +49,7 @@ struct WFS {
 pub struct Workflow {
 	#[serde(default)] id: Option<DocID>,
 	Title: String,
-	WorkflowSteps: Vec<WFS>
+	pub WorkflowSteps: Vec<WFS>
 }
 
 #[allow(non_snake_case)]
@@ -57,8 +57,8 @@ pub struct Workflow {
 pub struct WorkflowStep {
 	#[serde(default)] id: Option<DocID>,
 	Title: String,
-	SetupTime: u32,
-	TimePerPage: u32
+	pub SetupTime: u32,
+	pub TimePerPage: u32
 }
 
 #[allow(non_snake_case)]
