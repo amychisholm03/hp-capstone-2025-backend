@@ -23,6 +23,8 @@ use crate::simulation::{*};
  * functions that interact with a real database soon
  */
 
+ //TODO: Update functions to return Result instead of Option for better error messages
+
 
 pub type DocID = u32;
 
@@ -260,8 +262,8 @@ pub fn insert_workflow(mut data: Workflow) -> Option<DocID> {
 pub fn insert_simulation_report(data: SimulationReportArgs) -> Option<DocID> {
 	let simulation_reports = SIMULATION_REPORTS.get_or_init(|| Mutex::new(HashMap::new()));
 	let mut new_report = match simulate(data) {
-		Some(data) => data,
-		None => return None
+		Ok(data) => data,
+		Err(_) => return None
 	};
 	let id = next_id();
 	new_report.id = Some(id);
