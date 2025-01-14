@@ -7,7 +7,8 @@ After=network.target
 
 
 [Service]
-ExecStart=sudo /home/admin/.nvm/versions/node/v20.18.0/bin/node /home/admin/src/server.js
+ExecStart=sudo /home/admin/.cargo/bin/cargo /home/admin/src/main.rs
+WorkingDirectory=/home/admin/src
 Type=simple
 Restart=always
 
