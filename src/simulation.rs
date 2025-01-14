@@ -75,10 +75,6 @@ impl Visited {
 		return true;
 	}
 
-	fn can_visit(&self) -> bool {
-		return self.data.read().unwrap().1 < self.data.read().unwrap().0.len();
-	}
-
 	fn add_result(&self, id: &DocID, result: u32){
 		match self.data.read().unwrap().2.get(id) {
 			Some(data) => self.data.write().unwrap().2.insert(*id, result+data),
@@ -119,7 +115,7 @@ pub async fn simulate(data: SimulationReportArgs) -> Result<SimulationReport,Str
 
 
 async fn traverse_graph(print_job: &PrintJob, visited: &Visited, steps: &Vec<WFS>, step: usize) {
-	if !(visited.visit(step)) || !(visited.can_visit()) { return; }
+	if !(visited.visit(step)) { return; }
 	
 	// Visit all previous nodes first
 	join_all(steps[step].Prev.iter().map(|&i| 
