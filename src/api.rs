@@ -57,8 +57,8 @@ async fn hello_world() -> String {
 // TODO: Update to allow for querying
 async fn get_print_jobs() -> impl IntoResponse {
     return match query_print_jobs() {
-        Some(data) => response(200, data),
-        None => response(400, "Invalid Query".to_string())
+        Ok(data) => response(200, json!(data).to_string()),
+        Err(_) => response(400, "Invalid Query".to_string())
     }
 }
 
@@ -66,8 +66,8 @@ async fn get_print_jobs() -> impl IntoResponse {
 // TODO: Update to allow for querying
 async fn get_workflows() -> impl IntoResponse {
     return match query_workflows() {
-        Some(data) => response(200, data),
-        None => response(400, "Invalid Query".to_string())
+        Ok(data) => response(200, json!(data).to_string()),
+        Err(_) => response(400, "Invalid Query".to_string())
     }
 }
 
@@ -75,8 +75,8 @@ async fn get_workflows() -> impl IntoResponse {
 // TODO: Update to allow for querying
 async fn get_workflow_steps() -> impl IntoResponse {
     return match query_workflow_steps() {
-        Some(data) => response(200, data),
-        None => response(400, "Invalid Query".to_string())
+        Ok(data) => response(200, json!(data).to_string()),
+        Err(_) => response(400, "Invalid Query".to_string())
     }
 }
 
@@ -84,21 +84,20 @@ async fn get_workflow_steps() -> impl IntoResponse {
 // TODO: Update to allow for querying
 async fn get_simulation_reports() -> impl IntoResponse {
     return match query_simulation_reports() {
-        Some(data) => response(200, data),
-        None => response(400, "Invalid Query".to_string())
+        Ok(data) => response(200, json!(data).to_string()),
+        Err(_) => response(400, "Invalid Query".to_string())
     }
 }
 
 
 async fn get_print_job_by_id(Path(id_str): Path<String>) -> impl IntoResponse {
-    println!("Here");
     let id: DocID = match id_str.parse() {
         Ok(data) => data,
         Err(_) => return response(400, format!("Invalid ID: {id_str}"))
     };
     return match find_print_job(id) {
-        Some(data) => response(200, data),
-        None => response(404, format!("PrintJob not found: {id_str}"))
+        Ok(data) => response(200, json!(data).to_string()),
+        Err(_) => response(404, format!("PrintJob not found: {id_str}"))
     };
 }
 
@@ -109,8 +108,8 @@ async fn get_workflow_by_id(Path(id_str): Path<String>) -> impl IntoResponse {
         Err(_) => return response(400, format!("Invalid ID: {id_str}"))
     };
     return match find_workflow(id) {
-        Some(data) => response(200, data),
-        None => response(404, format!("Workflow not found: {id_str}"))
+        Ok(data) => response(200, json!(data).to_string()),
+        Err(_) => response(404, format!("Workflow not found: {id_str}"))
     };
 }
 
@@ -121,8 +120,8 @@ async fn get_workflow_step_by_id(Path(id_str): Path<String>) -> impl IntoRespons
         Err(_) => return response(400, format!("Invalid ID: {id_str}"))
     };
     return match find_workflow_step(id) {
-        Some(data) => response(200, data),
-        None => response(404, format!("WorkflowStep not found: {id_str}"))
+        Ok(data) => response(200, json!(data).to_string()),
+        Err(_) => response(404, format!("WorkflowStep not found: {id_str}"))
     };
 }
 
@@ -133,32 +132,32 @@ async fn get_simulation_report_by_id(Path(id_str): Path<String>) -> impl IntoRes
         Err(_) => return response(400, format!("Invalid ID: {id_str}"))
     };
     return match find_simulation_report(id) {
-        Some(data) => response(200, data),
-        None => response(404, format!("SimulationReport not found: {id_str}"))
+        Ok(data) => response(200, json!(data).to_string()),
+        Err(_) => response(404, format!("SimulationReport not found: {id_str}"))
     };
 }
 
 
 async fn post_print_job(Json(payload): Json<PrintJob>) -> impl IntoResponse {
     return match insert_print_job(payload) {
-        Some(data) => response(201, data.to_string()),
-        None => response(500, "Failed to insert".to_string()) //TODO: Better error code/message? What would cause this?
+        Ok(data) => response(201, data.to_string()),
+        Err(_) => response(500, "Failed to insert".to_string()) //TODO: Better error code/message? What would cause this?
     }
 }
 
 
 async fn post_workflow(Json(payload): Json<Workflow>) -> impl IntoResponse {
     return match insert_workflow(payload) {
-        Some(data) => response(201, data.to_string()),
-        None => response(500, "Failed to insert".to_string()) //TODO: Better error code/message? What would cause this?
+        Ok(data) => response(201, data.to_string()),
+        Err(_) => response(500, "Failed to insert".to_string()) //TODO: Better error code/message? What would cause this?
     }
 }
 
 
 async fn post_simulation_report(Json(payload): Json<SimulationReportArgs>) -> impl IntoResponse {
     return match insert_simulation_report(payload) {
-        Some(data) => response(201, data.to_string()),
-        None => response(500, "Failed to insert".to_string()) //TODO: Better error code/message? What would cause this?
+        Ok(data) => response(201, data.to_string()),
+        Err(_) => response(500, "Failed to insert".to_string()) //TODO: Better error code/message? What would cause this?
     }
 }
 
@@ -169,8 +168,8 @@ async fn delete_print_job(Path(id_str): Path<String>) -> impl IntoResponse {
         Err(_) => return response(400, format!("Invalid ID: {id_str}"))
     };
     return match remove_print_job(id) {
-        Some(_data) => response(204, "".to_string()), //TODO: Return the deleted data?
-        None => response(404, format!("PrintJob not found: {id_str}"))
+        Ok(_data) => response(204, "".to_string()), //TODO: Return the deleted data?
+        Err(_) => response(404, format!("PrintJob not found: {id_str}"))
         //TODO: Need to handle error 409(conflict) if the printjob can't be deleted
     }
 }
@@ -182,8 +181,8 @@ async fn delete_workflow(Path(id_str): Path<String>) -> impl IntoResponse {
         Err(_) => return response(400, format!("Invalid ID: {id_str}"))
     };
     return match remove_workflow(id) {
-        Some(_data) => response(204, "".to_string()), //TODO: Return the deleted data?
-        None => response(404, format!("Workflow not found: {id_str}"))
+        Ok(_data) => response(204, "".to_string()), //TODO: Return the deleted data?
+        Err(_) => response(404, format!("Workflow not found: {id_str}"))
         //TODO: Need to handle error 409(conflict) if the workflow can't be deleted
     }
 }
@@ -195,7 +194,7 @@ async fn delete_simulation_report(Path(id_str): Path<String>) -> impl IntoRespon
         Err(_) => return response(400, format!("Invalid ID: {id_str}"))
     };
     return match remove_simulation_report(id) {
-        Some(_data) => response(204, "".to_string()), //TODO: Return the deleted data?
-        None => response(404, format!("SimulationReport not found: {id_str}"))
+        Ok(_data) => response(204, "".to_string()), //TODO: Return the deleted data?
+        Err(_) => response(404, format!("SimulationReport not found: {id_str}"))
     }
 }
