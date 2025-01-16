@@ -124,13 +124,7 @@ pub fn database_init(){
 		RasterizationProfile: "CMYK".to_string()
 	});
 
-	let id = next_id();
-	workflows.lock().unwrap().insert(id, Workflow{
-		id: Some(id),
-		Title: "Workflow 1".to_string(),
-		WorkflowSteps: vec![WFS{id:2, Next:vec![], Prev:vec![]}]
-	});
-
+	next_id();
 	let id = next_id();
 	workflow_steps.lock().unwrap().insert(id, WorkflowStep{
 		id: Some(id),
@@ -177,6 +171,21 @@ pub fn database_init(){
 		Title: "Laminating".to_string(),
 		SetupTime: 10,
 		TimePerPage: 7
+	});
+
+	let id = next_id();
+	workflows.lock().unwrap().insert(id, Workflow{
+		id: Some(id),
+		Title: "Workflow 1".to_string(),
+		WorkflowSteps: vec![
+			WFS{id:2, Next:vec![2,3], Prev:vec![]},
+			WFS{id:3, Next:vec![2,3], Prev:vec![]},
+			WFS{id:4, Next:vec![4], Prev:vec![0,1]},
+			WFS{id:4, Next:vec![4], Prev:vec![0,1]},
+			WFS{id:5, Next:vec![5], Prev:vec![2,3]},
+			WFS{id:6, Next:vec![6], Prev:vec![4]},
+			WFS{id:7, Next:vec![], Prev:vec![5]},
+		]
 	});
 
 	let id = next_id();
