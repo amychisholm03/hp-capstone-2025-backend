@@ -32,11 +32,7 @@ pub async fn simulate(data: SimulationReportArgs) -> Result<SimulationReport,Str
 	let search = Search::new(&workflow);
 	traverse_graph(&print_job, &search, &workflow.WorkflowSteps.clone(), 0).await;
 
-	dbg!(search.get_step_times());
-	dbg!(search.get_step_times_by_id());
-	dbg!(&search.0.read().unwrap().step_times_cumulative);
-	dbg!(&search.0.read().unwrap().cumulative_time);
-	// Format Output
+	// Pass results to SimulationReport constructor
 	return Ok(SimulationReport::new(
 		data.PrintJobID, 
 		data.WorkflowID, 
@@ -51,11 +47,9 @@ pub async fn simulate(data: SimulationReportArgs) -> Result<SimulationReport,Str
 // TODO: Guarantee the graph is acyclic and connected
 async fn traverse_graph(print_job: &PrintJob, search: &Search, steps: &Vec<WFS>, step: usize){
 	if !(search.visit(step)) { return; }
-	println!("Visiting {step}");
 	
 	// Visit all previous nodes first
 	traverse_list(&steps[step].Prev, print_job, search, steps).await;
-	println!("Visit all {step}'s prev steps");
 
 	// Simulate the current step
 	let result = simulate_step(print_job, &steps[step]).await;
@@ -69,7 +63,6 @@ async fn traverse_graph(print_job: &PrintJob, search: &Search, steps: &Vec<WFS>,
 
 	// Visit next nodes
 	traverse_list(&steps[step].Next, print_job, search, steps).await;
-	println!("Visit all {step}'s next steps");
 }
 
 
