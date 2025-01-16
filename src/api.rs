@@ -11,6 +11,7 @@ use serde_json::json;
 use tower::ServiceBuilder;
 use tower_http::cors::{Any, CorsLayer};
 
+/// Builds the routes for the API.
 pub fn build_routes() -> Router {
     // https://dev.to/amaendeepm/api-development-in-rust-cors-tower-middleware-and-the-power-of-axum-397k
     let cors_layer = CorsLayer::new()
@@ -42,6 +43,14 @@ pub fn build_routes() -> Router {
         .layer(ServiceBuilder::new().layer(cors_layer));
 }
 
+/// Returns a sanitized tuple of the response code and message.
+///
+/// ### Arguments
+/// * `code` - The HTTP status code to return.
+/// * `message` - The message to return.
+///
+/// ### Returns
+/// A tuple of the HTTP status code and message.
 fn response(code: u16, message: String) -> impl IntoResponse {
     return (StatusCode::from_u16(code).unwrap(), message);
 }
@@ -82,6 +91,13 @@ async fn get_simulation_reports() -> impl IntoResponse {
     };
 }
 
+/// Returns a PrintJob by its ID.
+/// 
+/// ### Arguments
+/// * `id_str` - The ID of the PrintJob to return.
+/// 
+/// ### Returns
+/// The PrintJob with the given ID.
 async fn get_print_job_by_id(Path(id_str): Path<String>) -> impl IntoResponse {
     let id: DocID = match id_str.parse() {
         Ok(data) => data,
@@ -93,6 +109,13 @@ async fn get_print_job_by_id(Path(id_str): Path<String>) -> impl IntoResponse {
     };
 }
 
+/// Returns a Workflow by its ID.
+/// 
+/// ### Arguments
+/// * `id_str` - The ID of the Workflow to return.
+/// 
+/// ### Returns
+/// The Workflow with the given ID.
 async fn get_workflow_by_id(Path(id_str): Path<String>) -> impl IntoResponse {
     let id: DocID = match id_str.parse() {
         Ok(data) => data,
@@ -103,6 +126,7 @@ async fn get_workflow_by_id(Path(id_str): Path<String>) -> impl IntoResponse {
         Err(_) => response(404, format!("Workflow not found: {id_str}")),
     };
 }
+
 
 async fn get_workflow_step_by_id(Path(id_str): Path<String>) -> impl IntoResponse {
     let id: DocID = match id_str.parse() {
