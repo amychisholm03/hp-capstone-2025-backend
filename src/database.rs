@@ -31,7 +31,7 @@ pub struct PrintJob {
 	#[serde(default)] id: Option<DocID>,
 	#[serde(default)] DateCreated: Option<u32>,
 	Title: String,
-	PageCount: u32,
+	pub PageCount: u32,
 	RasterizationProfile: String
 }
 
@@ -55,8 +55,8 @@ pub struct Workflow {
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkflowStep {
-	#[serde(default)] id: Option<DocID>,
-	Title: String,
+	#[serde(default)] pub id: Option<DocID>,
+	pub Title: String,
 	pub SetupTime: u32,
 	pub TimePerPage: u32
 }
@@ -134,25 +134,49 @@ pub fn database_init(){
 	let id = next_id();
 	workflow_steps.lock().unwrap().insert(id, WorkflowStep{
 		id: Some(id),
-		Title: "WorkflowStep 1".to_string(),
-		SetupTime: 7,
-		TimePerPage: 3
+		Title: "Preflight".to_string(),
+		SetupTime: 10,
+		TimePerPage: 7
 	});
 
 	let id = next_id();
 	workflow_steps.lock().unwrap().insert(id, WorkflowStep{
 		id: Some(id),
-		Title: "WorkflowStep 2".to_string(),
-		SetupTime: 7,
-		TimePerPage: 3
+		Title: "Metrics".to_string(),
+		SetupTime: 2,
+		TimePerPage: 1
 	});
 
 	let id = next_id();
 	workflow_steps.lock().unwrap().insert(id, WorkflowStep{
 		id: Some(id),
-		Title: "WorkflowStep 3".to_string(),
-		SetupTime: 7,
-		TimePerPage: 3
+		Title: "Rasterization".to_string(),
+		SetupTime: 50,
+		TimePerPage: 16
+	});
+
+	let id = next_id();
+	workflow_steps.lock().unwrap().insert(id, WorkflowStep{
+		id: Some(id),
+		Title: "Printing".to_string(),
+		SetupTime: 10,
+		TimePerPage: 7
+	});
+
+	let id = next_id();
+	workflow_steps.lock().unwrap().insert(id, WorkflowStep{
+		id: Some(id),
+		Title: "Cutting".to_string(),
+		SetupTime: 10,
+		TimePerPage: 7
+	});
+
+	let id = next_id();
+	workflow_steps.lock().unwrap().insert(id, WorkflowStep{
+		id: Some(id),
+		Title: "Laminating".to_string(),
+		SetupTime: 10,
+		TimePerPage: 7
 	});
 
 	let id = next_id();
