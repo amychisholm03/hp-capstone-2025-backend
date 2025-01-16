@@ -4,9 +4,8 @@ use std::{
 };
 use serde::{Serialize, Deserialize};
 use std::fmt::Debug;
-
 use crate::simulation::{*};
-
+use rusqlite::{params, Connection, Row, Result};
 
 /**
  * This file has a lot of placeholder stuff to allow for development 
@@ -22,7 +21,6 @@ use crate::simulation::{*};
  * functions that interact with a real database soon
  */
 
-
 pub type DocID = u32;
 
 #[allow(non_snake_case)]
@@ -32,7 +30,7 @@ pub struct PrintJob {
 	#[serde(default)] DateCreated: Option<u32>,
 	Title: String,
 	PageCount: u32,
-	RasterizationProfile: String
+	rasterization_profile_id: u32
 }
 
 #[allow(non_snake_case)]
@@ -118,10 +116,10 @@ pub fn database_init(){
 	let id = next_id();
 	print_jobs.lock().unwrap().insert(id, PrintJob{
 		id: Some(id), 
-		DateCreated: Some(0), 
 		Title: "PrintJob1".to_string(), 
 		PageCount: 5, 
-		RasterizationProfile: "CMYK".to_string()
+		rasterization_profile_id: 2,
+        DateCreated: Some(0)
 	});
 
 	let id = next_id();
@@ -169,15 +167,64 @@ pub fn database_init(){
 
 // TODO: Update to allow for querying
 pub async fn query_print_jobs() -> Result<Vec<PrintJob>,String> {
-	let print_jobs = PRINT_JOBS.get_or_init(|| Mutex::new(HashMap::new()));
-	return Ok(print_jobs.lock().unwrap().values().cloned().collect());
+    let db = Connection::open("./db/database.db3").map_err(|e| e.to_string())?;
+
+    // Prepare the SELECT statement
+    let mut stmt = db
+        .prepare("SELECT id, title, page_count, rasterization_profile_id FROM printjob;")
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map([], |row: &Row| {
+            Ok(PrintJob {
+                id: row.get(0)?,        // Get ID from the first column
+                Title: row.get(1)?,     // Get name from the second column
+                DateCreated: Some(0),
+                PageCount: row.get(2)?,
+                rasterization_profile_id: row.get(3)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    // Collect the results into a Vec and update the shared map
+    let mut results = Vec::new();
+    for job_result in rows {
+        let job = job_result.map_err(|e| e.to_string())?;
+        results.push(job);
+    }
+
+    return Ok(results);
 }
 
 
 // TODO: Update to allow for querying
 pub async fn query_workflows() -> Result<Vec<Workflow>,String> {
-	let workflows = WORKFLOWS.get_or_init(|| Mutex::new(HashMap::new()));
-	return Ok(workflows.lock().unwrap().values().cloned().collect());
+    let db = Connection::open("./db/database.db3").map_err(|e| e.to_string())?;
+
+    // Prepare the SELECT statement
+    let mut stmt = db
+        .prepare("SELECT id, title FROM workflow;")
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map([], |row: &Row| {
+            Ok(Workflow {
+                id: row.get(0)?,        // Get ID from the first column
+                Title: row.get(1)?,     // Get name from the second column
+                WorkflowSteps: vec![],
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    // Collect the results into a Vec and update the shared map
+    let mut results = Vec::new();
+    for job_result in rows {
+        let job = job_result.map_err(|e| e.to_string())?;
+        results.push(job);
+    }
+
+    return Ok(results);
+
 }
 
 

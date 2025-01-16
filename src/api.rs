@@ -59,7 +59,7 @@ async fn hello_world() -> String {
 async fn get_print_jobs() -> impl IntoResponse {
     return match query_print_jobs().await {
         Ok(data) => response(200, json!(data).to_string()),
-        Err(_) => response(400, "Invalid Query".to_string())
+        Err(e) => response(400, e)
     }
 }
 
