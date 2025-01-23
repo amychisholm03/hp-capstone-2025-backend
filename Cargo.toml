@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 axum = "0.8"
-openssl-sys = "0.9.104"
 http = "1.2.0"
 hyper = "1.5.2"
 serde = { version = "1.0.217", features = ["derive"] }

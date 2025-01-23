@@ -85,7 +85,6 @@ dependencies = [
  "http 1.2.0",
  "hyper 1.5.2",
  "once_cell",
- "openssl-sys",
  "reqwest",
  "serde",
  "serde_json",
