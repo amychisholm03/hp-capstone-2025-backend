@@ -1,25 +1,18 @@
 use axum::http::StatusCode;
 use reqwest;
-use once_cell::sync::Lazy;
-use tokio::sync::OnceCell;
+use serial_test::serial;
 
 const HOST: &str = "localhost";
 const PORT: &str = "5040";
 
-static SERVER: Lazy<OnceCell<()>> = Lazy::new(OnceCell::new);
-
-async fn start_server() {
-    SERVER.get_or_init(|| async {
-        tokio::spawn(async {
-            backend::run_server(HOST, PORT).await;
-        });
-        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-    }).await;
-}
-
 #[tokio::test]
+#[serial]
 async fn test_hello_world() {
-    start_server().await;
+     // Start test server
+    let server = tokio::spawn(async {
+        backend::run_server(HOST, PORT).await;
+    });
+    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
 
     let client = reqwest::Client::new();
     let response = client
@@ -31,11 +24,18 @@ async fn test_hello_world() {
     assert_eq!(response.status(), StatusCode::OK.as_u16());
     let body = response.text().await.unwrap();
     assert_eq!(body, "Hello, World");
+
+    server.abort();
 }
 
 #[tokio::test]
+#[serial]
 async fn test_get_print_jobs() {
-    start_server().await;
+     // Start test server
+    let server = tokio::spawn(async {
+        backend::run_server(HOST, PORT).await;
+    });
+    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
 
     let client = reqwest::Client::new();
     let response = client
@@ -45,11 +45,17 @@ async fn test_get_print_jobs() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::OK.as_u16());
+    server.abort();
 }
 
 #[tokio::test]
+#[serial]
 async fn test_get_workflows() {
-    start_server().await;
+     // Start test server
+    let server = tokio::spawn(async {
+        backend::run_server(HOST, PORT).await;
+    });
+    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
 
     let client = reqwest::Client::new();
     let response = client
@@ -59,11 +65,17 @@ async fn test_get_workflows() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::OK.as_u16());
+    server.abort();
 }
 
 #[tokio::test]
+#[serial]
 async fn test_get_workflow_steps() {
-    start_server().await;
+     // Start test server
+    let server = tokio::spawn(async {
+        backend::run_server(HOST, PORT).await;
+    });
+    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
 
     let client = reqwest::Client::new();
     let response = client
@@ -73,11 +85,17 @@ async fn test_get_workflow_steps() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::OK.as_u16());
+    server.abort();
 }
 
 #[tokio::test]
+#[serial]
 async fn test_get_simulation_reports() {
-    start_server().await;
+     // Start test server
+    let server = tokio::spawn(async {
+        backend::run_server(HOST, PORT).await;
+    });
+    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
 
     let client = reqwest::Client::new();
     let response = client
@@ -87,12 +105,18 @@ async fn test_get_simulation_reports() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::OK.as_u16());
+    server.abort();
 }
 
 /*
 #[tokio::test]
+#[serial]
 async fn test_get_print_job_by_id() {
-    start_server().await;
+     // Start test server
+    let server = tokio::spawn(async {
+        backend::run_server(HOST, PORT).await;
+    });
+    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
 
     let client = reqwest::Client::new();
     let response = client
@@ -102,11 +126,17 @@ async fn test_get_print_job_by_id() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::OK.as_u16());
+    server.abort();
 }
 
 #[tokio::test]
+#[serial]
 async fn test_get_workflow_by_id() {
-    start_server().await;
+     // Start test server
+    let server = tokio::spawn(async {
+        backend::run_server(HOST, PORT).await;
+    });
+    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
 
     let client = reqwest::Client::new();
     let response = client
@@ -116,11 +146,17 @@ async fn test_get_workflow_by_id() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::OK.as_u16());
+    server.abort();
 }
 
 #[tokio::test]
+#[serial]
 async fn test_get_workflow_step_by_id() {
-    start_server().await;
+     // Start test server
+    let server = tokio::spawn(async {
+        backend::run_server(HOST, PORT).await;
+    });
+    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
 
     let client = reqwest::Client::new();
     let response = client
@@ -130,11 +166,17 @@ async fn test_get_workflow_step_by_id() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::OK.as_u16());
+    server.abort();
 }
 
 #[tokio::test]
+#[serial]
 async fn test_get_simulation_report_by_id() {
-    start_server().await;
+     // Start test server
+    let server = tokio::spawn(async {
+        backend::run_server(HOST, PORT).await;
+    });
+    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
 
     let client = reqwest::Client::new();
     let response = client
@@ -144,5 +186,6 @@ async fn test_get_simulation_report_by_id() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::OK.as_u16());
+    server.abort();
 }
 */
