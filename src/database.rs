@@ -21,6 +21,8 @@ use rusqlite::{params, Connection, Row, Result};
  * functions that interact with a real database soon
  */
 
+const DATABASE_LOCATION: &str = "./db/database.db3";
+
 pub type DocID = u32;
 
 #[allow(non_snake_case)]
@@ -167,7 +169,7 @@ pub fn database_init(){
 
 // TODO: Update to allow for querying
 pub async fn query_print_jobs() -> Result<Vec<PrintJob>,String> {
-    let db = Connection::open("./db/database.db3").map_err(|e| e.to_string())?;
+    let db = Connection::open(DATABASE_LOCATION).unwrap();
 
     // Prepare the SELECT statement
     let mut stmt = db
@@ -199,7 +201,7 @@ pub async fn query_print_jobs() -> Result<Vec<PrintJob>,String> {
 
 // TODO: Update to allow for querying
 pub async fn query_workflows() -> Result<Vec<Workflow>,String> {
-    let db = Connection::open("./db/database.db3").map_err(|e| e.to_string())?;
+    let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
 
     // Prepare the SELECT statement
     let mut stmt = db
