@@ -1,5 +1,6 @@
 use axum::http::StatusCode;
 use reqwest;
+use serde_json::json;
 use serial_test::serial;
 
 const HOST: &str = "localhost";
@@ -8,7 +9,7 @@ const PORT: &str = "5040";
 #[tokio::test]
 #[serial]
 async fn test_hello_world() {
-     // Start test server
+    // Start test server
     let server = tokio::spawn(async {
         backend::run_server(HOST, PORT).await;
     });
@@ -28,10 +29,11 @@ async fn test_hello_world() {
     server.abort();
 }
 
+
 #[tokio::test]
 #[serial]
 async fn test_get_print_jobs() {
-     // Start test server
+    // Start test server
     let server = tokio::spawn(async {
         backend::run_server(HOST, PORT).await;
     });
@@ -51,7 +53,7 @@ async fn test_get_print_jobs() {
 #[tokio::test]
 #[serial]
 async fn test_get_workflows() {
-     // Start test server
+    // Start test server
     let server = tokio::spawn(async {
         backend::run_server(HOST, PORT).await;
     });
@@ -71,7 +73,7 @@ async fn test_get_workflows() {
 #[tokio::test]
 #[serial]
 async fn test_get_workflow_steps() {
-     // Start test server
+    // Start test server
     let server = tokio::spawn(async {
         backend::run_server(HOST, PORT).await;
     });
@@ -91,7 +93,7 @@ async fn test_get_workflow_steps() {
 #[tokio::test]
 #[serial]
 async fn test_get_simulation_reports() {
-     // Start test server
+    // Start test server
     let server = tokio::spawn(async {
         backend::run_server(HOST, PORT).await;
     });
@@ -108,47 +110,128 @@ async fn test_get_simulation_reports() {
     server.abort();
 }
 
+#[tokio::test]
+#[serial]
+async fn test_all_post_get_then_delete(){
+    let server = tokio::spawn(async {
+        backend::run_server(HOST, PORT).await;
+    });
+    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+
+    let print_job_id = test_post_print_job().await;
+    let workflow_id = test_post_workflow().await;
+    //let sim_report_id = test_post_simulation_report(&print_job_id, &workflow_id).await;
+    test_get_print_job_by_id(&print_job_id).await;
+    test_get_workflow_by_id(&workflow_id).await;
+    //test_get_workflow_step_by_id().await;
+    //test_get_simulation_report_by_id(&sim_report_id).await;
+    test_delete_print_job(&print_job_id).await;
+    test_delete_workflow(&workflow_id).await;
+    //test_delete_simulation_report(&sim_report_id).await;
+
+    server.abort();
+}
+
+async fn test_post_print_job() -> String {
+  
+    let client = reqwest::Client::new();
+    let payload = json!({
+        "Title": "Test Print Job",
+        "PageCount": 10,
+        "RasterizationProfile": "RGB"
+    });
+
+    let response = client
+        .post(&format!("http://{}:{}/PrintJob", HOST, PORT))
+        .json(&payload)
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::CREATED.as_u16());
+
+    // Set print job ID to use for future tests
+    let body = response.text().await.unwrap();
+    return body;
+}
+
+async fn test_post_workflow() -> String {
+    let client = reqwest::Client::new();
+    let payload = json!({
+        "Title": "Test Workflow",
+        "WorkflowSteps": []
+    });
+
+    let response = client
+        .post(&format!("http://{}:{}/Workflow", HOST, PORT))
+        .json(&payload)
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::CREATED.as_u16());
+
+    // Set workflow ID to use for future tests
+    let body = response.text().await.unwrap();
+    return body;
+}
+
+async fn test_post_simulation_report(print_job_id: &str, workflow_id: &str) -> String {
+    print!("print_job_id: {}\n", print_job_id);
+    print!("workflow_id: {}\n", workflow_id);
+    let client = reqwest::Client::new();
+    let payload = json!({
+        "PrintJobID": print_job_id,
+        "WorkflowID": workflow_id,
+    });
+
+    let response = client
+        .post(&format!("http://{}:{}/SimulationReport", HOST, PORT))
+        .json(&payload)
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::CREATED.as_u16());
+
+    // Set simulation report ID to use for future tests
+    let body = response.text().await.unwrap();
+    return body;
+}
+
+async fn test_get_print_job_by_id(print_job_id: &str) {
+    let client = reqwest::Client::new();
+    let response = client
+        .get(&format!(
+            "http://{}:{}/PrintJob/{}",
+            HOST,
+            PORT,
+            print_job_id
+        ))
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK.as_u16());
+}
+
+async fn test_get_workflow_by_id(workflow_id: &str) {
+    let client = reqwest::Client::new();
+    let response = client
+        .get(&format!(
+            "http://{}:{}/Workflow/{}",
+            HOST,
+            PORT,
+            workflow_id
+        ))
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK.as_u16());
+}
+
 /*
-#[tokio::test]
-#[serial]
-async fn test_get_print_job_by_id() {
-     // Start test server
-    let server = tokio::spawn(async {
-        backend::run_server(HOST, PORT).await;
-    });
-    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-
-    let client = reqwest::Client::new();
-    let response = client
-        .get(&format!("http://{}:{}/PrintJob/1", HOST, PORT))
-        .send()
-        .await
-        .unwrap();
-
-    assert_eq!(response.status(), StatusCode::OK.as_u16());
-    server.abort();
-}
-
-#[tokio::test]
-#[serial]
-async fn test_get_workflow_by_id() {
-     // Start test server
-    let server = tokio::spawn(async {
-        backend::run_server(HOST, PORT).await;
-    });
-    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-
-    let client = reqwest::Client::new();
-    let response = client
-        .get(&format!("http://{}:{}/Workflow/1", HOST, PORT))
-        .send()
-        .await
-        .unwrap();
-
-    assert_eq!(response.status(), StatusCode::OK.as_u16());
-    server.abort();
-}
-
 #[tokio::test]
 #[serial]
 async fn test_get_workflow_step_by_id() {
@@ -168,24 +251,68 @@ async fn test_get_workflow_step_by_id() {
     assert_eq!(response.status(), StatusCode::OK.as_u16());
     server.abort();
 }
+    */
 
-#[tokio::test]
-#[serial]
-async fn test_get_simulation_report_by_id() {
-     // Start test server
-    let server = tokio::spawn(async {
-        backend::run_server(HOST, PORT).await;
-    });
-    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-
+async fn test_get_simulation_report_by_id(sim_report_id: &str) {
     let client = reqwest::Client::new();
     let response = client
-        .get(&format!("http://{}:{}/SimulationReport/1", HOST, PORT))
+        .get(&format!(
+            "http://{}:{}/SimulationReport/{}",
+            HOST,
+            PORT,
+            sim_report_id
+        ))
         .send()
         .await
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::OK.as_u16());
-    server.abort();
 }
-*/
+
+async fn test_delete_print_job(print_job_id: &str) {
+    let client = reqwest::Client::new();
+    let response = client
+        .delete(&format!(
+            "http://{}:{}/PrintJob/{}",
+            HOST,
+            PORT,
+            print_job_id
+        ))
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::NO_CONTENT.as_u16());
+}
+
+async fn test_delete_workflow(workflow_id: &str) {
+    let client = reqwest::Client::new();
+    let response = client
+        .delete(&format!(
+            "http://{}:{}/Workflow/{}",
+            HOST,
+            PORT,
+            workflow_id
+        ))
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::NO_CONTENT.as_u16());
+}
+
+async fn test_delete_simulation_report(sim_report_id: &str) {
+    let client = reqwest::Client::new();
+    let response = client
+        .delete(&format!(
+            "http://{}:{}/SimulationReport/{}",
+            HOST,
+            PORT,
+            sim_report_id
+        ))
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::NO_CONTENT.as_u16());
+}

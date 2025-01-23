@@ -127,7 +127,13 @@ async fn get_workflow_by_id(Path(id_str): Path<String>) -> impl IntoResponse {
     };
 }
 
-
+/// Returns a Workflow Step by its ID.
+/// 
+/// ### Arguments
+/// * `id_str` - The ID of the Workflow Step to return.
+/// 
+/// ### Returns
+/// The Workflow Step with the given ID.
 async fn get_workflow_step_by_id(Path(id_str): Path<String>) -> impl IntoResponse {
     let id: DocID = match id_str.parse() {
         Ok(data) => data,
@@ -139,6 +145,13 @@ async fn get_workflow_step_by_id(Path(id_str): Path<String>) -> impl IntoRespons
     };
 }
 
+/// Returns a Simulation Report by its ID.
+/// 
+/// ### Arguments
+/// * `id_str` - The ID of the Simulation Report to return.
+/// 
+/// ### Returns
+/// The Simulation Report with the given ID.
 async fn get_simulation_report_by_id(Path(id_str): Path<String>) -> impl IntoResponse {
     let id: DocID = match id_str.parse() {
         Ok(data) => data,
@@ -150,6 +163,13 @@ async fn get_simulation_report_by_id(Path(id_str): Path<String>) -> impl IntoRes
     };
 }
 
+/// Inserts a Print Job into the database.
+/// 
+/// ### Arguments
+/// * `payload` - A JSON object of a Print Job to insert.
+/// 
+/// ### Returns
+/// The status code of the insertion.
 async fn post_print_job(Json(payload): Json<PrintJob>) -> impl IntoResponse {
     return match insert_print_job(payload).await {
         Ok(data) => response(201, data.to_string()),
@@ -157,6 +177,13 @@ async fn post_print_job(Json(payload): Json<PrintJob>) -> impl IntoResponse {
     };
 }
 
+/// Inserts a Workflow into the database.
+/// 
+/// ### Arguments
+/// * `payload` - A JSON object of a Workflow to insert.
+/// 
+/// ### Returns
+/// The status code of the insertion.
 async fn post_workflow(Json(payload): Json<Workflow>) -> impl IntoResponse {
     return match insert_workflow(payload).await {
         Ok(data) => response(201, data.to_string()),
@@ -164,6 +191,13 @@ async fn post_workflow(Json(payload): Json<Workflow>) -> impl IntoResponse {
     };
 }
 
+/// Inserts a Simulation Report into the database.
+/// 
+/// ### Arguments
+/// * `payload` - A JSON object of a Simulation Report to insert.
+/// 
+/// ### Returns
+/// The status code of the insertion.
 async fn post_simulation_report(Json(payload): Json<SimulationReportArgs>) -> impl IntoResponse {
     return match insert_simulation_report(payload).await {
         Ok(data) => response(201, data.to_string()),
@@ -171,6 +205,13 @@ async fn post_simulation_report(Json(payload): Json<SimulationReportArgs>) -> im
     };
 }
 
+/// Deletes a Print Job from the database.
+/// 
+/// ### Arguments
+/// * `id_str` - The ID of the Print Job to delete.
+/// 
+/// ### Returns
+/// The status code of the deletion.
 async fn delete_print_job(Path(id_str): Path<String>) -> impl IntoResponse {
     let id: DocID = match id_str.parse() {
         Ok(data) => data,
@@ -182,6 +223,13 @@ async fn delete_print_job(Path(id_str): Path<String>) -> impl IntoResponse {
     };
 }
 
+/// Deletes a Workflow from the database.
+/// 
+/// ### Arguments
+/// * `id_str` - The ID of the Workflow to delete.
+/// 
+/// ### Returns
+/// The status code of the deletion.
 async fn delete_workflow(Path(id_str): Path<String>) -> impl IntoResponse {
     let id: DocID = match id_str.parse() {
         Ok(data) => data,
@@ -193,6 +241,13 @@ async fn delete_workflow(Path(id_str): Path<String>) -> impl IntoResponse {
     };
 }
 
+/// Deletes a Simulation Report from the database.
+/// 
+/// ### Arguments
+/// * `id_str` - The ID of the Simulation Report to delete.
+/// 
+/// ### Returns
+/// The status code of the deletion.
 async fn delete_simulation_report(Path(id_str): Path<String>) -> impl IntoResponse {
     let id: DocID = match id_str.parse() {
         Ok(data) => data,
