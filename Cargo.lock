@@ -84,6 +84,7 @@ dependencies = [
  "axum",
  "http 1.2.0",
  "hyper 1.5.2",
+ "once_cell",
  "reqwest",
  "serde",
  "serde_json",
