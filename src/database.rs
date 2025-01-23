@@ -6,6 +6,7 @@ use serde::{Serialize, Deserialize};
 use std::fmt::Debug;
 use crate::simulation::{*};
 use rusqlite::{params, Connection, Row, Result};
+use chrono::NaiveDateTime;
 
 /**
  * This file has a lot of placeholder stuff to allow for development 
@@ -69,7 +70,7 @@ pub struct SimulationReport {
 	WorkflowID: DocID,
 	CreationTime: u32,
 	TotalTimeTaken: u32,
-	StepTimes: HashMap<DocID,u32> //Key: WorkflowStep ID; Value: Total time for that step
+	//StepTimes: HashMap<DocID,u32> //Key: WorkflowStep ID; Value: Total time for that step
 }
 
 #[allow(non_snake_case)]
@@ -88,7 +89,6 @@ impl SimulationReport {
 			WorkflowID: workflow_id,
 			CreationTime: creation_time,
 			TotalTimeTaken: total_time_taken,
-			StepTimes: step_times
 		}
 	}
 }
@@ -162,7 +162,7 @@ pub fn database_init(){
 		WorkflowID: 1,
 		CreationTime: 6,
 		TotalTimeTaken: 25,
-		StepTimes: HashMap::from([(2, 15)])
+		//StepTimes: HashMap::from([(2, 15)])
 	});
 }
 
@@ -221,8 +221,7 @@ pub async fn query_workflows() -> Result<Vec<Workflow>,String> {
     // Collect the results into a Vec and update the shared map
     let mut results = Vec::new();
     for job_result in rows {
-        let job = job_result.map_err(|e| e.to_string())?;
-        results.push(job);
+        results.push(job_result.unwrap());
     }
 
     return Ok(results);
@@ -232,24 +231,87 @@ pub async fn query_workflows() -> Result<Vec<Workflow>,String> {
 
 // TODO: Update to allow for querying
 pub async fn query_workflow_steps() -> Result<Vec<WorkflowStep>,String> {
-	let workflow_steps = WORKFLOW_STEPS.get_or_init(|| Mutex::new(HashMap::new()));
-	return Ok(workflow_steps.lock().unwrap().values().cloned().collect());
+    let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
+
+    // Prepare the SELECT statement
+    let mut stmt = db
+        .prepare("SELECT id, title, setup_time, time_per_page FROM workflow_step;")
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map([], |row: &Row| {
+            Ok(WorkflowStep {
+                id: row.get(0)?,        // Get ID from the first column
+                Title: row.get(1)?,     // Get name from the second column
+                SetupTime: row.get(2)?,
+                TimePerPage: row.get(3)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut results = Vec::new();
+    for workflow_step in rows {
+        results.push(workflow_step.unwrap());
+    }
+
+    return Ok(results);
+
 }
 
 
 // TODO: Update to allow for querying
 pub async fn query_simulation_reports() -> Result<Vec<SimulationReport>,String> {
-	let simulation_reports = SIMULATION_REPORTS.get_or_init(|| Mutex::new(HashMap::new()));
-	return Ok(simulation_reports.lock().unwrap().values().cloned().collect());
+    let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
+
+    // Prepare the SELECT statement
+    let mut stmt = db
+        .prepare("SELECT id, title, creation_time, total_time_taken, printjobID, workflowID FROM simulation_report;")
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map([], |row: &Row| {
+            Ok(SimulationReport {
+                id: row.get(0)?, 
+                CreationTime: row.get(2)?,
+                TotalTimeTaken: row.get(3)?,
+                PrintJobID: row.get(4)?,
+                WorkflowID: row.get(5)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut results = Vec::new();
+    for report in rows {
+        results.push(report.unwrap());
+    }
+
+    return Ok(results);
 }
 
 
 pub async fn find_print_job(id: DocID) -> Result<PrintJob,String> {
-	let print_jobs = PRINT_JOBS.get_or_init(|| Mutex::new(HashMap::new()));
-	return match print_jobs.lock().unwrap().get(&id) {
-		Some(data) => Ok(data.clone()),
-		None => Err("Error".to_string())
-	}
+
+    let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
+
+    // Prepare the SELECT statement
+    let mut stmt = db
+        .prepare("SELECT id, title, creation_time, page_count, rasterization_profile_id FROM printjob WHERE id=(?);")
+        .map_err(|e| e.to_string())?;
+
+    let mut rows = stmt
+        .query_map([id], |row: &Row| {
+            Ok(PrintJob {
+                id: row.get(0)?,
+                Title: row.get(1)?,
+                DateCreated: row.get(2)?,
+                PageCount: row.get(3)?,
+                rasterization_profile_id: row.get(4)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+
+    return Ok(rows.next().unwrap().unwrap());
 }
 
 

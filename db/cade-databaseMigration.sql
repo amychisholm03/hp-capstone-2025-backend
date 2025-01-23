@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS rasterization_profile (
 CREATE TABLE IF NOT EXISTS printjob (
     id INTEGER PRIMARY KEY,
     title TEXT NOT NULL,
-    creation_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    creation_time INTEGER,
     page_count INTEGER,
     rasterization_profile_id INTEGER,
     FOREIGN KEY (rasterization_profile_id) REFERENCES rasterization_profile(id)
@@ -24,6 +24,8 @@ CREATE TABLE IF NOT EXISTS workflow (
 CREATE TABLE IF NOT EXISTS simulation_report (
     id INTEGER PRIMARY KEY,
     title TEXT NOT NULL,
+    creation_time INTEGER,
+    total_time_taken INTEGER,
     printjobID INTEGER NOT NULL,
     workflowID INTEGER NOT NULL,
     FOREIGN KEY (printjobID) REFERENCES printjob(id),
@@ -39,7 +41,7 @@ CREATE TABLE IF NOT EXISTS workflow_step (
 );
 
 -- Create a table to track workflow steps which are part of a workflow
-CREATE TABLE assigned_workflow_step (
+CREATE TABLE IF NOT EXISTS assigned_workflow_step (
     workflow_id INTEGER, 		-- which workflow this step belongs to.
     workflow_step_id INTEGER, 		-- which type of workflow step this is.
     next_step_id INTEGER, 		-- which workflow step comes next.
@@ -49,7 +51,7 @@ CREATE TABLE assigned_workflow_step (
 );
 
 --- Create a table to track workflow step results.
-CREATE TABLE ran_workflow_step (
+CREATE TABLE IF NOT EXISTS ran_workflow_step (
    workflow_step_id INTEGER,
    simulation_report_id INTEGER,
    time_taken INTEGER,
