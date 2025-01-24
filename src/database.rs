@@ -33,7 +33,7 @@ pub struct PrintJob {
 	#[serde(default)] DateCreated: Option<u32>,
 	Title: String,
 	PageCount: u32,
-	rasterization_profile_id: u32
+	RasterizationProfileID: u32
 }
 
 #[allow(non_snake_case)]
@@ -120,7 +120,7 @@ pub fn database_init(){
 		id: Some(id), 
 		Title: "PrintJob1".to_string(), 
 		PageCount: 5, 
-		rasterization_profile_id: 2,
+		RasterizationProfileID: 2,
         DateCreated: Some(0)
 	});
 
@@ -183,7 +183,7 @@ pub async fn query_print_jobs() -> Result<Vec<PrintJob>,String> {
                 Title: row.get(1)?,     // Get name from the second column
                 DateCreated: Some(0),
                 PageCount: row.get(2)?,
-                rasterization_profile_id: row.get(3)?,
+                RasterizationProfileID: row.get(3)?,
             })
         })
         .map_err(|e| e.to_string())?;
@@ -290,10 +290,8 @@ pub async fn query_simulation_reports() -> Result<Vec<SimulationReport>,String> 
 
 
 pub async fn find_print_job(id: DocID) -> Result<PrintJob,String> {
-
     let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
 
-    // Prepare the SELECT statement
     let mut stmt = db
         .prepare("SELECT id, title, creation_time, page_count, rasterization_profile_id FROM printjob WHERE id=(?);")
         .map_err(|e| e.to_string())?;
@@ -305,51 +303,96 @@ pub async fn find_print_job(id: DocID) -> Result<PrintJob,String> {
                 Title: row.get(1)?,
                 DateCreated: row.get(2)?,
                 PageCount: row.get(3)?,
-                rasterization_profile_id: row.get(4)?,
+                RasterizationProfileID: row.get(4)?,
             })
         })
         .map_err(|e| e.to_string())?;
-
 
     return Ok(rows.next().unwrap().unwrap());
 }
 
 
 pub async fn find_workflow(id: DocID) -> Result<Workflow,String> {
-	let workflows = WORKFLOWS.get_or_init(|| Mutex::new(HashMap::new()));
-	return match workflows.lock().unwrap().get(&id) {
-		Some(data) => Ok(data.clone()),
-		None => Err("Error".to_string())
-	}
+    let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
+
+    let mut stmt = db
+        .prepare("SELECT id, title FROM workflow WHERE id=(?);")
+        .map_err(|e| e.to_string())?;
+
+    let mut rows = stmt
+        .query_map([id], |row: &Row| {
+            Ok(Workflow {
+                id: row.get(0)?,
+                Title: row.get(1)?,
+                WorkflowSteps: vec![],
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    return Ok(rows.next().unwrap().unwrap());
+
 }
 
 
 pub async fn find_workflow_step(id: DocID) -> Result<WorkflowStep,String> {
-	let workflow_steps = WORKFLOW_STEPS.get_or_init(|| Mutex::new(HashMap::new()));
-	return match workflow_steps.lock().unwrap().get(&id) {
-		Some(data) => Ok(data.clone()),
-		None => Err("Error".to_string())
-	}
+    let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
+
+    let mut stmt = db
+        .prepare("SELECT id, title, setup_time, time_per_page FROM workflow_step WHERE id=(?);")
+        .map_err(|e| e.to_string())?;
+
+    let mut rows = stmt
+        .query_map([id], |row: &Row| {
+            Ok(WorkflowStep {
+                id: row.get(0)?,
+                Title: row.get(1)?,
+                SetupTime: row.get(2)?,
+                TimePerPage: row.get(3)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    return Ok(rows.next().unwrap().unwrap());
+
 }
 
 
 pub async fn find_simulation_report(id: DocID) -> Result<SimulationReport,String> {
-	let simulation_reports = SIMULATION_REPORTS.get_or_init(|| Mutex::new(HashMap::new()));
-	return match simulation_reports.lock().unwrap().get(&id) {
-		Some(data) => Ok(data.clone()),
-		None => Err("Error".to_string())
-	}
+    let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
+
+    let mut stmt = db
+        .prepare("SELECT id, creation_time, total_time_taken, printjobID, workflowID FROM simulation_report WHERE id=(?);")
+        .map_err(|e| e.to_string())?;
+
+    let mut rows = stmt
+        .query_map([id], |row: &Row| {
+            Ok(SimulationReport {
+                id: row.get(0)?,
+                CreationTime: row.get(1)?,
+                TotalTimeTaken: row.get(2)?, 
+                PrintJobID: row.get(3)?,
+                WorkflowID: row.get(4)?,
+
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    return Ok(rows.next().unwrap().unwrap());
+
 }
 
 
-pub async fn insert_print_job(mut data: PrintJob) -> Result<DocID,String> {
-	if data.id != None || data.DateCreated != None { return Err("Error".to_string()) }
-	let print_jobs = PRINT_JOBS.get_or_init(|| Mutex::new(HashMap::new()));
-	let id = next_id();
-	data.id = Some(id);
-	data.DateCreated = Some(0);
-	print_jobs.lock().unwrap().insert(id, data);
-	return Ok(id);
+pub async fn insert_print_job(data: PrintJob) -> Result<DocID,String> {
+    let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
+    
+    db.execute(
+        "INSERT INTO printjob (id, title, creation_time, page_count, rasterization_profile_id) VALUES (NULL, ?1, ?2, ?3, ?4)",
+        params![data.Title, data.DateCreated, data.PageCount, data.RasterizationProfileID]
+    ).map_err(|e| e.to_string())?;
+
+    let inserted_id : u32 = db.last_insert_rowid() as u32;
+	return Ok(inserted_id);
+
 }
 
 

@@ -17,7 +17,7 @@ tests/    			Tests<br>
 		Title: string
 		DateCreated: number
 		PageCount: integer
-		RasterizationProfile: string
+		RasterizationProfileID: integer (fk)
 
 	Workflow
 		id (pk)
