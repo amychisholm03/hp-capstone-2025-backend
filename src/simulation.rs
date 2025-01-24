@@ -80,9 +80,9 @@ impl Visited {
 
 
 //TODO: async?
-pub async fn simulate(data: SimulationReportArgs) -> Result<SimulationReport,String> {
+pub async fn simulate(PrintJobID : u32, WorkflowID: u32) -> Result<SimulationReport,String> {
 	let static_wf_id = static_testing().await;
-	let printjob: PrintJob = match find_print_job(data.PrintJobID).await{
+	let printjob: PrintJob = match find_print_job(PrintJobID).await{
 		Ok(data) => data,
 		Err(_) => return Err("PrintJob not found".to_string())
 	};
@@ -92,20 +92,17 @@ pub async fn simulate(data: SimulationReportArgs) -> Result<SimulationReport,Str
 		Ok(data) => data,
 		Err(_) => return Err("Workflow not found".to_string())
 	};
-	dbg!(printjob.clone());
-	dbg!(workflow.clone());
-
 
 	// Graph Search
 	let visited = Visited::new(workflow.WorkflowSteps.len());
 	let _results = traverse_graph(&printjob, &visited, &workflow.WorkflowSteps.clone(), 0).await;
 
+	return Ok(SimulationReport::new(PrintJobID, WorkflowID, 6, 25, HashMap::from([(2, 15)])));
 
-	return Ok(SimulationReport::new(data.PrintJobID, data.WorkflowID, 6, 25, HashMap::from([(2, 15)])));
 }
 
 
-async fn traverse_graph(print_job: &PrintJob, visited: &Visited, steps: &Vec<WFS>, step: usize) -> bool {
+async fn traverse_graph(print_job: &PrintJob, visited: &Visited, steps: &Vec<AssignedWorkflowStep>, step: usize) -> bool {
 	if !(visited.visit(step)) || !(visited.can_visit()) { return false; }
 
 	// let previouses = steps[step].Prev.iter().map(|&i| traverse_graph(print_job, visited, steps, i)).collect();

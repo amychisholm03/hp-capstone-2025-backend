@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS simulation_report (
     FOREIGN KEY (workflowID) REFERENCES workflow(id)
 );
 
--- Create a table to define workflow steps
+-- Workflow Step Definition
 CREATE TABLE IF NOT EXISTS workflow_step (
 	id INTEGER PRIMARY KEY,
 	title TEXT NOT NULL,
@@ -40,14 +40,31 @@ CREATE TABLE IF NOT EXISTS workflow_step (
 	time_per_page INTEGER
 );
 
--- Create a table to track workflow steps which are part of a workflow
+-- A workflow step which is assigned to a specific workflow
 CREATE TABLE IF NOT EXISTS assigned_workflow_step (
-    workflow_id INTEGER, 		-- which workflow this step belongs to.
-    workflow_step_id INTEGER, 		-- which type of workflow step this is.
-    next_step_id INTEGER, 		-- which workflow step comes next.
-    PRIMARY KEY (workflow_id, workflow_step_id, next_step_id),
-    FOREIGN KEY (workflow_id) REFERENCES workflow(id),
+   id INTEGER,
+   workflow_id INTEGER,
+   workflow_step_id INTEGER,
+   PRIMARY KEY (id),
+   FOREIGN KEY (workflow_id) REFERENCES workflow(id), 
+   FOREIGN KEY (workflow_step_id) REFERENCES workflow_step(id) 
+);
+
+-- Create a table to track workflow steps which are part of a workflow
+CREATE TABLE IF NOT EXISTS next_workflow_step (
+    assigned_workflow_step_id INTEGER,  -- the id of the assigned workflow step this is 
+    next_step_id INTEGER, 		          -- which workflow step comes next.
+    PRIMARY KEY (assigned_workflow_step_id, next_step_id),
     FOREIGN KEY (next_step_id) REFERENCES assigned_workflow_step(id)
+    FOREIGN KEY (assigned_workflow_step_id) REFERENCES assigned_workflow_step(id)
+);
+
+CREATE TABLE IF NOT EXISTS prev_workflow_step (
+    assigned_workflow_step_id INTEGER,  -- the id of the assigned workflow step this is 
+    prev_step_id INTEGER, 		          -- which workflow step came last.
+    PRIMARY KEY (assigned_workflow_step_id, prev_step_id),
+    FOREIGN KEY (prev_step_id) REFERENCES assigned_workflow_step(id),
+    FOREIGN KEY (assigned_workflow_step_id) REFERENCES assigned_workflow_step(id)
 );
 
 --- Create a table to track workflow step results.

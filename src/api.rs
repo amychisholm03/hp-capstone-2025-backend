@@ -150,13 +150,13 @@ async fn post_print_job(Json(payload): Json<PrintJob>) -> impl IntoResponse {
 async fn post_workflow(Json(payload): Json<Workflow>) -> impl IntoResponse {
     return match insert_workflow(payload).await {
         Ok(data) => response(201, data.to_string()),
-        Err(_) => response(500, "Failed to insert".to_string()) //TODO: Better error code/message? What would cause this?
+        Err(err) => response(500, err.to_string()) //TODO: Better error code/message? What would cause this?
     }
 }
 
 
 async fn post_simulation_report(Json(payload): Json<SimulationReportArgs>) -> impl IntoResponse {
-    return match insert_simulation_report(payload).await {
+    return match insert_simulation_report(payload.PrintJobID, payload.WorkflowID).await {
         Ok(data) => response(201, data.to_string()),
         Err(_) => response(500, "Failed to insert".to_string()) //TODO: Better error code/message? What would cause this?
     }

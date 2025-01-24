@@ -6,7 +6,6 @@ use serde::{Serialize, Deserialize};
 use std::fmt::Debug;
 use crate::simulation::{*};
 use rusqlite::{params, Connection, Row, Result};
-use chrono::NaiveDateTime;
 
 /**
  * This file has a lot of placeholder stuff to allow for development 
@@ -38,11 +37,11 @@ pub struct PrintJob {
 
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-//TODO: Different name?
-pub struct WFS {
-	pub id: DocID,
-	pub Prev: Vec<usize>,
-	pub Next: Vec<usize>
+pub struct AssignedWorkflowStep {
+	pub id: DocID,           // id by which to track this workflow step in the graph
+    pub WorkflowStepID: u32, // which type of workflow step this is
+	pub Prev: Vec<u32>,
+	pub Next: Vec<u32>
 }
 
 #[allow(non_snake_case)]
@@ -50,7 +49,7 @@ pub struct WFS {
 pub struct Workflow {
 	#[serde(default)] id: Option<DocID>,
 	Title: String,
-	pub WorkflowSteps: Vec<WFS>
+	pub WorkflowSteps: Vec<AssignedWorkflowStep>
 }
 
 #[allow(non_snake_case)]
@@ -128,7 +127,7 @@ pub fn database_init(){
 	workflows.lock().unwrap().insert(id, Workflow{
 		id: Some(id),
 		Title: "Workflow 1".to_string(),
-		WorkflowSteps: vec![WFS{id:2, Next:vec![], Prev:vec![]}]
+		WorkflowSteps: vec![AssignedWorkflowStep{id:2, WorkflowStepID: 0, Next:vec![], Prev:vec![]}]
 	});
 
 	let id = next_id();
@@ -229,7 +228,6 @@ pub async fn query_workflows() -> Result<Vec<Workflow>,String> {
 }
 
 
-// TODO: Update to allow for querying
 pub async fn query_workflow_steps() -> Result<Vec<WorkflowStep>,String> {
     let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
 
@@ -241,8 +239,8 @@ pub async fn query_workflow_steps() -> Result<Vec<WorkflowStep>,String> {
     let rows = stmt
         .query_map([], |row: &Row| {
             Ok(WorkflowStep {
-                id: row.get(0)?,        // Get ID from the first column
-                Title: row.get(1)?,     // Get name from the second column
+                id: row.get(0)?,        
+                Title: row.get(1)?, 
                 SetupTime: row.get(2)?,
                 TimePerPage: row.get(3)?,
             })
@@ -312,14 +310,56 @@ pub async fn find_print_job(id: DocID) -> Result<PrintJob,String> {
 }
 
 
+// Todo: Coming back to this after i finish the adding workflow steps
 pub async fn find_workflow(id: DocID) -> Result<Workflow,String> {
     let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
 
-    let mut stmt = db
+
+    // get all the steps associated with this workflow
+    let mut stmt1 = db
+        .prepare("SELECT id, workflow_id, workflow_step_id FROM assigned_workflow_step WHERE workflow_id=(?);")
+        .map_err(|e| e.to_string())?;
+    let mut steps = stmt1
+        .query_map([id], |row: &Row| {
+            Ok(AssignedWorkflowStep {
+                id: row.get(0)?,
+                WorkflowStepID: row.get(2)?,
+                Next: vec![],
+                Prev: vec![],
+            }) 
+        }).map_err(|e| e.to_string())?;
+
+    // get the prev/next steps associated with each step
+    for step in steps {
+        let step_id = step.as_ref().unwrap().id;
+        let mut step_unwrapped = step.unwrap();
+
+        let mut stmt2 = db
+            .prepare("SELECT assigned_workflow_step_id, next_step_id FROM next_workflow_step WHERE assigned_workflow_step_id=(?);")
+            .map_err(|e| e.to_string())?;
+        let prev_steps = stmt2
+            .query_map([step_id], |row: &Row| row.get(1))
+            .map_err(|e| e.to_string())?
+            .collect::<Result<Vec<u32>, _>>() // Collect into Vec<u32>, handling errors.
+            .map_err(|e| e.to_string())?;
+        step_unwrapped.Prev = prev_steps;
+
+        let mut stmt3 = db
+            .prepare("SELECT assigned_workflow_step_id, prev_step_id FROM prev_workflow_step WHERE assigned_workflow_step_id=(?);")
+            .map_err(|e| e.to_string())?;
+        let next_steps = stmt3
+            .query_map([step_id], |row: &Row| row.get(1))
+            .map_err(|e| e.to_string())?
+            .collect::<Result<Vec<u32>, _>>() // Collect into Vec<u32>, handling errors.
+            .map_err(|e| e.to_string())?;
+        step_unwrapped.Next = next_steps;
+    }
+
+    let mut stmt2 = db
         .prepare("SELECT id, title FROM workflow WHERE id=(?);")
         .map_err(|e| e.to_string())?;
 
-    let mut rows = stmt
+    let mut rows = stmt2
         .query_map([id], |row: &Row| {
             Ok(Workflow {
                 id: row.get(0)?,
@@ -328,6 +368,9 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow,String> {
             })
         })
         .map_err(|e| e.to_string())?;
+
+    let workflow = rows.next().unwrap().unwrap(); 
+    workflow.WorkflowSteps = steps;
 
     return Ok(rows.next().unwrap().unwrap());
 
@@ -396,27 +439,69 @@ pub async fn insert_print_job(data: PrintJob) -> Result<DocID,String> {
 }
 
 
-pub async fn insert_workflow(mut data: Workflow) -> Result<DocID,String> {
-	// TODO: it would be a good idea to check that all the prev and next indices are valid
-	if data.id != None { return Err("Error".to_string()) }
-	let workflows = WORKFLOWS.get_or_init(|| Mutex::new(HashMap::new()));
-	let id = next_id();
-	data.id = Some(id);
-	workflows.lock().unwrap().insert(id, data);
-	return Ok(id);
+pub async fn insert_workflow(data: Workflow) -> Result<DocID,String> {
+    let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
+
+    dbg!(&data);
+    // Insert the Workflow
+    db.execute(
+        "INSERT INTO workflow (id, title) VALUES (NULL, ?1)",
+        params![data.Title]
+    ).map_err(|e| e.to_string())?;
+
+    let inserted_id : u32 = db.last_insert_rowid() as u32;
+
+    // Load all workflow steps into the database
+    for step in &data.WorkflowSteps {
+        db.execute(
+            "INSERT INTO assigned_workflow_step (id, workflow_id, workflow_step_id) VALUES (?1, ?2, ?3)",
+            params![step.id, inserted_id, step.id]
+        ).map_err(|e| e.to_string())?;
+    }
+
+    // Tie each step to it's previous/next workflow steps
+    for step in &data.WorkflowSteps {
+
+        // ... all steps that come after this step
+        for next_step in &step.Next {
+            db.execute(
+                "INSERT INTO next_workflow_step (assigned_workflow_step_id, next_step_id) VALUES (?1, ?2)",
+                params![step.id, next_step] 
+            ).map_err(|e| e.to_string())?;
+        }
+
+        // ... all steps that come before this step
+        for prev_step in &step.Prev {
+            db.execute(
+                "INSERT INTO prev_workflow_step (assigned_workflow_step_id, prev_step_id) VALUES (?1, ?2)",
+                params![step.id, prev_step] 
+            ).map_err(|e| e.to_string())?;
+        }
+
+    }
+
+    return Ok(inserted_id);
+
 }
 
 
-pub async fn insert_simulation_report(data: SimulationReportArgs) -> Result<DocID,String> {
-	let simulation_reports = SIMULATION_REPORTS.get_or_init(|| Mutex::new(HashMap::new()));
-	let mut new_report = match simulate(data).await {
+pub async fn insert_simulation_report(PrintJobID: u32, WorkflowID: u32) -> Result<DocID,String> {
+
+    // Run the simulation
+    let new_report = match simulate(PrintJobID, WorkflowID).await {
 		Ok(data) => data,
 		Err(_) => return Err("Error".to_string())
 	};
-	let id = next_id();
-	new_report.id = Some(id);
-	simulation_reports.lock().unwrap().insert(id, new_report);
-	return Ok(id);
+
+    // Store resulting simulation data in the db.
+    let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
+    db.execute(
+        "INSERT INTO simulation_report (id, title, creation_time, total_time_taken, printjobID, workflowID) VALUES (NULL, 'Default', ?2, ?3, ?4, ?5)",
+        params![new_report.CreationTime, new_report.TotalTimeTaken, new_report.PrintJobID, new_report.WorkflowID]
+    ).map_err(|e| e.to_string())?;
+
+    let inserted_id : u32 = db.last_insert_rowid() as u32;
+	return Ok(inserted_id);
 }
 
 
