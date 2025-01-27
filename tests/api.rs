@@ -1,3 +1,4 @@
+use backend::database::DocID;
 use axum::http::StatusCode;
 use reqwest;
 use serde_json::json;
@@ -120,19 +121,19 @@ async fn test_all_post_get_then_delete(){
 
     let print_job_id = test_post_print_job().await;
     let workflow_id = test_post_workflow().await;
-    //let sim_report_id = test_post_simulation_report(&print_job_id, &workflow_id).await;
-    test_get_print_job_by_id(&print_job_id).await;
-    test_get_workflow_by_id(&workflow_id).await;
+    let sim_report_id = test_post_simulation_report(print_job_id, workflow_id).await;
+    test_get_print_job_by_id(print_job_id).await;
+    test_get_workflow_by_id(workflow_id).await;
     //test_get_workflow_step_by_id().await;
-    //test_get_simulation_report_by_id(&sim_report_id).await;
-    test_delete_print_job(&print_job_id).await;
-    test_delete_workflow(&workflow_id).await;
-    //test_delete_simulation_report(&sim_report_id).await;
+    test_get_simulation_report_by_id(sim_report_id).await;
+    test_delete_print_job(print_job_id).await;
+    test_delete_workflow(workflow_id).await;
+    test_delete_simulation_report(sim_report_id).await;
 
     server.abort();
 }
 
-async fn test_post_print_job() -> String {
+async fn test_post_print_job() -> DocID {
   
     let client = reqwest::Client::new();
     let payload = json!({
@@ -152,10 +153,10 @@ async fn test_post_print_job() -> String {
 
     // Set print job ID to use for future tests
     let body = response.text().await.unwrap();
-    return body;
+    return body.parse::<DocID>().unwrap();
 }
 
-async fn test_post_workflow() -> String {
+async fn test_post_workflow() -> DocID {
     let client = reqwest::Client::new();
     let payload = json!({
         "Title": "Test Workflow",
@@ -173,10 +174,10 @@ async fn test_post_workflow() -> String {
 
     // Set workflow ID to use for future tests
     let body = response.text().await.unwrap();
-    return body;
+    return body.parse::<DocID>().unwrap();
 }
 
-async fn test_post_simulation_report(print_job_id: &str, workflow_id: &str) -> String {
+async fn test_post_simulation_report(print_job_id: DocID, workflow_id: DocID) -> DocID {
     print!("print_job_id: {}\n", print_job_id);
     print!("workflow_id: {}\n", workflow_id);
     let client = reqwest::Client::new();
@@ -196,10 +197,10 @@ async fn test_post_simulation_report(print_job_id: &str, workflow_id: &str) -> S
 
     // Set simulation report ID to use for future tests
     let body = response.text().await.unwrap();
-    return body;
+    return body.parse::<DocID>().unwrap();
 }
 
-async fn test_get_print_job_by_id(print_job_id: &str) {
+async fn test_get_print_job_by_id(print_job_id: DocID) {
     let client = reqwest::Client::new();
     let response = client
         .get(&format!(
@@ -215,7 +216,7 @@ async fn test_get_print_job_by_id(print_job_id: &str) {
     assert_eq!(response.status(), StatusCode::OK.as_u16());
 }
 
-async fn test_get_workflow_by_id(workflow_id: &str) {
+async fn test_get_workflow_by_id(workflow_id: DocID) {
     let client = reqwest::Client::new();
     let response = client
         .get(&format!(
@@ -253,7 +254,7 @@ async fn test_get_workflow_step_by_id() {
 }
     */
 
-async fn test_get_simulation_report_by_id(sim_report_id: &str) {
+async fn test_get_simulation_report_by_id(sim_report_id: DocID) {
     let client = reqwest::Client::new();
     let response = client
         .get(&format!(
@@ -269,7 +270,7 @@ async fn test_get_simulation_report_by_id(sim_report_id: &str) {
     assert_eq!(response.status(), StatusCode::OK.as_u16());
 }
 
-async fn test_delete_print_job(print_job_id: &str) {
+async fn test_delete_print_job(print_job_id: DocID) {
     let client = reqwest::Client::new();
     let response = client
         .delete(&format!(
@@ -285,7 +286,7 @@ async fn test_delete_print_job(print_job_id: &str) {
     assert_eq!(response.status(), StatusCode::NO_CONTENT.as_u16());
 }
 
-async fn test_delete_workflow(workflow_id: &str) {
+async fn test_delete_workflow(workflow_id: DocID) {
     let client = reqwest::Client::new();
     let response = client
         .delete(&format!(
@@ -301,7 +302,7 @@ async fn test_delete_workflow(workflow_id: &str) {
     assert_eq!(response.status(), StatusCode::NO_CONTENT.as_u16());
 }
 
-async fn test_delete_simulation_report(sim_report_id: &str) {
+async fn test_delete_simulation_report(sim_report_id: DocID) {
     let client = reqwest::Client::new();
     let response = client
         .delete(&format!(
