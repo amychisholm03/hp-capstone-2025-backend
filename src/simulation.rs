@@ -9,7 +9,6 @@ use crate::database::{*};
 
 struct SearchData {
 	visited: Vec<bool>,
-	step_times: Vec<u32>,
 	step_times_cumulative: Vec<u32>,
 	step_times_by_id: HashMap<DocID,u32>,
 	cumulative_time: u32
@@ -48,20 +47,20 @@ pub async fn simulate(data: SimulationReportArgs) -> Result<SimulationReport,Str
 async fn traverse_graph(print_job: &PrintJob, search: &Search, steps: &Vec<WFS>, step: usize){
 	if !(search.visit(step)) { return; }
 	
-	// Visit all previous nodes first
+	// Recursively visit all previous nodes first
 	traverse_list(&steps[step].Prev, print_job, search, steps).await;
 
 	// Simulate the current step
 	let result = simulate_step(print_job, &steps[step]).await;
 	
 	// Update times
-	search.update_step_time(&steps[step].id, step, result);
+	search.update_step_time_by_id(&steps[step].id, result);
 	match Iterator::max(steps[step].Prev.iter().map(|&i| search.get_step_time_cumulative(i))){
 		Some(data) => search.update_step_time_cumulative(step, result+data),
 		None => search.update_step_time_cumulative(step, result)
 	};
 
-	// Visit next nodes
+	// Recursively visit next nodes
 	traverse_list(&steps[step].Next, print_job, search, steps).await;
 }
 
@@ -81,15 +80,17 @@ async fn simulate_step(print_job: &PrintJob, wfs: &WFS) -> u32 {
 
 impl Search {
 	fn new(workflow: &Workflow) -> Search {
-		return Search ( RwLock::new(SearchData{
-			visited: vec![false; workflow.WorkflowSteps.len()], 
-			step_times: vec![0; workflow.WorkflowSteps.len()],
+		return Search(RwLock::new(SearchData{
+			visited: vec![false; workflow.WorkflowSteps.len()],
 			step_times_cumulative: vec![0; workflow.WorkflowSteps.len()],
 			step_times_by_id: HashMap::new(),
 			cumulative_time: 0
 		}));
 	}
 
+	// Returns false to indicate that an index can't be visited because 
+	// it already has been, otherwise sets visited[index] to true 
+	// and returns true to indicate that it's OK to evaluate that step
 	fn visit(&self, index: usize) -> bool {
 		if self.0.read().unwrap().visited[index] == true { return false; }
 		let mut visited = self.0.write().unwrap();
@@ -97,33 +98,28 @@ impl Search {
 		return true;
 	}
 
-	fn update_step_time(&self, id: &DocID, step: usize, time: u32){
-		let mut write_lock = self.0.write().unwrap();
-		write_lock.step_times[step] = time;
-		write_lock.step_times_by_id.entry(*id)
-			.and_modify(|val| *val += time).or_insert(time);
-	}
-
-	fn get_step_times(&self) -> Vec<u32> {
-		return self.0.read().unwrap().step_times.clone();
-	}
-
+	// Sets the cumulative time to reach the end of a step and keeps 
+	// track of the cumulative time overall
 	fn update_step_time_cumulative(&self, step: usize, time: u32){
-		self.0.write().unwrap().step_times_cumulative[step] = time;
-		/*Acquire read lock, then drop when it goes out of scope*/{ 
-			if time < self.0.read().unwrap().cumulative_time { return; }
-		} self.0.write().unwrap().cumulative_time = time;
+		let mut write_lock = self.0.write().unwrap();
+		write_lock.step_times_cumulative[step] = time;
+		if time > write_lock.cumulative_time { 
+			write_lock.cumulative_time = time;
+		}
 	}
 
 	fn get_step_time_cumulative(&self, step: usize) -> u32 {
 		return self.0.read().unwrap().step_times_cumulative[step];
 	}
 
+	fn update_step_time_by_id(&self, id: &DocID, time: u32){
+		self.0.write().unwrap().step_times_by_id.entry(*id)
+			.and_modify(|val| *val += time).or_insert(time);
+	}
 
 	fn get_step_times_by_id(&self) -> HashMap<DocID,u32> {
 		return self.0.read().unwrap().step_times_by_id.clone();
 	}
-
 
 	fn get_cumulative_time(&self) -> u32 {
 		return self.0.read().unwrap().cumulative_time;
