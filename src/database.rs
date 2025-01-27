@@ -30,7 +30,7 @@ pub struct RasterizationProfile {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AssignedWorkflowStep {
 	pub id: DocID,             // id by which to track this workflow step in the graph
-    pub WorkflowStepID: DocID, // which type of workflow step this is
+        pub WorkflowStepID: DocID, // which type of workflow step this is
 	pub Prev: Vec<DocID>,
 	pub Next: Vec<DocID>
 }
@@ -67,10 +67,10 @@ pub struct SimulationReport {
 
 
 #[allow(non_snake_case)]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimulationReportArgs {
-	pub PrintJobID: DocID,
-	pub WorkflowID: DocID,
+    pub PrintJobID: DocID,
+    pub WorkflowID: DocID,
 }
 
 
@@ -134,8 +134,9 @@ pub async fn query_workflows() -> Result<Vec<Workflow>,String> {
         .map_err(|e| e.to_string())?;
 
     let mut results = Vec::new();
-    for job_result in rows {
-        results.push(job_result.unwrap());
+    for workflow_result in rows {
+        let workflow = workflow_result.map_err(|e| e.to_string())?;
+        results.push(workflow);
     }
 
     return Ok(results);
@@ -162,8 +163,9 @@ pub async fn query_workflow_steps() -> Result<Vec<WorkflowStep>,String> {
         .map_err(|e| e.to_string())?;
 
     let mut results = Vec::new();
-    for workflow_step in rows {
-        results.push(workflow_step.unwrap());
+    for workflow_step_result in rows {
+        let workflow_step = workflow_step_result.map_err(|e| e.to_string())?;
+        results.push(workflow_step);
     }
 
     return Ok(results);
@@ -191,8 +193,9 @@ pub async fn query_simulation_reports() -> Result<Vec<SimulationReport>,String> 
         .map_err(|e| e.to_string())?;
 
     let mut results = Vec::new();
-    for report in rows {
-        results.push(report.unwrap());
+    for report_result in rows {
+        let report = report_result.map_err(|e| e.to_string())?;
+        results.push(report);
     }
 
     return Ok(results);
@@ -216,8 +219,9 @@ pub async fn query_rasterization_profiles() -> Result<Vec<RasterizationProfile>,
         .map_err(|e| e.to_string())?;
 
     let mut results = Vec::new();
-    for profile in rows {
-        results.push(profile.unwrap());
+    for profile_result in rows {
+        let profile = profile_result.map_err(|e| e.to_string())?;
+        results.push(profile);
     }
 
     return Ok(results);
