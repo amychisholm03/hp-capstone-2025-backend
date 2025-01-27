@@ -14,3 +14,6 @@ actions-runner
 # Rust/cargo
 Cargo.lock
 /target
+
+#sqlite
+.db3
