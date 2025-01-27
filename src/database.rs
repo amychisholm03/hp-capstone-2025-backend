@@ -39,9 +39,9 @@ pub struct PrintJob {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AssignedWorkflowStep {
 	pub id: DocID,           // id by which to track this workflow step in the graph
-    pub WorkflowStepID: u32, // which type of workflow step this is
-	pub Prev: Vec<u32>,
-	pub Next: Vec<u32>
+    pub WorkflowStepID: DocID, // which type of workflow step this is
+	pub Prev: Vec<DocID>,
+	pub Next: Vec<DocID>
 }
 
 #[allow(non_snake_case)]
@@ -458,13 +458,15 @@ pub async fn insert_workflow(data: Workflow) -> Result<DocID,String> {
         params![data.Title]
     ).map_err(|e| e.to_string())?;
 
-    let inserted_id : u32 = db.last_insert_rowid() as u32;
+    let inserted_id : DocID = db.last_insert_rowid() as DocID;
+
+    dbg!(&data);
 
     // Load all workflow steps into the database
     for step in &data.WorkflowSteps {
         db.execute(
             "INSERT INTO assigned_workflow_step (id, workflow_id, workflow_step_id) VALUES (?1, ?2, ?3)",
-            params![step.id, inserted_id, step.id]
+            params![step.id, inserted_id, step.WorkflowStepID]
         ).map_err(|e| e.to_string())?;
     }
 
