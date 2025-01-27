@@ -27,6 +27,11 @@ pub fn build_routes() -> Router {
         .route("/PrintJob", post(post_print_job))
         .route("/PrintJob/{id}", get(get_print_job_by_id))
         .route("/PrintJob/{id}", delete(delete_print_job))
+        // Rasterization Profile Routes 
+        .route("/RasterizationProfile", get(get_rasterization_profiles))
+        .route("/RasterizationProfile/{id}", get(get_rasterization_profile_by_id))
+        .route("/RasterizationProfile", post(post_rasterization_profile))
+        .route("/RasterizationProfile/{id}", delete(delete_rasterization_profile))
         // Workflow Routes
         .route("/Workflow", get(get_workflows))
         .route("/Workflow", post(post_workflow))
@@ -60,6 +65,13 @@ async fn get_print_jobs() -> impl IntoResponse {
     return match query_print_jobs().await {
         Ok(data) => response(200, json!(data).to_string()),
         Err(e) => response(400, e)
+    }
+}
+
+async fn get_rasterization_profiles() -> impl IntoResponse {
+    return match query_rasterization_profiles().await {
+        Ok(data) => response(200, json!(data).to_string()),
+        Err(e) => response(400,e)
     }
 }
 
@@ -99,6 +111,18 @@ async fn get_print_job_by_id(Path(id_str): Path<String>) -> impl IntoResponse {
     return match find_print_job(id).await {
         Ok(data) => response(200, json!(data).to_string()),
         Err(_) => response(404, format!("PrintJob not found: {id_str}"))
+    };
+}
+
+
+async fn get_rasterization_profile_by_id(Path(id_str): Path<String>) -> impl IntoResponse {
+    let id: DocID = match id_str.parse() {
+        Ok(data) => data,
+        Err(_) => return response(400, format!("Invalid ID: {id_str}"))
+    };
+    return match find_rasterization_profile(id).await {
+        Ok(data) => response(200, json!(data).to_string()),
+        Err(_) => response(404, format!("Rasterization profile not found: {id_str}"))
     };
 }
 
@@ -147,6 +171,14 @@ async fn post_print_job(Json(payload): Json<PrintJob>) -> impl IntoResponse {
 }
 
 
+async fn post_rasterization_profile(Json(payload): Json<RasterizationProfile>) -> impl IntoResponse {
+    return match insert_rasterization_profile(payload).await {
+        Ok(data) => response(201, data.to_string()),
+        Err(_) => response(500, "Failed to insert".to_string()) //TODO: Better error code/message? What would cause this?
+    }
+}
+
+
 async fn post_workflow(Json(payload): Json<Workflow>) -> impl IntoResponse {
     return match insert_workflow(payload).await {
         Ok(data) => response(201, data.to_string()),
@@ -172,6 +204,18 @@ async fn delete_print_job(Path(id_str): Path<String>) -> impl IntoResponse {
         Ok(_data) => response(204, "".to_string()), //TODO: Return the deleted data?
         Err(_) => response(404, format!("PrintJob not found: {id_str}"))
         //TODO: Need to handle error 409(conflict) if the printjob can't be deleted
+    }
+}
+
+
+async fn delete_rasterization_profile(Path(id_str): Path<String>) -> impl IntoResponse {
+    let id: DocID = match id_str.parse() {
+        Ok(data) => data,
+        Err(_) => return response(400, format!("Invalid ID: {id_str}"))
+    };
+    return match remove_rasterization_profile(id).await {
+        Ok(_data) => response(204, "".to_string()), //TODO: Return the deleted data?
+        Err(_) => response(404, format!("Rasterization profile not found: {id_str}"))
     }
 }
 

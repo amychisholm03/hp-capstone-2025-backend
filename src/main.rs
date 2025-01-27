@@ -11,8 +11,6 @@ const PORT: &str = "80"; // production port
 
 // Runs the server, allowing reuse in tests
 pub async fn run_server(host: &str, port: &str) {
-    // Initialize database
-    database_init();
 
     // Build Routes
     println!("Building Routes");
