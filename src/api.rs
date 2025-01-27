@@ -110,7 +110,7 @@ async fn get_workflow_by_id(Path(id_str): Path<String>) -> impl IntoResponse {
     };
     return match find_workflow(id).await {
         Ok(data) => response(200, json!(data).to_string()),
-        Err(_) => response(404, format!("Workflow not found: {id_str}"))
+        Err(err) => response(404, err.to_string())
     };
 }
 

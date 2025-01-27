@@ -310,69 +310,78 @@ pub async fn find_print_job(id: DocID) -> Result<PrintJob,String> {
 }
 
 
-// Todo: Coming back to this after i finish the adding workflow steps
-pub async fn find_workflow(id: DocID) -> Result<Workflow,String> {
+pub async fn find_workflow(id: DocID) -> Result<Workflow, String> {
     let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
 
+    // get the workflow
+    let mut stmt0 = db.prepare("SELECT id, title FROM workflow WHERE id=(?);")
+    .map_err(|e| e.to_string())?;
+    let mut workflow_iter = stmt0.query_map([id], |row: &Row| {
+        Ok(Workflow {
+            id: row.get(0)?,
+            Title: row.get(1)?,
+            WorkflowSteps: vec![],
+        })
+    })
+    .map_err(|e| e.to_string())?;
 
-    // get all the steps associated with this workflow
-    let mut stmt1 = db
-        .prepare("SELECT id, workflow_id, workflow_step_id FROM assigned_workflow_step WHERE workflow_id=(?);")
+    let mut workflow = match workflow_iter.next().unwrap() {
+        Ok(w) => w,
+        Err(_) => return Err("Workflow not found".to_string()),
+    };
+
+    //get all of the steps in this workflow
+    let mut stmt1 = db.prepare("SELECT id, workflow_id, workflow_step_id FROM assigned_workflow_step WHERE workflow_id = ?")
+    .map_err(|e| e.to_string())?;
+    let steps_iter = stmt1.query_map([id], |row| {
+        Ok(AssignedWorkflowStep {
+            id: row.get(0)?,
+            WorkflowStepID: row.get(2)?,
+            Prev: vec![],
+            Next: vec![],
+        })
+    })
+    .map_err(|e| e.to_string())?;
+
+
+    //gather all of the prev/next steps for each step in this workflow
+    for step_result in steps_iter {
+        let mut step = match step_result {
+            Ok(s) => s,
+            Err(e) => return Err(e.to_string()),
+        };
+
+
+        // grab all of the workflow steps that come next
+        let mut stmt2 = db.prepare("SELECT assigned_workflow_step_id, next_step_id FROM next_workflow_step WHERE assigned_workflow_step_id=(?);")
         .map_err(|e| e.to_string())?;
-    let mut steps = stmt1
-        .query_map([id], |row: &Row| {
-            Ok(AssignedWorkflowStep {
-                id: row.get(0)?,
-                WorkflowStepID: row.get(2)?,
-                Next: vec![],
-                Prev: vec![],
-            }) 
-        }).map_err(|e| e.to_string())?;
 
-    // get the prev/next steps associated with each step
-    for step in steps {
-        let step_id = step.as_ref().unwrap().id;
-        let mut step_unwrapped = step.unwrap();
+        let next_step_iter = stmt2.query_map([step.id], |row| {
+            let next_step_id: u32 = row.get(1)?;
+            Ok(next_step_id)
+        });
 
-        let mut stmt2 = db
-            .prepare("SELECT assigned_workflow_step_id, next_step_id FROM next_workflow_step WHERE assigned_workflow_step_id=(?);")
-            .map_err(|e| e.to_string())?;
-        let prev_steps = stmt2
-            .query_map([step_id], |row: &Row| row.get(1))
-            .map_err(|e| e.to_string())?
-            .collect::<Result<Vec<u32>, _>>() // Collect into Vec<u32>, handling errors.
-            .map_err(|e| e.to_string())?;
-        step_unwrapped.Prev = prev_steps;
+        let next_step_vec: Vec<u32> = next_step_iter.unwrap().collect::<Result<Vec<u32>, _>>().unwrap();
+    
 
-        let mut stmt3 = db
-            .prepare("SELECT assigned_workflow_step_id, prev_step_id FROM prev_workflow_step WHERE assigned_workflow_step_id=(?);")
-            .map_err(|e| e.to_string())?;
-        let next_steps = stmt3
-            .query_map([step_id], |row: &Row| row.get(1))
-            .map_err(|e| e.to_string())?
-            .collect::<Result<Vec<u32>, _>>() // Collect into Vec<u32>, handling errors.
-            .map_err(|e| e.to_string())?;
-        step_unwrapped.Next = next_steps;
+        // grab all of the workflow steps that came previously
+        let mut stmt2 = db.prepare("SELECT assigned_workflow_step_id, prev_step_id FROM prev_workflow_step WHERE assigned_workflow_step_id=(?);")
+        .map_err(|e| e.to_string())?;
+
+        let next_step_iter = stmt2.query_map([step.id], |row| {
+            let prev_step_id: u32 = row.get(1)?;
+            Ok(prev_step_id)
+        });
+
+        let prev_step_vec: Vec<u32> = next_step_iter.unwrap().collect::<Result<Vec<u32>, _>>().unwrap();
+
+        step.Prev = prev_step_vec;
+        step.Next = next_step_vec;
+        workflow.WorkflowSteps.push(step);
+
     }
 
-    let mut stmt2 = db
-        .prepare("SELECT id, title FROM workflow WHERE id=(?);")
-        .map_err(|e| e.to_string())?;
-
-    let mut rows = stmt2
-        .query_map([id], |row: &Row| {
-            Ok(Workflow {
-                id: row.get(0)?,
-                Title: row.get(1)?,
-                WorkflowSteps: vec![],
-            })
-        })
-        .map_err(|e| e.to_string())?;
-
-    let workflow = rows.next().unwrap().unwrap(); 
-    workflow.WorkflowSteps = steps;
-
-    return Ok(rows.next().unwrap().unwrap());
+    return Ok(workflow);
 
 }
 
