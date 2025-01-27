@@ -1,29 +1,10 @@
-use std::{
-	collections::HashMap,
-	sync::{Mutex, OnceLock}
-};
+use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
-use tower::util::error::optional::None;
 use std::fmt::Debug;
 use crate::simulation::{*};
 use rusqlite::{params, Connection, Row, Result};
 
-/**
- * This file has a lot of placeholder stuff to allow for development 
- * of the API before the real database has been set up
- * 
- * The struct member types are my best approximation of what they 
- * should be, but will likely need to be changed, as they will need 
- * to be able to be converted from JSON -> Rust -> mySQL and back and 
- * some of the types may not be the best fit for the data
- * 
- * The "database" right now is just four HashMaps that the functions
- * do their operations on, which will need to be replaced with 
- * functions that interact with a real database soon
- */
-
 const DATABASE_LOCATION: &str = "./db/database.db3";
-
 pub type DocID = u32;
 
 #[allow(non_snake_case)]
@@ -36,6 +17,7 @@ pub struct PrintJob {
 	RasterizationProfileID: u32
 }
 
+
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RasterizationProfile {
@@ -43,14 +25,16 @@ pub struct RasterizationProfile {
     pub title: String,
 }
 
+
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AssignedWorkflowStep {
-	pub id: DocID,           // id by which to track this workflow step in the graph
+	pub id: DocID,             // id by which to track this workflow step in the graph
     pub WorkflowStepID: DocID, // which type of workflow step this is
 	pub Prev: Vec<DocID>,
 	pub Next: Vec<DocID>
 }
+
 
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -59,6 +43,7 @@ pub struct Workflow {
 	Title: String,
 	pub WorkflowSteps: Vec<AssignedWorkflowStep>
 }
+
 
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -69,6 +54,7 @@ pub struct WorkflowStep {
 	pub TimePerPage: u32
 }
 
+
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimulationReport {
@@ -77,8 +63,8 @@ pub struct SimulationReport {
 	WorkflowID: DocID,
 	CreationTime: u32,
 	TotalTimeTaken: u32,
-	//StepTimes: HashMap<DocID,u32> //Key: WorkflowStep ID; Value: Total time for that step
 }
+
 
 #[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize)]
@@ -100,10 +86,10 @@ impl SimulationReport {
 	}
 }
 
+
 pub async fn query_print_jobs() -> Result<Vec<PrintJob>,String> {
     let db = Connection::open(DATABASE_LOCATION).unwrap();
 
-    // Prepare the SELECT statement
     let mut stmt = db
         .prepare("SELECT id, title, page_count, rasterization_profile_id FROM printjob;")
         .map_err(|e| e.to_string())?;
@@ -120,7 +106,6 @@ pub async fn query_print_jobs() -> Result<Vec<PrintJob>,String> {
         })
         .map_err(|e| e.to_string())?;
 
-    // Collect the results into a Vec and update the shared map
     let mut results = Vec::new();
     for job_result in rows {
         let job = job_result.map_err(|e| e.to_string())?;
@@ -184,6 +169,7 @@ pub async fn query_workflow_steps() -> Result<Vec<WorkflowStep>,String> {
     return Ok(results);
 
 }
+
 
 pub async fn query_simulation_reports() -> Result<Vec<SimulationReport>,String> {
     let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
@@ -447,8 +433,6 @@ pub async fn insert_print_job(data: PrintJob) -> Result<DocID,String> {
 pub async fn insert_rasterization_profile(data: RasterizationProfile) -> Result<DocID,String> {
     let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
     
-    dbg!(&data);
-
     db.execute(
         "INSERT INTO rasterization_profile (id, title) VALUES (?1, ?2);",
         params![data.id, data.title]
@@ -463,16 +447,12 @@ pub async fn insert_rasterization_profile(data: RasterizationProfile) -> Result<
 pub async fn insert_workflow(data: Workflow) -> Result<DocID,String> {
     let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
 
-    dbg!(&data);
     // Insert the Workflow
     db.execute(
         "INSERT INTO workflow (id, title) VALUES (NULL, ?1)",
         params![data.Title]
     ).map_err(|e| e.to_string())?;
-
     let inserted_id : DocID = db.last_insert_rowid() as DocID;
-
-    dbg!(&data);
 
     // Load all workflow steps into the database
     for step in &data.WorkflowSteps {
@@ -590,3 +570,4 @@ pub async fn remove_simulation_report(id: DocID) -> Result<usize,String> {
     return Ok(res);
 
 }
+

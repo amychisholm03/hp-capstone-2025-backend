@@ -60,7 +60,6 @@ async fn hello_world() -> String {
 }
 
 
-// TODO: Update to allow for querying
 async fn get_print_jobs() -> impl IntoResponse {
     return match query_print_jobs().await {
         Ok(data) => response(200, json!(data).to_string()),
@@ -76,7 +75,6 @@ async fn get_rasterization_profiles() -> impl IntoResponse {
 }
 
 
-// TODO: Update to allow for querying
 async fn get_workflows() -> impl IntoResponse {
     return match query_workflows().await {
         Ok(data) => response(200, json!(data).to_string()),
@@ -85,7 +83,6 @@ async fn get_workflows() -> impl IntoResponse {
 }
 
 
-// TODO: Update to allow for querying
 async fn get_workflow_steps() -> impl IntoResponse {
     return match query_workflow_steps().await {
         Ok(data) => response(200, json!(data).to_string()),
@@ -94,7 +91,6 @@ async fn get_workflow_steps() -> impl IntoResponse {
 }
 
 
-// TODO: Update to allow for querying
 async fn get_simulation_reports() -> impl IntoResponse {
     return match query_simulation_reports().await {
         Ok(data) => response(200, json!(data).to_string()),
@@ -243,3 +239,4 @@ async fn delete_simulation_report(Path(id_str): Path<String>) -> impl IntoRespon
         Err(_) => response(404, format!("SimulationReport not found: {id_str}"))
     }
 }
+
