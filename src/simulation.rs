@@ -27,6 +27,13 @@ pub async fn simulate(data: SimulationReportArgs) -> Result<SimulationReport,Str
 		Err(_) => return Err("Workflow not found".to_string())
 	};
 
+	// Return early if the workflow contains no steps
+	// TODO: A workflow with no steps should be made impossible
+	if workflow.WorkflowSteps.len() == 0 { 
+		return Ok(SimulationReport::new( data.PrintJobID, data.WorkflowID,
+			0, 0, HashMap::new()));
+	}
+
 	// Graph Search
 	let search = Search::new(&workflow);
 	traverse_graph(&print_job, &search, &workflow.WorkflowSteps.clone(), 0).await;
