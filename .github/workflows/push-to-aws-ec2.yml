@@ -20,7 +20,7 @@ jobs:
           ARGS: 
             --exclude='.gitignore'
             --exclude='.github/'
-            --exclude='README.md'
+            --exclude='js_version/'
           SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
           SOURCE: "./"
           REMOTE_HOST: ${{ secrets.EC2_HOST }}
