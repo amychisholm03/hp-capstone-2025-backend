@@ -31,7 +31,7 @@ pub struct PrintJob {
     #[serde(default)]
     DateCreated: Option<u32>,
     Title: String,
-    PageCount: u32,
+    pub PageCount: u32,
     RasterizationProfile: String,
 }
 
@@ -57,8 +57,8 @@ pub struct Workflow {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkflowStep {
     #[serde(default)]
-    id: Option<DocID>,
-    Title: String,
+    pub id: Option<DocID>,
+    pub Title: String,
     pub SetupTime: u32,
     pub TimePerPage: u32,
 }
@@ -114,85 +114,97 @@ pub fn next_id() -> DocID {
     return *out - 1;
 }
 
-pub fn database_init() {
-    let print_jobs = PRINT_JOBS.get_or_init(|| Mutex::new(HashMap::new()));
-    let workflows = WORKFLOWS.get_or_init(|| Mutex::new(HashMap::new()));
-    let workflow_steps = WORKFLOW_STEPS.get_or_init(|| Mutex::new(HashMap::new()));
-    let simulation_reports = SIMULATION_REPORTS.get_or_init(|| Mutex::new(HashMap::new()));
+pub fn database_init(){
+	let print_jobs = PRINT_JOBS.get_or_init(|| Mutex::new(HashMap::new()));
+	let workflows = WORKFLOWS.get_or_init(|| Mutex::new(HashMap::new()));
+	let workflow_steps = WORKFLOW_STEPS.get_or_init(|| Mutex::new(HashMap::new()));
+	let simulation_reports = SIMULATION_REPORTS.get_or_init(|| Mutex::new(HashMap::new()));
 
-    //Insert some dummy data
-    let id = next_id();
-    print_jobs.lock().unwrap().insert(
-        id,
-        PrintJob {
-            id: Some(id),
-            DateCreated: Some(0),
-            Title: "PrintJob1".to_string(),
-            PageCount: 5,
-            RasterizationProfile: "CMYK".to_string(),
-        },
-    );
+	//Insert some dummy data
+	let id = next_id();
+	print_jobs.lock().unwrap().insert(id, PrintJob{
+		id: Some(id), 
+		DateCreated: Some(0), 
+		Title: "PrintJob1".to_string(), 
+		PageCount: 5, 
+		RasterizationProfile: "CMYK".to_string()
+	});
 
-    let id = next_id();
-    workflows.lock().unwrap().insert(
-        id,
-        Workflow {
-            id: Some(id),
-            Title: "Workflow 1".to_string(),
-            WorkflowSteps: vec![WFS {
-                id: 2,
-                Next: vec![],
-                Prev: vec![],
-            }],
-        },
-    );
+	next_id();
+	let id = next_id();
+	workflow_steps.lock().unwrap().insert(id, WorkflowStep{
+		id: Some(id),
+		Title: "Preflight".to_string(),
+		SetupTime: 10,
+		TimePerPage: 7
+	});
 
-    let id = next_id();
-    workflow_steps.lock().unwrap().insert(
-        id,
-        WorkflowStep {
-            id: Some(id),
-            Title: "WorkflowStep 1".to_string(),
-            SetupTime: 7,
-            TimePerPage: 3,
-        },
-    );
+	let id = next_id();
+	workflow_steps.lock().unwrap().insert(id, WorkflowStep{
+		id: Some(id),
+		Title: "Metrics".to_string(),
+		SetupTime: 2,
+		TimePerPage: 1
+	});
 
-    let id = next_id();
-    workflow_steps.lock().unwrap().insert(
-        id,
-        WorkflowStep {
-            id: Some(id),
-            Title: "WorkflowStep 2".to_string(),
-            SetupTime: 7,
-            TimePerPage: 3,
-        },
-    );
+	let id = next_id();
+	workflow_steps.lock().unwrap().insert(id, WorkflowStep{
+		id: Some(id),
+		Title: "Rasterization".to_string(),
+		SetupTime: 50,
+		TimePerPage: 16
+	});
 
-    let id = next_id();
-    workflow_steps.lock().unwrap().insert(
-        id,
-        WorkflowStep {
-            id: Some(id),
-            Title: "WorkflowStep 3".to_string(),
-            SetupTime: 7,
-            TimePerPage: 3,
-        },
-    );
+	let id = next_id();
+	workflow_steps.lock().unwrap().insert(id, WorkflowStep{
+		id: Some(id),
+		Title: "Printing".to_string(),
+		SetupTime: 10,
+		TimePerPage: 7
+	});
 
-    let id = next_id();
-    simulation_reports.lock().unwrap().insert(
-        id,
-        SimulationReport {
-            id: Some(id),
-            PrintJobID: 0,
-            WorkflowID: 1,
-            CreationTime: 6,
-            TotalTimeTaken: 25,
-            StepTimes: HashMap::from([(2, 15)]),
-        },
-    );
+	let id = next_id();
+	workflow_steps.lock().unwrap().insert(id, WorkflowStep{
+		id: Some(id),
+		Title: "Cutting".to_string(),
+		SetupTime: 10,
+		TimePerPage: 7
+	});
+
+	let id = next_id();
+	workflow_steps.lock().unwrap().insert(id, WorkflowStep{
+		id: Some(id),
+		Title: "Laminating".to_string(),
+		SetupTime: 10,
+		TimePerPage: 7
+	});
+
+	let id = next_id();
+	workflows.lock().unwrap().insert(id, Workflow{
+		id: Some(id),
+		Title: "Workflow 1".to_string(),
+		WorkflowSteps: vec![
+			WFS{id:2, Next:vec![2,3], Prev:vec![]},
+			WFS{id:3, Next:vec![2,3], Prev:vec![]},
+			WFS{id:4, Next:vec![4], Prev:vec![0,1]},
+			WFS{id:4, Next:vec![4], Prev:vec![0,1]},
+			WFS{id:5, Next:vec![5], Prev:vec![2,3]},
+			WFS{id:6, Next:vec![6], Prev:vec![4]},
+			WFS{id:7, Next:vec![], Prev:vec![5]},
+		]
+	});
+
+	let id = next_id();
+	simulation_reports.lock().unwrap().insert(id, SimulationReport{
+		id: Some(id),
+		PrintJobID: 0,
+		WorkflowID: 1,
+		CreationTime: 6,
+		TotalTimeTaken: 25,
+		StepTimes: HashMap::from([(2, 15)])
+	});
 }
+
 
 // TODO: Update to allow for querying
 pub async fn query_print_jobs() -> Result<Vec<PrintJob>, String> {

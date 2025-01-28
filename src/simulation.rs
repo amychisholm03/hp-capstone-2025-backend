@@ -1,133 +1,134 @@
-use std::{collections::HashMap, sync::RwLock};
+use std::{
+	sync::RwLock,
+	collections::HashMap
+};
+use futures::future::join_all;
 
-use crate::database::*;
+use crate::database::{*};
 
-async fn static_testing() -> DocID {
-    // let workflow_steps = query_workflow_steps().expect("Failed to get WorkflowSteps");
-    // dbg!(workflow_steps);
-    // Graph 1 - Linear
-    let workflow: Workflow = serde_json::from_str(&format!(
-        "{{
-		\"Title\":\"Simulation Testing Workflow\",
-		\"WorkflowSteps\":[
-			{{\"Next\":[1],\"Prev\":[],\"id\":2}},
-			{{\"Next\":[2],\"Prev\":[0],\"id\":3}},
-			{{\"Next\":[],\"Prev\":[2],\"id\":4}}
-		]
-	}}"
-    ))
-    .expect("Failed to deserialize");
-    // // Graph 2 - Split, recombine, simple
-    // let workflow: Workflow = serde_json::from_str(&format!("{{
-    // 	\"Title\":\"Simulation Testing Workflow\",
-    // 	\"WorkflowSteps\":[
-    // 		{{\"Next\":[1, 2],\"Prev\":[],\"id\":2}},
-    // 		{{\"Next\":[3],\"Prev\":[0],\"id\":3}},
-    // 		{{\"Next\":[3],\"Prev\":[0],\"id\":4}},
-    // 		{{\"Next\":[],\"Prev\":[1, 2],\"id\":2}}
-    // 	]
-    // }}")).expect("Failed to deserialize");
-    // // Graph 3 - Split, recombine, complex
-    // let workflow: Workflow = serde_json::from_str(&format!("{{
-    // 	\"Title\":\"Simulation Testing Workflow\",
-    // 	\"WorkflowSteps\":[
-    // 		{{\"Next\":[1, 2, 3],\"Prev\":[],\"id\":2}},
-    // 		{{\"Next\":[5],\"Prev\":[0],\"id\":3}},
-    // 		{{\"Next\":[4],\"Prev\":[0],\"id\":4}},
-    // 		{{\"Next\":[4],\"Prev\":[0],\"id\":2}},
-    // 		{{\"Next\":[5],\"Prev\":[2, 3],\"id\":3}},
-    // 		{{\"Next\":[],\"Prev\":[1, 4],\"id\":4}}
-    // 	]
-    // }}")).expect("Failed to deserialize");
-    // // Graph 4 - Split, don't recombine
-    // let workflow: Workflow = serde_json::from_str(&format!("{{
-    // 	\"Title\":\"Simulation Testing Workflow\",
-    // 	\"WorkflowSteps\":[
-    // 		{{\"Next\":[1, 2, 3],\"Prev\":[],\"id\":2}},
-    // 		{{\"Next\":[4],\"Prev\":[0],\"id\":3}},
-    // 		{{\"Next\":[5],\"Prev\":[0],\"id\":4}},
-    // 		{{\"Next\":[5],\"Prev\":[0],\"id\":2}},
-    // 		{{\"Next\":[],\"Prev\":[1],\"id\":3}},
-    // 		{{\"Next\":[],\"Prev\":[2, 3],\"id\":4}}
-    // 	]
-    // }}")).expect("Failed to deserialize");
-    return insert_workflow(workflow).await.expect("Failed to insert");
+
+struct SearchData {
+	visited: Vec<bool>,
+	step_times_cumulative: Vec<u32>,
+	step_times_by_id: HashMap<DocID,u32>,
+	cumulative_time: u32
+}
+struct Search(RwLock<SearchData>);
+
+
+pub async fn simulate(data: SimulationReportArgs) -> Result<SimulationReport,String> {
+	// Get PrintJob and Workflow
+	let print_job = match find_print_job(data.PrintJobID).await{
+		Ok(data) => data,
+		Err(_) => return Err("PrintJob not found".to_string())
+	};
+	let workflow = match find_workflow(data.WorkflowID).await{
+		Ok(data) => data,
+		Err(_) => return Err("Workflow not found".to_string())
+	};
+
+	// Return early if the workflow contains no steps
+	// TODO: A workflow with no steps should be made impossible
+	if workflow.WorkflowSteps.len() == 0 { 
+		return Ok(SimulationReport::new( data.PrintJobID, data.WorkflowID,
+			0, 0, HashMap::new()));
+	}
+
+	// Graph Search
+	let search = Search::new(&workflow);
+	traverse_graph(&print_job, &search, &workflow.WorkflowSteps.clone(), 0).await;
+
+	// Pass results to SimulationReport constructor
+	return Ok(SimulationReport::new(
+		data.PrintJobID, 
+		data.WorkflowID, 
+		0, //TODO: Properly determine creation time, should probably be handled in database.rs
+		search.get_cumulative_time(), 
+		search.get_step_times_by_id()
+	));
 }
 
-struct Visited {
-    data: RwLock<(Vec<bool>, usize)>,
-}
-impl Visited {
-    fn new(workflow_steps: usize) -> Visited {
-        return Visited {
-            data: RwLock::new((vec![false; workflow_steps], 0)),
-        };
-    }
 
-    fn visit(&self, index: usize) -> bool {
-        if self.data.read().unwrap().0[index] == true {
-            return false;
-        }
-        let mut visited = self.data.write().unwrap();
-        visited.0[index] = true;
-        visited.1 += 1;
-        return true;
-    }
+// Assumes graph is acyclic and connected
+// TODO: Guarantee the graph is acyclic and connected
+async fn traverse_graph(print_job: &PrintJob, search: &Search, steps: &Vec<WFS>, step: usize){
+	if !(search.visit(step)) { return; }
+	
+	// Recursively visit all previous nodes first
+	traverse_list(&steps[step].Prev, print_job, search, steps).await;
 
-    fn can_visit(&self) -> bool {
-        return self.data.read().unwrap().1 < self.data.read().unwrap().0.len();
-    }
+	// Simulate the current step
+	let result = simulate_step(print_job, &steps[step]).await;
+	
+	// Update times
+	search.update_step_time_by_id(&steps[step].id, result);
+	match Iterator::max(steps[step].Prev.iter().map(|&i| search.get_step_time_cumulative(i))){
+		Some(data) => search.update_step_time_cumulative(step, result+data),
+		None => search.update_step_time_cumulative(step, result)
+	};
+
+	// Recursively visit next nodes
+	traverse_list(&steps[step].Next, print_job, search, steps).await;
 }
 
-//TODO: async?
-pub async fn simulate(data: SimulationReportArgs) -> Result<SimulationReport, String> {
-    let static_wf_id = static_testing().await;
-    let printjob: PrintJob = match find_print_job(data.PrintJobID).await {
-        Ok(data) => data,
-        Err(_) => return Err("PrintJob not found".to_string()),
-    };
-    //TODO: Make dynamic
-    // let workflow = match find_workflow(data.WorkflowID).await{
-    let workflow: Workflow = match find_workflow(static_wf_id).await {
-        Ok(data) => data,
-        Err(_) => return Err("Workflow not found".to_string()),
-    };
-    dbg!(printjob.clone());
-    dbg!(workflow.clone());
 
-    // Graph Search
-    let visited = Visited::new(workflow.WorkflowSteps.len());
-    let _results = traverse_graph(&printjob, &visited, &workflow.WorkflowSteps.clone(), 0).await;
-
-    return Ok(SimulationReport::new(
-        data.PrintJobID,
-        data.WorkflowID,
-        6,
-        25,
-        HashMap::from([(2, 15)]),
-    ));
+async fn traverse_list(steps: &Vec<usize>, print_job: &PrintJob, search: &Search, all_steps: &Vec<WFS>){
+	join_all(steps.iter().map(|&i| 
+		traverse_graph(print_job, search, all_steps, i)
+	).collect::<Vec<_>>()).await;
 }
 
-async fn traverse_graph(
-    print_job: &PrintJob,
-    visited: &Visited,
-    steps: &Vec<WFS>,
-    step: usize,
-) -> bool {
-    if !(visited.visit(step)) || !(visited.can_visit()) {
-        return false;
-    }
 
-    // let previouses = steps[step].Prev.iter().map(|&i| traverse_graph(print_job, visited, steps, i)).collect();
-    // join!(previouses);
+async fn simulate_step(print_job: &PrintJob, wfs: &WFS) -> u32 {
+	let workflow_step = find_workflow_step(wfs.id).await.expect("WorkflowStep not found");
+	return print_job.PageCount * workflow_step.TimePerPage + workflow_step.SetupTime;
+}
 
-    // for i in &steps[step].Prev {
-    // 	traverse_graph(print_job, visited, steps, *i);
-    // }
-    // TODO: Simulate step
-    // for i in &steps[step].Next {
-    // 	traverse_graph(print_job, visited, steps, *i);
-    // }
 
-    return true;
+impl Search {
+	fn new(workflow: &Workflow) -> Search {
+		return Search(RwLock::new(SearchData{
+			visited: vec![false; workflow.WorkflowSteps.len()],
+			step_times_cumulative: vec![0; workflow.WorkflowSteps.len()],
+			step_times_by_id: HashMap::new(),
+			cumulative_time: 0
+		}));
+	}
+
+	// Returns false to indicate that an index can't be visited because 
+	// it already has been, otherwise sets visited[index] to true 
+	// and returns true to indicate that it's OK to evaluate that step
+	fn visit(&self, index: usize) -> bool {
+		if self.0.read().unwrap().visited[index] == true { return false; }
+		let mut visited = self.0.write().unwrap();
+		visited.visited[index] = true;
+		return true;
+	}
+
+	// Sets the cumulative time to reach the end of a step and keeps 
+	// track of the cumulative time overall
+	fn update_step_time_cumulative(&self, step: usize, time: u32){
+		let mut write_lock = self.0.write().unwrap();
+		write_lock.step_times_cumulative[step] = time;
+		if time > write_lock.cumulative_time { 
+			write_lock.cumulative_time = time;
+		}
+	}
+
+	fn get_step_time_cumulative(&self, step: usize) -> u32 {
+		return self.0.read().unwrap().step_times_cumulative[step];
+	}
+
+	fn update_step_time_by_id(&self, id: &DocID, time: u32){
+		self.0.write().unwrap().step_times_by_id.entry(*id)
+			.and_modify(|val| *val += time).or_insert(time);
+	}
+
+	fn get_step_times_by_id(&self) -> HashMap<DocID,u32> {
+		return self.0.read().unwrap().step_times_by_id.clone();
+	}
+
+	fn get_cumulative_time(&self) -> u32 {
+		return self.0.read().unwrap().cumulative_time;
+	}
 }
