@@ -63,6 +63,7 @@ pub struct SimulationReport {
 	WorkflowID: DocID,
 	CreationTime: u32,
 	TotalTimeTaken: u32,
+    StepTimes: HashMap<DocID, u32>,
 }
 
 
@@ -82,6 +83,7 @@ impl SimulationReport {
 			WorkflowID: workflow_id,
 			CreationTime: creation_time,
 			TotalTimeTaken: total_time_taken,
+            StepTimes: step_times,
 		}
 	}
 }
@@ -188,6 +190,7 @@ pub async fn query_simulation_reports() -> Result<Vec<SimulationReport>,String> 
                 TotalTimeTaken: row.get(3)?,
                 PrintJobID: row.get(4)?,
                 WorkflowID: row.get(5)?,
+                StepTimes: HashMap::from([(2, 15)]),
             })
         })
         .map_err(|e| e.to_string())?;
@@ -405,6 +408,7 @@ pub async fn find_simulation_report(id: DocID) -> Result<SimulationReport,String
                 TotalTimeTaken: row.get(2)?, 
                 PrintJobID: row.get(3)?,
                 WorkflowID: row.get(4)?,
+                StepTimes: HashMap::from([(2, 15)]),
 
             })
         })
