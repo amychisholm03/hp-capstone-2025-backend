@@ -16,4 +16,4 @@ Cargo.lock
 /target
 
 #sqlite
-.db3
+*.db3

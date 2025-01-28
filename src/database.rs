@@ -29,10 +29,10 @@ pub struct RasterizationProfile {
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AssignedWorkflowStep {
-	pub id: DocID,             // id by which to track this workflow step in the graph
-        pub WorkflowStepID: DocID, // which type of workflow step this is
-	pub Prev: Vec<DocID>,
-	pub Next: Vec<DocID>
+	pub id: DocID,             // primary key for this workflow step
+    pub WorkflowStepID: DocID, // foreign key ID pertaining to what type of workflow step this is.
+	pub Prev: Vec<usize>,      // list of indices into a vec of AssignedWorkflowSteps, denoting which steps came last.
+	pub Next: Vec<usize>       // list of indicies into a vec of AssignedWorkflowSteps, denoting which steps come next.
 }
 
 
@@ -322,41 +322,59 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow, String> {
     })
     .map_err(|e| e.to_string())?;
 
+    let mut id_to_indice : HashMap<DocID, usize> = HashMap::new();
 
-    // Gather all of the prev/next steps for each step in this workflow
+    // Place all workflow steps in a vector. Keep track of which step is at which index.
     for step_result in steps_iter {
-        let mut step = match step_result {
+        
+        let step = match step_result {
             Ok(s) => s,
             Err(e) => return Err(e.to_string()),
         };
 
+        id_to_indice.insert(step.id, workflow.WorkflowSteps.len());
+        workflow.WorkflowSteps.push(step);
 
-        // grab all of the workflow steps that come next
+    }
+
+    // Add previous and next workflow step information to each step.
+    for step in &mut workflow.WorkflowSteps {
+        
+        //// Add all of the steps that come next
         let mut stmt2 = db.prepare("SELECT assigned_workflow_step_id, next_step_id FROM next_workflow_step WHERE assigned_workflow_step_id=(?);")
         .map_err(|e| e.to_string())?;
 
-        let next_step_iter = stmt2.query_map([step.id], |row| {
+        let next_steps_iter = stmt2.query_map([step.id], |row| {
             let next_step_id: u32 = row.get(1)?;
             Ok(next_step_id)
-        });
-
-        let next_step_vec: Vec<u32> = next_step_iter.unwrap().collect::<Result<Vec<u32>, _>>().unwrap();
-    
-
-        // grab all of the workflow steps that came previously
-        let mut stmt2 = db.prepare("SELECT assigned_workflow_step_id, prev_step_id FROM prev_workflow_step WHERE assigned_workflow_step_id=(?);")
+        })
         .map_err(|e| e.to_string())?;
 
-        let next_step_iter = stmt2.query_map([step.id], |row| {
-            let prev_step_id: u32 = row.get(1)?;
-            Ok(prev_step_id)
-        });
+        for next_step_result in next_steps_iter {
+            let next_step = match next_step_result {
+                Ok(s) => s,
+                Err(e) => return Err(e.to_string()),
+            };
+            step.Next.push(*id_to_indice.get(&next_step).unwrap());
+        }
 
-        let prev_step_vec: Vec<u32> = next_step_iter.unwrap().collect::<Result<Vec<u32>, _>>().unwrap();
+        //// Add all of the steps that come before this step
+        let mut stmt3 = db.prepare("SELECT assigned_workflow_step_id, prev_step_id FROM prev_workflow_step WHERE assigned_workflow_step_id=(?);")
+        .map_err(|e| e.to_string())?;
 
-        step.Prev = prev_step_vec;
-        step.Next = next_step_vec;
-        workflow.WorkflowSteps.push(step);
+        let prev_steps_iter = stmt3.query_map([step.id], |row| {
+            let next_step_id: u32 = row.get(1)?;
+            Ok(next_step_id)
+        })
+        .map_err(|e| e.to_string())?;
+
+        for prev_step_result in prev_steps_iter {
+            let prev_step = match prev_step_result {
+                Ok(s) => s,
+                Err(e) => return Err(e.to_string()),
+            };
+            step.Prev.push(*id_to_indice.get(&prev_step).unwrap());
+        }
 
     }
 
