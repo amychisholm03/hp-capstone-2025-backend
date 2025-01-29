@@ -93,7 +93,7 @@ async fn get_workflow_steps() -> impl IntoResponse {
 async fn get_simulation_reports() -> impl IntoResponse {
     return match query_simulation_reports().await {
         Ok(data) => response(200, json!(data).to_string()),
-        Err(e) => response(400, e.to_string())
+        Err(e) => response(400, "An error occurred.".to_string())
     }
 }
 
