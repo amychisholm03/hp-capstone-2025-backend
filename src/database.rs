@@ -1,11 +1,21 @@
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
+use lazy_static::lazy_static;
 use std::fmt::Debug;
+use std::sync::{Arc, Mutex};
 use crate::simulation::{*};
 use rusqlite::{params, Connection, Row, Result};
 
-const DATABASE_LOCATION: &str = "./db/database.db3";
 pub type DocID = u32;
+const DATABASE_LOCATION: &str = "./db/database.db3";
+
+// Wrap database in mutex so it can be used concurrently. Connection is opened lazily at first usage, then kept open.
+lazy_static! {
+    pub static ref DB_CONNECTION: Arc<Mutex<Connection>> = Arc::new(Mutex::new(
+        Connection::open(DATABASE_LOCATION).expect("Failed to connect to database.")
+    ));
+}
+
 
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -23,6 +33,7 @@ pub struct PrintJob {
 pub struct RasterizationProfile {
     pub id: DocID,
     pub title: String,
+    pub profile: String,
 }
 
 
@@ -69,9 +80,45 @@ pub struct SimulationReport {
 
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SimulationReportDetailed {
+	#[serde(default)] id: Option<DocID>,
+	PrintJobID: DocID,
+    PrintJobTitle: String,
+	WorkflowID: DocID,
+    WorkflowTitle: String,
+    RasterizationProfile: String,
+	CreationTime: u32,
+	TotalTimeTaken: u32,
+    StepTimes: HashMap<DocID, u32>,
+    //TODO: There is a table in the database called ran_workflow_step, which associates a workflow
+    //step with a simulation_report_id and time_taken value. We could potentially store a list of
+    //RanWorkflowSteps in this struct, similar to how a workflow struct does.
+}
+
+
+#[allow(non_snake_case)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimulationReportArgs {
     pub PrintJobID: DocID,
     pub WorkflowID: DocID,
+}
+
+
+#[allow(non_snake_case)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AssignedWorkflowStepArgs {
+    pub WorkflowStepID: DocID, // foreign key ID pertaining to what type of workflow step this is.
+	pub Prev: Vec<usize>,      // list of indices into a vec of AssignedWorkflowSteps, denoting which steps came last.
+	pub Next: Vec<usize>       // list of indicies into a vec of AssignedWorkflowSteps, denoting which steps come next.
+}
+
+
+#[allow(non_snake_case)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkflowArgs {
+	#[serde(default)] id: Option<DocID>,
+	Title: String,
+	pub WorkflowSteps: Vec<AssignedWorkflowStepArgs>
 }
 
 
@@ -89,8 +136,16 @@ impl SimulationReport {
 }
 
 
+pub async fn enable_foreign_key_checking() -> Result<(), String> {
+    let db = DB_CONNECTION.lock().unwrap();
+    db.execute("PRAGMA foreign_keys = ON;", [])
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+
 pub async fn query_print_jobs() -> Result<Vec<PrintJob>,String> {
-    let db = Connection::open(DATABASE_LOCATION).unwrap();
+    let db = DB_CONNECTION.lock().unwrap();
 
     let mut stmt = db
         .prepare("SELECT id, title, page_count, rasterization_profile_id FROM printjob;")
@@ -119,7 +174,7 @@ pub async fn query_print_jobs() -> Result<Vec<PrintJob>,String> {
 
 
 pub async fn query_workflows() -> Result<Vec<Workflow>,String> {
-    let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
+    let db = DB_CONNECTION.lock().unwrap();
 
     let mut stmt = db
         .prepare("SELECT id, title FROM workflow;")
@@ -147,7 +202,7 @@ pub async fn query_workflows() -> Result<Vec<Workflow>,String> {
 
 
 pub async fn query_workflow_steps() -> Result<Vec<WorkflowStep>,String> {
-    let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
+    let db = DB_CONNECTION.lock().unwrap();
 
     let mut stmt = db
         .prepare("SELECT id, title, setup_time, time_per_page FROM workflow_step;")
@@ -175,41 +230,64 @@ pub async fn query_workflow_steps() -> Result<Vec<WorkflowStep>,String> {
 }
 
 
-pub async fn query_simulation_reports() -> Result<Vec<SimulationReport>,String> {
-    let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
+pub async fn query_simulation_reports() -> Result<Vec<SimulationReportDetailed>,String> {
+    let db = DB_CONNECTION.lock().unwrap();
 
-    let mut stmt = db
-        .prepare("SELECT id, title, creation_time, total_time_taken, printjobID, workflowID FROM simulation_report;")
+
+    let mut stmt = db.prepare
+        ("
+            SELECT 
+                simulation_report.id,
+                simulation_report.title,
+                simulation_report.creation_time,
+                simulation_report.total_time_taken,
+                printjobID,
+                workflowID,
+                workflow.title,
+                printjob.title,
+                rasterization_profile.title
+            FROM simulation_report
+            LEFT JOIN workflow
+                ON simulation_report.workflowID=workflow.id
+            LEFT JOIN printjob
+                ON simulation_report.printjobID=printjob.id
+            LEFT JOIN rasterization_profile
+                ON printjob.rasterization_profile_id=rasterization_profile.id;
+        ")
         .map_err(|e| e.to_string())?;
 
     let rows = stmt
         .query_map([], |row: &Row| {
-            Ok(SimulationReport {
+            Ok(SimulationReportDetailed {
                 id: row.get(0)?, 
                 CreationTime: row.get(2)?,
                 TotalTimeTaken: row.get(3)?,
                 PrintJobID: row.get(4)?,
                 WorkflowID: row.get(5)?,
                 StepTimes: HashMap::from([(2, 15)]),
+                PrintJobTitle: row.get(6)?,
+                WorkflowTitle: row.get(7)?,
+                RasterizationProfile: row.get(8)?,
             })
         })
         .map_err(|e| e.to_string())?;
 
-    let mut results = Vec::new();
+    let mut results : Vec<SimulationReportDetailed> = Vec::new();
     for report_result in rows {
         let report = report_result.map_err(|e| e.to_string())?;
         results.push(report);
     }
 
     return Ok(results);
+
 }
 
 
 pub async fn query_rasterization_profiles() -> Result<Vec<RasterizationProfile>, String> {
-    let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
+    let db = DB_CONNECTION.lock().unwrap();
     
     let mut stmt = db
-        .prepare("SELECT id, title FROM rasterization_profile;")
+        .prepare("SELECT id, title, profile FROM rasterization_profile;")
         .map_err(|e| e.to_string())?;
 
     let rows = stmt
@@ -217,6 +295,7 @@ pub async fn query_rasterization_profiles() -> Result<Vec<RasterizationProfile>,
             Ok(RasterizationProfile {
                 id: row.get(0)?, 
                 title: row.get(1)?, 
+                profile: row.get(2)?,
             })
         })
         .map_err(|e| e.to_string())?;
@@ -233,7 +312,7 @@ pub async fn query_rasterization_profiles() -> Result<Vec<RasterizationProfile>,
 
 
 pub async fn find_print_job(id: DocID) -> Result<PrintJob,String> {
-    let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
+    let db = DB_CONNECTION.lock().unwrap();
 
     let mut stmt = db
         .prepare("SELECT id, title, creation_time, page_count, rasterization_profile_id FROM printjob WHERE id=(?);")
@@ -264,10 +343,10 @@ pub async fn find_print_job(id: DocID) -> Result<PrintJob,String> {
 
 
 pub async fn find_rasterization_profile(id: DocID) -> Result<RasterizationProfile,String> {
-    let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
+    let db = DB_CONNECTION.lock().unwrap();
 
     let mut stmt = db
-        .prepare("SELECT id, title FROM rasterization_profile WHERE id=(?);")
+        .prepare("SELECT id, title, profile FROM rasterization_profile WHERE id=(?);")
         .map_err(|e| e.to_string())?;
 
     let mut rows = stmt
@@ -275,6 +354,8 @@ pub async fn find_rasterization_profile(id: DocID) -> Result<RasterizationProfil
             Ok(RasterizationProfile {
                 id: row.get(0)?,
                 title: row.get(1)?,
+                profile: row.get(2)?,
+
             })
         })
         .map_err(|e| e.to_string())?;
@@ -290,7 +371,7 @@ pub async fn find_rasterization_profile(id: DocID) -> Result<RasterizationProfil
 
 
 pub async fn find_workflow(id: DocID) -> Result<Workflow, String> {
-    let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
+    let db = DB_CONNECTION.lock().unwrap();
 
     // Get the workflow matching the supplied id
     let mut stmt0 = db.prepare("SELECT id, title FROM workflow WHERE id=(?);")
@@ -384,7 +465,7 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow, String> {
 
 
 pub async fn find_workflow_step(id: DocID) -> Result<WorkflowStep,String> {
-    let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
+    let db = DB_CONNECTION.lock().unwrap();
 
     let mut stmt = db
         .prepare("SELECT id, title, setup_time, time_per_page FROM workflow_step WHERE id=(?);")
@@ -412,7 +493,7 @@ pub async fn find_workflow_step(id: DocID) -> Result<WorkflowStep,String> {
 
 
 pub async fn find_simulation_report(id: DocID) -> Result<SimulationReport,String> {
-    let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
+    let db = DB_CONNECTION.lock().unwrap();
 
     let mut stmt = db
         .prepare("SELECT id, creation_time, total_time_taken, printjobID, workflowID FROM simulation_report WHERE id=(?);")
@@ -443,7 +524,7 @@ pub async fn find_simulation_report(id: DocID) -> Result<SimulationReport,String
 
 
 pub async fn insert_print_job(data: PrintJob) -> Result<DocID,String> {
-    let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
+    let db = DB_CONNECTION.lock().unwrap();
     
     db.execute(
         "INSERT INTO printjob (id, title, creation_time, page_count, rasterization_profile_id) VALUES (NULL, ?1, ?2, ?3, ?4)",
@@ -457,7 +538,7 @@ pub async fn insert_print_job(data: PrintJob) -> Result<DocID,String> {
 
 
 pub async fn insert_rasterization_profile(data: RasterizationProfile) -> Result<DocID,String> {
-    let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
+    let db = DB_CONNECTION.lock().unwrap();
     
     db.execute(
         "INSERT INTO rasterization_profile (id, title) VALUES (?1, ?2);",
@@ -470,8 +551,8 @@ pub async fn insert_rasterization_profile(data: RasterizationProfile) -> Result<
 }
 
 
-pub async fn insert_workflow(data: Workflow) -> Result<DocID,String> {
-    let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
+pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,String> {
+    let db = DB_CONNECTION.lock().unwrap();
 
     // Insert the Workflow
     db.execute(
@@ -479,23 +560,31 @@ pub async fn insert_workflow(data: Workflow) -> Result<DocID,String> {
         params![data.Title]
     ).map_err(|e| e.to_string())?;
     let inserted_id : DocID = db.last_insert_rowid() as DocID;
-
-    // Load all workflow steps into the database
+    
+    // Load all workflow steps into the database.
+    let mut indexcounter : usize = 0;
+    let mut index_to_id : HashMap<usize, DocID> = HashMap::new();
     for step in &data.WorkflowSteps {
         db.execute(
-            "INSERT INTO assigned_workflow_step (id, workflow_id, workflow_step_id) VALUES (?1, ?2, ?3)",
-            params![step.id, inserted_id, step.WorkflowStepID]
+            "INSERT INTO assigned_workflow_step (id, workflow_id, workflow_step_id) VALUES (NULL, ?1, ?2)",
+            params![inserted_id, step.WorkflowStepID]
         ).map_err(|e| e.to_string())?;
+
+        // map the primary key of each AssignedWorkflowStep to it's index in the vector.
+        let inserted_id : DocID = db.last_insert_rowid() as DocID;
+        index_to_id.insert(indexcounter, inserted_id); 
+        indexcounter+=1;
     }
 
-    // Tie each step to it's previous/next workflow steps
+    // Now tie each step to it's previous/next workflow steps
+    indexcounter = 0;
     for step in &data.WorkflowSteps {
 
         // ... all steps that come after this step
         for next_step in &step.Next {
             db.execute(
                 "INSERT INTO next_workflow_step (assigned_workflow_step_id, next_step_id) VALUES (?1, ?2)",
-                params![step.id, next_step] 
+                params![index_to_id.get(&indexcounter), index_to_id.get(next_step)] 
             ).map_err(|e| e.to_string())?;
         }
 
@@ -503,10 +592,12 @@ pub async fn insert_workflow(data: Workflow) -> Result<DocID,String> {
         for prev_step in &step.Prev {
             db.execute(
                 "INSERT INTO prev_workflow_step (assigned_workflow_step_id, prev_step_id) VALUES (?1, ?2)",
-                params![step.id, prev_step] 
+                params![index_to_id.get(&indexcounter), index_to_id.get(prev_step)] 
             ).map_err(|e| e.to_string())?;
         }
 
+        indexcounter+=1;
+    
     }
 
     return Ok(inserted_id);
@@ -523,9 +614,9 @@ pub async fn insert_simulation_report(PrintJobID: u32, WorkflowID: u32) -> Resul
 	};
 
     // Store resulting simulation data in the db.
-    let db = Connection::open(DATABASE_LOCATION).map_err(|e| e.to_string())?;
+    let db = DB_CONNECTION.lock().unwrap();
     db.execute(
-        "INSERT INTO simulation_report (id, title, creation_time, total_time_taken, printjobID, workflowID) VALUES (NULL, 'Default', ?2, ?3, ?4, ?5)",
+        "INSERT INTO simulation_report (id, title, creation_time, total_time_taken, printjobID, workflowID) VALUES (NULL, 'Default', ?1, ?2, ?3, ?4)",
         params![new_report.CreationTime, new_report.TotalTimeTaken, new_report.PrintJobID, new_report.WorkflowID]
     ).map_err(|e| return e.to_string())?;
     let inserted_id : u32 = db.last_insert_rowid() as u32;
@@ -535,10 +626,8 @@ pub async fn insert_simulation_report(PrintJobID: u32, WorkflowID: u32) -> Resul
 }
 
 
-//TODO: Removing a print job should fail if any simulation reports refer to it
 pub async fn remove_print_job(id: DocID) -> Result<usize, String> {
-    let db = Connection::open(DATABASE_LOCATION)
-    .map_err(|e| return e.to_string())?;
+    let db = DB_CONNECTION.lock().unwrap();
     
     let mut stmt = db.prepare("DELETE FROM print_job WHERE id=(?)")
     .map_err(|e| return e.to_string())?;
@@ -551,10 +640,8 @@ pub async fn remove_print_job(id: DocID) -> Result<usize, String> {
 }
 
 
-//TODO: Removing a simulation report should fail if any print job refers to it
 pub async fn remove_rasterization_profile(id: DocID) -> Result<usize, String> {
-    let db = Connection::open(DATABASE_LOCATION)
-    .map_err(|e| return e.to_string())?;
+    let db = DB_CONNECTION.lock().unwrap();
     
     let mut stmt = db.prepare("DELETE FROM rasterization_profile WHERE id=(?)")
     .map_err(|e| return e.to_string())?;
@@ -567,10 +654,8 @@ pub async fn remove_rasterization_profile(id: DocID) -> Result<usize, String> {
 }
 
 
-//TODO: Removing a workflow should fail if any simulation reports refer to it
 pub async fn remove_workflow(id: DocID) -> Result<usize,String> {
-    let db = Connection::open(DATABASE_LOCATION)
-    .map_err(|e| return e.to_string())?;
+    let db = DB_CONNECTION.lock().unwrap();
     
     let mut stmt = db.prepare("DELETE FROM workflow WHERE id=(?)")
     .map_err(|e| return e.to_string())?;
@@ -584,8 +669,7 @@ pub async fn remove_workflow(id: DocID) -> Result<usize,String> {
 
 
 pub async fn remove_simulation_report(id: DocID) -> Result<usize,String> {
-    let db = Connection::open(DATABASE_LOCATION)
-    .map_err(|e| e.to_string())?;
+    let db = DB_CONNECTION.lock().unwrap();
     
     let mut stmt = db.prepare("DELETE FROM simulation_report WHERE id=(?)")
     .map_err(|e| e.to_string())?;

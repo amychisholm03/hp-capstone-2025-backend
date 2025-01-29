@@ -1,61 +1,10 @@
 use std::{
 	sync::RwLock,
-	collections::HashMap
+	collections::HashMap,
+    time::{SystemTime, UNIX_EPOCH}
 };
-use tokio::join;
 
 use crate::database::{*};
-
-
-async fn static_testing() -> DocID {
-	// let workflow_steps = query_workflow_steps().expect("Failed to get WorkflowSteps");
-	// dbg!(workflow_steps);
-	// Graph 1 - Linear
-	let workflow: Workflow = serde_json::from_str(&format!("{{
-		\"Title\":\"Simulation Testing Workflow\",
-		\"WorkflowSteps\":[
-			{{\"Next\":[1],\"Prev\":[],\"id\":2}},
-			{{\"Next\":[2],\"Prev\":[0],\"id\":3}},
-			{{\"Next\":[],\"Prev\":[2],\"id\":4}}
-		]
-	}}")).expect("Failed to deserialize");
-	// // Graph 2 - Split, recombine, simple
-	// let workflow: Workflow = serde_json::from_str(&format!("{{
-	// 	\"Title\":\"Simulation Testing Workflow\",
-	// 	\"WorkflowSteps\":[
-	// 		{{\"Next\":[1, 2],\"Prev\":[],\"id\":2}},
-	// 		{{\"Next\":[3],\"Prev\":[0],\"id\":3}},
-	// 		{{\"Next\":[3],\"Prev\":[0],\"id\":4}},
-	// 		{{\"Next\":[],\"Prev\":[1, 2],\"id\":2}}
-	// 	]
-	// }}")).expect("Failed to deserialize");
-	// // Graph 3 - Split, recombine, complex
-	// let workflow: Workflow = serde_json::from_str(&format!("{{
-	// 	\"Title\":\"Simulation Testing Workflow\",
-	// 	\"WorkflowSteps\":[
-	// 		{{\"Next\":[1, 2, 3],\"Prev\":[],\"id\":2}},
-	// 		{{\"Next\":[5],\"Prev\":[0],\"id\":3}},
-	// 		{{\"Next\":[4],\"Prev\":[0],\"id\":4}},
-	// 		{{\"Next\":[4],\"Prev\":[0],\"id\":2}},
-	// 		{{\"Next\":[5],\"Prev\":[2, 3],\"id\":3}},
-	// 		{{\"Next\":[],\"Prev\":[1, 4],\"id\":4}}
-	// 	]
-	// }}")).expect("Failed to deserialize");
-	// // Graph 4 - Split, don't recombine
-	// let workflow: Workflow = serde_json::from_str(&format!("{{
-	// 	\"Title\":\"Simulation Testing Workflow\",
-	// 	\"WorkflowSteps\":[
-	// 		{{\"Next\":[1, 2, 3],\"Prev\":[],\"id\":2}},
-	// 		{{\"Next\":[4],\"Prev\":[0],\"id\":3}},
-	// 		{{\"Next\":[5],\"Prev\":[0],\"id\":4}},
-	// 		{{\"Next\":[5],\"Prev\":[0],\"id\":2}},
-	// 		{{\"Next\":[],\"Prev\":[1],\"id\":3}},
-	// 		{{\"Next\":[],\"Prev\":[2, 3],\"id\":4}}
-	// 	]
-	// }}")).expect("Failed to deserialize");
-	return insert_workflow(workflow).await.expect("Failed to insert");
-}
-
 
 struct Visited { 
 	data: RwLock<(Vec<bool>,usize)>
@@ -81,27 +30,29 @@ impl Visited {
 
 //TODO: async?
 pub async fn simulate(PrintJobID : u32, WorkflowID: u32) -> Result<SimulationReport,String> {
-	let static_wf_id = static_testing().await;
-	let printjob: PrintJob = match find_print_job(PrintJobID).await{
+	
+    let printjob: PrintJob = match find_print_job(PrintJobID).await{
 		Ok(data) => data,
 		Err(_) => return Err("PrintJob not found".to_string())
 	};
-	//TODO: Make dynamic
-	// let workflow = match find_workflow(data.WorkflowID).await{
-	let workflow: Workflow = match find_workflow(static_wf_id).await{
-		Ok(data) => data,
-		Err(_) => return Err("Workflow not found".to_string())
-	};
+    
+    let workflow = match find_workflow(WorkflowID).await{
+        Ok(data) => data,
+        Err(_) => return Err("Workflow not found".to_string())
+    };
 
 	// Graph Search
 	let visited = Visited::new(workflow.WorkflowSteps.len());
 	let _results = traverse_graph(&printjob, &visited, &workflow.WorkflowSteps.clone(), 0).await;
+    let current_time_in_secs = SystemTime::now().duration_since(UNIX_EPOCH).expect("Issue discerning current time.").as_secs() as u32;
 
-	return Ok(SimulationReport::new(PrintJobID, WorkflowID, 6, 25, HashMap::from([(2, 15)])));
+	return Ok(SimulationReport::new(PrintJobID, WorkflowID, current_time_in_secs, 25, HashMap::from([(2, 15)])));
 
 }
 
-
+// TODO: I expect we'll probably store the time/cost/other details from each step into the
+// database here. There is a table in the database called ran_workflow_step that associates an
+// AssignedWorkflowStep with a simulation_report_id & time_taken value
 async fn traverse_graph(print_job: &PrintJob, visited: &Visited, steps: &Vec<AssignedWorkflowStep>, step: usize) -> bool {
 	if !(visited.visit(step)) || !(visited.can_visit()) { return false; }
 

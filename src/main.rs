@@ -16,6 +16,8 @@ pub async fn run_server(host: &str, port: &str) {
     println!("Building Routes");
     let app = build_routes();
 
+    enable_foreign_key_checking();
+
     // Run Server
     println!("Starting server on {host}:{port}");
     let listener = match tokio::net::TcpListener::bind(format!("{host}:{port}")).await {

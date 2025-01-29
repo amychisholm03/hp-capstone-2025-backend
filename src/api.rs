@@ -12,7 +12,6 @@ use tower_http::cors::{CorsLayer, Any};
 use hyper::StatusCode;
 use crate::database::{*};
 
-
 pub fn build_routes() -> Router {
     // https://dev.to/amaendeepm/api-development-in-rust-cors-tower-middleware-and-the-power-of-axum-397k
     let cors_layer = CorsLayer::new()
@@ -94,7 +93,7 @@ async fn get_workflow_steps() -> impl IntoResponse {
 async fn get_simulation_reports() -> impl IntoResponse {
     return match query_simulation_reports().await {
         Ok(data) => response(200, json!(data).to_string()),
-        Err(_) => response(400, "An error occurred.".to_string())
+        Err(e) => response(400, e.to_string())
     }
 }
 
@@ -162,7 +161,7 @@ async fn get_simulation_report_by_id(Path(id_str): Path<String>) -> impl IntoRes
 async fn post_print_job(Json(payload): Json<PrintJob>) -> impl IntoResponse {
     return match insert_print_job(payload).await {
         Ok(data) => response(201, data.to_string()),
-        Err(_) => response(500, "Failed to insert".to_string()) //TODO: Better error code/message? What would cause this?
+        Err(_) => response(500, "An error occurred.".to_string()) //TODO: Better error code/message? What would cause this?
     }
 }
 
@@ -175,10 +174,10 @@ async fn post_rasterization_profile(Json(payload): Json<RasterizationProfile>) -
 }
 
 
-async fn post_workflow(Json(payload): Json<Workflow>) -> impl IntoResponse {
+async fn post_workflow(Json(payload): Json<WorkflowArgs>) -> impl IntoResponse {
     return match insert_workflow(payload).await {
         Ok(data) => response(201, data.to_string()),
-        Err(err) => response(500, "An error occurred.".to_string()) //TODO: Better error code/message? What would cause this?
+        Err(err) => response(500, err.to_string()) //TODO: Better error code/message? What would cause this?
     }
 }
 
@@ -186,7 +185,7 @@ async fn post_workflow(Json(payload): Json<Workflow>) -> impl IntoResponse {
 async fn post_simulation_report(Json(payload): Json<SimulationReportArgs>) -> impl IntoResponse {
     return match insert_simulation_report(payload.PrintJobID, payload.WorkflowID).await {
         Ok(data) => response(201, data.to_string()),
-        Err(_) => response(500, "An error occurred.".to_string()) //TODO: Better error code/message? What would cause this?
+        Err(err) => response(500, err.to_string()) //TODO: Better error code/message? What would cause this?
     }
 }
 
@@ -211,7 +210,7 @@ async fn delete_rasterization_profile(Path(id_str): Path<String>) -> impl IntoRe
     };
     return match remove_rasterization_profile(id).await {
         Ok(_data) => response(204, "".to_string()), //TODO: Return the deleted data?
-        Err(_) => response(404, format!("Rasterization profile not found: {id_str}"))
+        Err(_) => response(404, format!("Unable to delete."))
     }
 }
 
@@ -223,7 +222,7 @@ async fn delete_workflow(Path(id_str): Path<String>) -> impl IntoResponse {
     };
     return match remove_workflow(id).await {
         Ok(_data) => response(204, "".to_string()), //TODO: Return the deleted data?
-        Err(_) => response(404, format!("Workflow not found: {id_str}"))
+        Err(_) => response(404, format!("Unable to delete."))
         //TODO: Need to handle error 409(conflict) if the workflow can't be deleted
     }
 }

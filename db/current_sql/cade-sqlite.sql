@@ -1,7 +1,8 @@
 -- Create a table to define rasterization profiles
 CREATE TABLE IF NOT EXISTS rasterization_profile (
    id INTEGER PRIMARY KEY,
-   title TEXT NOT NULL
+   title TEXT NOT NULL,
+   profile TEXT NOT NULL
 );
 
 -- Create a table to define print jobs
