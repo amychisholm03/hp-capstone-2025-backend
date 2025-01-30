@@ -59,10 +59,11 @@ pub struct Workflow {
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkflowStep {
-	#[serde(default)] id: Option<DocID>,
-	Title: String,
-	pub SetupTime: u32,
-	pub TimePerPage: u32
+    #[serde(default)]
+    pub id: Option<DocID>,
+    pub Title: String,
+    pub SetupTime: u32,
+    pub TimePerPage: u32,
 }
 
 
@@ -101,6 +102,8 @@ pub struct SimulationReportDetailed {
 pub struct SimulationReportArgs {
     pub PrintJobID: DocID,
     pub WorkflowID: DocID,
+    pub PrintJobID: DocID,
+    pub WorkflowID: DocID,
 }
 
 
@@ -134,7 +137,6 @@ impl SimulationReport {
 		}
 	}
 }
-
 
 pub async fn enable_foreign_key_checking() -> Result<(), String> {
     let db = DB_CONNECTION.lock().unwrap();
@@ -309,7 +311,6 @@ pub async fn query_rasterization_profiles() -> Result<Vec<RasterizationProfile>,
     return Ok(results);
 
 }
-
 
 pub async fn find_print_job(id: DocID) -> Result<PrintJob,String> {
     let db = DB_CONNECTION.lock().unwrap();
@@ -521,7 +522,6 @@ pub async fn find_simulation_report(id: DocID) -> Result<SimulationReport,String
     return Ok(val.unwrap());
 
 }
-
 
 pub async fn insert_print_job(data: PrintJob) -> Result<DocID,String> {
     let db = DB_CONNECTION.lock().unwrap();
