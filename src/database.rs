@@ -51,6 +51,8 @@ pub struct Workflow {
     id: Option<DocID>,
     Title: String,
     pub WorkflowSteps: Vec<WFS>,
+    pub Parallelizable: bool,
+    pub RIPs: u32,
 }
 
 #[allow(non_snake_case)]
