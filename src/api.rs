@@ -7,7 +7,6 @@ use axum::{
     Json, Router,
 };
 use http::Method;
-use hyper::StatusCode;
 use serde_json::json;
 use tower::ServiceBuilder;
 use tower_http::cors::{CorsLayer, Any};
@@ -137,17 +136,6 @@ async fn get_rasterization_profile_by_id(Path(id_str): Path<String>) -> impl Int
 }
 
 
-async fn get_rasterization_profile_by_id(Path(id_str): Path<String>) -> impl IntoResponse {
-    let id: DocID = match id_str.parse() {
-        Ok(data) => data,
-        Err(_) => return response(400, format!("Invalid ID: {id_str}"))
-    };
-    return match find_rasterization_profile(id).await {
-        Ok(data) => response(200, json!(data).to_string()),
-        Err(_) => response(404, format!("Rasterization profile not found: {id_str}"))
-    };
-}
-
 /// Returns a Workflow by its ID.
 /// 
 /// ### Arguments
@@ -201,6 +189,15 @@ async fn get_simulation_report_by_id(Path(id_str): Path<String>) -> impl IntoRes
         Err(_) => response(404, format!("SimulationReport not found: {id_str}")),
     };
 }
+
+
+async fn post_rasterization_profile(Json(payload): Json<RasterizationProfile>) -> impl IntoResponse {
+    return match insert_rasterization_profile(payload).await {
+        Ok(data) => response(201, data.to_string()),
+        Err(_) => response(500, "Failed to insert".to_string()) //TODO: Better error code/message? What would cause this?
+    }
+}
+
 
 /// Inserts a Print Job into the database.
 /// 

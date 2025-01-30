@@ -16,22 +16,21 @@ struct SearchData {
 }
 struct Search(RwLock<SearchData>);
 
-
-pub async fn simulate(data: SimulationReportArgs) -> Result<SimulationReport,String> {
+pub async fn simulate(PrintJobID : DocID, WorkflowID : DocID ) -> Result<SimulationReport,String> {
 	// Get PrintJob and Workflow
-	let print_job = match find_print_job(data.PrintJobID).await{
-		Ok(data) => data,
+	let print_job = match find_print_job(PrintJobID).await{
+		Ok(pjid) => pjid,
 		Err(_) => return Err("PrintJob not found".to_string())
 	};
-	let workflow = match find_workflow(data.WorkflowID).await{
-		Ok(data) => data,
+	let workflow = match find_workflow(WorkflowID).await{
+		Ok(wfid) => wfid,
 		Err(_) => return Err("Workflow not found".to_string())
 	};
 
 	// Return early if the workflow contains no steps
 	// TODO: A workflow with no steps should be made impossible
 	if workflow.WorkflowSteps.len() == 0 { 
-		return Ok(SimulationReport::new( data.PrintJobID, data.WorkflowID,
+		return Ok(SimulationReport::new( PrintJobID, WorkflowID,
 			0, 0, HashMap::new()));
 	}
 
@@ -41,24 +40,21 @@ pub async fn simulate(data: SimulationReportArgs) -> Result<SimulationReport,Str
 
 	// Pass results to SimulationReport constructor
 	return Ok(SimulationReport::new(
-		data.PrintJobID, 
-		data.WorkflowID, 
-		0, //TODO: Properly determine creation time, should probably be handled in database.rs
+		PrintJobID, 
+		WorkflowID, 
+        SystemTime::now().duration_since(UNIX_EPOCH).expect("Issue discerning current time.").as_secs() as u32,
 		search.get_cumulative_time(), 
 		search.get_step_times_by_id()
 	));
-	let visited = Visited::new(workflow.WorkflowSteps.len());
-	let _results = traverse_graph(&printjob, &visited, &workflow.WorkflowSteps.clone(), 0).await;
-    let current_time_in_secs = SystemTime::now().duration_since(UNIX_EPOCH).expect("Issue discerning current time.").as_secs() as u32;
-
-	return Ok(SimulationReport::new(PrintJobID, WorkflowID, current_time_in_secs, 25, HashMap::from([(2, 15)])));
-
 }
 
 
 // Assumes graph is acyclic and connected
 // TODO: Guarantee the graph is acyclic and connected
-async fn traverse_graph(print_job: &PrintJob, search: &Search, steps: &Vec<WFS>, step: usize){
+// TODO: I expect we'll probably store the time/cost/other details from each step into the
+// database here. There is a table in the database called ran_workflow_step that associates an
+// AssignedWorkflowStep with a simulation_report_id & time_taken value
+async fn traverse_graph(print_job: &PrintJob, search: &Search, steps: &Vec<AssignedWorkflowStep>, step: usize){
 	if !(search.visit(step)) { return; }
 	
 	// Recursively visit all previous nodes first
@@ -79,14 +75,14 @@ async fn traverse_graph(print_job: &PrintJob, search: &Search, steps: &Vec<WFS>,
 }
 
 
-async fn traverse_list(steps: &Vec<usize>, print_job: &PrintJob, search: &Search, all_steps: &Vec<WFS>){
+async fn traverse_list(steps: &Vec<usize>, print_job: &PrintJob, search: &Search, all_steps: &Vec<AssignedWorkflowStep>){
 	join_all(steps.iter().map(|&i| 
 		traverse_graph(print_job, search, all_steps, i)
 	).collect::<Vec<_>>()).await;
 }
 
 
-async fn simulate_step(print_job: &PrintJob, wfs: &WFS) -> u32 {
+async fn simulate_step(print_job: &PrintJob, wfs: &AssignedWorkflowStep) -> u32 {
 	let workflow_step = find_workflow_step(wfs.id).await.expect("WorkflowStep not found");
 	return print_job.PageCount * workflow_step.TimePerPage + workflow_step.SetupTime;
 }
@@ -138,22 +134,4 @@ impl Search {
 	fn get_cumulative_time(&self) -> u32 {
 		return self.0.read().unwrap().cumulative_time;
 	}
-// TODO: I expect we'll probably store the time/cost/other details from each step into the
-// database here. There is a table in the database called ran_workflow_step that associates an
-// AssignedWorkflowStep with a simulation_report_id & time_taken value
-async fn traverse_graph(print_job: &PrintJob, visited: &Visited, steps: &Vec<AssignedWorkflowStep>, step: usize) -> bool {
-	if !(visited.visit(step)) || !(visited.can_visit()) { return false; }
-
-	// let previouses = steps[step].Prev.iter().map(|&i| traverse_graph(print_job, visited, steps, i)).collect();
-	// join!(previouses);
-	
-	// for i in &steps[step].Prev {
-	// 	traverse_graph(print_job, visited, steps, *i);
-	// }
-	// TODO: Simulate step
-	// for i in &steps[step].Next {
-	// 	traverse_graph(print_job, visited, steps, *i);
-	// }
-
-	return true;
 }

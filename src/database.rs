@@ -20,11 +20,11 @@ lazy_static! {
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrintJob {
-	#[serde(default)] id: Option<DocID>,
-	#[serde(default)] DateCreated: Option<u32>,
-	Title: String,
-	PageCount: u32,
-	RasterizationProfileID: u32
+	#[serde(default)] pub id: Option<DocID>,
+	#[serde(default)] pub DateCreated: Option<u32>,
+	pub Title: String,
+	pub PageCount: u32,
+	pub RasterizationProfileID: u32
 }
 
 
@@ -102,8 +102,6 @@ pub struct SimulationReportDetailed {
 pub struct SimulationReportArgs {
     pub PrintJobID: DocID,
     pub WorkflowID: DocID,
-    pub PrintJobID: DocID,
-    pub WorkflowID: DocID,
 }
 
 
@@ -137,6 +135,7 @@ impl SimulationReport {
 		}
 	}
 }
+
 
 pub async fn enable_foreign_key_checking() -> Result<(), String> {
     let db = DB_CONNECTION.lock().unwrap();
