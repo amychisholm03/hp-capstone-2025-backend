@@ -580,6 +580,7 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,String> {
     indexcounter = 0;
     for step in &data.WorkflowSteps {
 
+	// TODO: make so we don't have to use queries in a loop at some point. pry fine for now but it's shitty for performance
         // ... all steps that come after this step
         for next_step in &step.Next {
             db.execute(
@@ -588,6 +589,7 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,String> {
             ).map_err(|e| e.to_string())?;
         }
 
+	// TODO: make so we don't have to use queries in a loop at some point. pry fine for now but it's shitty for performance
         // ... all steps that come before this step
         for prev_step in &step.Prev {
             db.execute(
