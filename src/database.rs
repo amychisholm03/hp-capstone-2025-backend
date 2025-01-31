@@ -629,7 +629,7 @@ pub async fn insert_simulation_report(print_job_id: u32, workflow_id: u32) -> Re
 pub async fn remove_print_job(id: DocID) -> Result<usize, String> {
     let db = DB_CONNECTION.lock().unwrap();
     
-    let mut stmt = db.prepare("DELETE FROM print_job WHERE id=(?)")
+    let mut stmt = db.prepare("DELETE FROM printjob WHERE id=(?)")
     .map_err(|e| return e.to_string())?;
 
     let res = stmt.execute([id])
