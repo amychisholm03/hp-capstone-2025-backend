@@ -606,10 +606,9 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,String> {
 }
 
 
-pub async fn insert_simulation_report(PrintJobID: u32, WorkflowID: u32) -> Result<DocID,String> {
-
+pub async fn insert_simulation_report(print_job_id: u32, workflow_id: u32) -> Result<DocID,String> {
     // Run the simulation
-    let new_report = match simulate(PrintJobID, WorkflowID).await {
+    let new_report = match simulate(print_job_id, workflow_id).await {
 		Ok(data) => data,
 		Err(_) => return Err("Error".to_string())
 	};

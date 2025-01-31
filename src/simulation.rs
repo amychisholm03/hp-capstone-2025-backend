@@ -16,13 +16,13 @@ struct SearchData {
 }
 struct Search(RwLock<SearchData>);
 
-pub async fn simulate(PrintJobID : DocID, WorkflowID : DocID ) -> Result<SimulationReport,String> {
+pub async fn simulate(print_job_id : DocID, workflow_id : DocID ) -> Result<SimulationReport,String> {
 	// Get PrintJob and Workflow
-	let print_job = match find_print_job(PrintJobID).await{
+	let print_job = match find_print_job(print_job_id).await{
 		Ok(pjid) => pjid,
 		Err(_) => return Err("PrintJob not found".to_string())
 	};
-	let workflow = match find_workflow(WorkflowID).await{
+	let workflow = match find_workflow(workflow_id).await{
 		Ok(wfid) => wfid,
 		Err(_) => return Err("Workflow not found".to_string())
 	};
@@ -30,7 +30,7 @@ pub async fn simulate(PrintJobID : DocID, WorkflowID : DocID ) -> Result<Simulat
 	// Return early if the workflow contains no steps
 	// TODO: A workflow with no steps should be made impossible
 	if workflow.WorkflowSteps.len() == 0 { 
-		return Ok(SimulationReport::new( PrintJobID, WorkflowID,
+		return Ok(SimulationReport::new( print_job_id, workflow_id,
 			0, 0, HashMap::new()));
 	}
 
@@ -40,8 +40,8 @@ pub async fn simulate(PrintJobID : DocID, WorkflowID : DocID ) -> Result<Simulat
 
 	// Pass results to SimulationReport constructor
 	return Ok(SimulationReport::new(
-		PrintJobID, 
-		WorkflowID, 
+		print_job_id, 
+		workflow_id, 
         SystemTime::now().duration_since(UNIX_EPOCH).expect("Issue discerning current time.").as_secs() as u32,
 		search.get_cumulative_time(), 
 		search.get_step_times_by_id()
