@@ -68,7 +68,10 @@ jobs:
                 key: ${{ secrets.EC2_SSH_KEY }}
                 script: |
                   export PATH=$PATH:/home/admin/.cargo/bin
-                  cd ~/test
+                  mkdir ~/test/db
+                  cd ~/test/db
+                  ./run_current_sql.sh
+                  cd ..
                   sudo rm -rf target
                   sudo -E env "PATH=$PATH" cargo build
                   sudo -E env "PATH=$PATH" cargo test
