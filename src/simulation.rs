@@ -1,6 +1,7 @@
 use std::{
 	sync::RwLock,
-	collections::HashMap
+	collections::HashMap,
+    time::{SystemTime, UNIX_EPOCH}
 };
 use futures::future::join_all;
 
@@ -15,22 +16,21 @@ struct SearchData {
 }
 struct Search(RwLock<SearchData>);
 
-
-pub async fn simulate(data: SimulationReportArgs) -> Result<SimulationReport,String> {
+pub async fn simulate(print_job_id : DocID, workflow_id : DocID ) -> Result<SimulationReport,String> {
 	// Get PrintJob and Workflow
-	let print_job = match find_print_job(data.PrintJobID).await{
-		Ok(data) => data,
+	let print_job = match find_print_job(print_job_id).await{
+		Ok(pjid) => pjid,
 		Err(_) => return Err("PrintJob not found".to_string())
 	};
-	let workflow = match find_workflow(data.WorkflowID).await{
-		Ok(data) => data,
+	let workflow = match find_workflow(workflow_id).await{
+		Ok(wfid) => wfid,
 		Err(_) => return Err("Workflow not found".to_string())
 	};
 
 	// Return early if the workflow contains no steps
 	// TODO: A workflow with no steps should be made impossible
 	if workflow.WorkflowSteps.len() == 0 { 
-		return Ok(SimulationReport::new( data.PrintJobID, data.WorkflowID,
+		return Ok(SimulationReport::new( print_job_id, workflow_id,
 			0, 0, HashMap::new()));
 	}
 
@@ -40,9 +40,9 @@ pub async fn simulate(data: SimulationReportArgs) -> Result<SimulationReport,Str
 
 	// Pass results to SimulationReport constructor
 	return Ok(SimulationReport::new(
-		data.PrintJobID, 
-		data.WorkflowID, 
-		0, //TODO: Properly determine creation time, should probably be handled in database.rs
+		print_job_id, 
+		workflow_id, 
+        SystemTime::now().duration_since(UNIX_EPOCH).expect("Issue discerning current time.").as_secs() as u32,
 		search.get_cumulative_time(), 
 		search.get_step_times_by_id()
 	));
@@ -51,7 +51,10 @@ pub async fn simulate(data: SimulationReportArgs) -> Result<SimulationReport,Str
 
 // Assumes graph is acyclic and connected
 // TODO: Guarantee the graph is acyclic and connected
-async fn traverse_graph(print_job: &PrintJob, search: &Search, steps: &Vec<WFS>, step: usize){
+// TODO: I expect we'll probably store the time/cost/other details from each step into the
+// database here. There is a table in the database called ran_workflow_step that associates an
+// AssignedWorkflowStep with a simulation_report_id & time_taken value
+async fn traverse_graph(print_job: &PrintJob, search: &Search, steps: &Vec<AssignedWorkflowStep>, step: usize){
 	if !(search.visit(step)) { return; }
 	
 	// Recursively visit all previous nodes first
@@ -72,14 +75,14 @@ async fn traverse_graph(print_job: &PrintJob, search: &Search, steps: &Vec<WFS>,
 }
 
 
-async fn traverse_list(steps: &Vec<usize>, print_job: &PrintJob, search: &Search, all_steps: &Vec<WFS>){
+async fn traverse_list(steps: &Vec<usize>, print_job: &PrintJob, search: &Search, all_steps: &Vec<AssignedWorkflowStep>){
 	join_all(steps.iter().map(|&i| 
 		traverse_graph(print_job, search, all_steps, i)
 	).collect::<Vec<_>>()).await;
 }
 
 
-async fn simulate_step(print_job: &PrintJob, wfs: &WFS) -> u32 {
+async fn simulate_step(print_job: &PrintJob, wfs: &AssignedWorkflowStep) -> u32 {
 	let workflow_step = find_workflow_step(wfs.id).await.expect("WorkflowStep not found");
 	return print_job.PageCount * workflow_step.TimePerPage + workflow_step.SetupTime;
 }

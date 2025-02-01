@@ -1,7 +1,9 @@
-use backend::database::DocID;
+use backend::database::*;
 use axum::http::StatusCode;
 use reqwest;
-use serde_json::json;
+use serde_json::{
+    json, from_str
+};
 use serial_test::serial;
 
 const HOST: &str = "localhost";
@@ -119,27 +121,40 @@ async fn test_all_post_get_then_delete(){
     });
     tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
 
-    let print_job_id = test_post_print_job().await;
+    let rasterization_profile_id = test_get_rasterization_profile().await;
+    let print_job_id = test_post_print_job(rasterization_profile_id).await;
     let workflow_id = test_post_workflow().await;
     let sim_report_id = test_post_simulation_report(print_job_id, workflow_id).await;
     test_get_print_job_by_id(print_job_id).await;
     test_get_workflow_by_id(workflow_id).await;
     //test_get_workflow_step_by_id().await;
     test_get_simulation_report_by_id(sim_report_id).await;
+    test_delete_simulation_report(sim_report_id).await;
     test_delete_print_job(print_job_id).await;
     test_delete_workflow(workflow_id).await;
-    test_delete_simulation_report(sim_report_id).await;
 
     server.abort();
 }
 
-async fn test_post_print_job() -> DocID {
-  
+async fn test_get_rasterization_profile() -> DocID {
+    let client = reqwest::Client::new();
+    let response = client.get(&format!("http://{HOST}:{PORT}/RasterizationProfile"))
+        .send().await.unwrap();
+    let list: Vec<RasterizationProfile> = from_str(
+        &response.text().await.unwrap()
+    ).unwrap();
+
+    assert_eq!(list.len(), 5);
+
+    return list[0].id;
+}
+
+async fn test_post_print_job(rasterization_profile_id: DocID) -> DocID {
     let client = reqwest::Client::new();
     let payload = json!({
         "Title": "Test Print Job",
         "PageCount": 10,
-        "RasterizationProfile": "RGB"
+        "RasterizationProfileID": rasterization_profile_id
     });
 
     let response = client

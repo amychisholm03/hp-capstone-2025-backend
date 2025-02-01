@@ -1,5 +1,3 @@
-
-use crate::database::*;
 use axum::{
     extract::Path,
     response::IntoResponse,
@@ -7,10 +5,11 @@ use axum::{
     Json, Router,
 };
 use http::Method;
-use hyper::StatusCode;
 use serde_json::json;
 use tower::ServiceBuilder;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::{CorsLayer, Any};
+use hyper::StatusCode;
+use crate::database::{*};
 
 /// Builds the routes for the API.
 pub fn build_routes() -> Router {
@@ -27,6 +26,11 @@ pub fn build_routes() -> Router {
         .route("/PrintJob", post(post_print_job))
         .route("/PrintJob/{id}", get(get_print_job_by_id))
         .route("/PrintJob/{id}", delete(delete_print_job))
+        // Rasterization Profile Routes 
+        .route("/RasterizationProfile", get(get_rasterization_profiles))
+        .route("/RasterizationProfile/{id}", get(get_rasterization_profile_by_id))
+        .route("/RasterizationProfile", post(post_rasterization_profile))
+        .route("/RasterizationProfile/{id}", delete(delete_rasterization_profile))
         // Workflow Routes
         .route("/Workflow", get(get_workflows))
         .route("/Workflow", post(post_workflow))
@@ -60,36 +64,43 @@ async fn hello_world() -> String {
     return "Hello, World".to_string();
 }
 
-// TODO: Update to allow for querying
+
 async fn get_print_jobs() -> impl IntoResponse {
     return match query_print_jobs().await {
         Ok(data) => response(200, json!(data).to_string()),
-        Err(_) => response(400, "Invalid Query".to_string()),
-    };
+        Err(_) => response(400, "Invalid Query".to_string())
+    }
 }
 
-// TODO: Update to allow for querying
+async fn get_rasterization_profiles() -> impl IntoResponse {
+    return match query_rasterization_profiles().await {
+        Ok(data) => response(200, json!(data).to_string()),
+        Err(_) => response(400, "An error occurred.".to_string())
+    }
+}
+
+
 async fn get_workflows() -> impl IntoResponse {
     return match query_workflows().await {
         Ok(data) => response(200, json!(data).to_string()),
-        Err(_) => response(400, "Invalid Query".to_string()),
-    };
+        Err(_) => response(400, "Invalid Query".to_string())
+    }
 }
 
-// TODO: Update to allow for querying
+
 async fn get_workflow_steps() -> impl IntoResponse {
     return match query_workflow_steps().await {
         Ok(data) => response(200, json!(data).to_string()),
-        Err(_) => response(400, "Invalid Query".to_string()),
-    };
+        Err(_) => response(400, "An error occurred.".to_string())
+    }
 }
 
-// TODO: Update to allow for querying
+
 async fn get_simulation_reports() -> impl IntoResponse {
     return match query_simulation_reports().await {
         Ok(data) => response(200, json!(data).to_string()),
-        Err(_) => response(400, "Invalid Query".to_string()),
-    };
+        Err(_) => response(400, "An error occurred.".to_string())
+    }
 }
 
 /// Returns a PrintJob by its ID.
@@ -110,6 +121,19 @@ async fn get_print_job_by_id(Path(id_str): Path<String>) -> impl IntoResponse {
     };
 }
 
+
+async fn get_rasterization_profile_by_id(Path(id_str): Path<String>) -> impl IntoResponse {
+    let id: DocID = match id_str.parse() {
+        Ok(data) => data,
+        Err(_) => return response(400, format!("Invalid ID: {id_str}"))
+    };
+    return match find_rasterization_profile(id).await {
+        Ok(data) => response(200, json!(data).to_string()),
+        Err(_) => response(404, "An error occurred.".to_string())
+    };
+}
+
+
 /// Returns a Workflow by its ID.
 /// 
 /// ### Arguments
@@ -124,7 +148,7 @@ async fn get_workflow_by_id(Path(id_str): Path<String>) -> impl IntoResponse {
     };
     return match find_workflow(id).await {
         Ok(data) => response(200, json!(data).to_string()),
-        Err(_) => response(404, format!("Workflow not found: {id_str}")),
+        Err(_) => response(404, "An error occurred.".to_string())
     };
 }
 
@@ -164,6 +188,15 @@ async fn get_simulation_report_by_id(Path(id_str): Path<String>) -> impl IntoRes
     };
 }
 
+
+async fn post_rasterization_profile(Json(payload): Json<RasterizationProfile>) -> impl IntoResponse {
+    return match insert_rasterization_profile(payload).await {
+        Ok(data) => response(201, data.to_string()),
+        Err(_) => response(500, "Failed to insert".to_string()) //TODO: Better error code/message? What would cause this?
+    }
+}
+
+
 /// Inserts a Print Job into the database.
 /// 
 /// ### Arguments
@@ -174,22 +207,16 @@ async fn get_simulation_report_by_id(Path(id_str): Path<String>) -> impl IntoRes
 async fn post_print_job(Json(payload): Json<PrintJob>) -> impl IntoResponse {
     return match insert_print_job(payload).await {
         Ok(data) => response(201, data.to_string()),
-        Err(_) => response(500, "Failed to insert".to_string()), //TODO: Better error code/message? What would cause this?
-    };
+        Err(_) => response(500, "Failed to insert".to_string()) //TODO: Better error code/message? What would cause this?
+    }
 }
 
-/// Inserts a Workflow into the database.
-/// 
-/// ### Arguments
-/// * `payload` - A JSON object of a Workflow to insert.
-/// 
-/// ### Returns
-/// The status code of the insertion.
-async fn post_workflow(Json(payload): Json<Workflow>) -> impl IntoResponse {
+
+async fn post_workflow(Json(payload): Json<WorkflowArgs>) -> impl IntoResponse {
     return match insert_workflow(payload).await {
         Ok(data) => response(201, data.to_string()),
-        Err(_) => response(500, "Failed to insert".to_string()), //TODO: Better error code/message? What would cause this?
-    };
+        Err(err) => response(500, err.to_string()) //TODO: Better error code/message? What would cause this?
+    }
 }
 
 /// Inserts a Simulation Report into the database.
@@ -200,10 +227,10 @@ async fn post_workflow(Json(payload): Json<Workflow>) -> impl IntoResponse {
 /// ### Returns
 /// The status code of the insertion.
 async fn post_simulation_report(Json(payload): Json<SimulationReportArgs>) -> impl IntoResponse {
-    return match insert_simulation_report(payload).await {
+    return match insert_simulation_report(payload.PrintJobID, payload.WorkflowID).await {
         Ok(data) => response(201, data.to_string()),
-        Err(_) => response(500, "Failed to insert".to_string()), //TODO: Better error code/message? What would cause this?
-    };
+        Err(err) => response(500, err.to_string()) //TODO: Better error code/message? What would cause this?
+    }
 }
 
 /// Deletes a Print Job from the database.
@@ -224,6 +251,18 @@ async fn delete_print_job(Path(id_str): Path<String>) -> impl IntoResponse {
     };
 }
 
+
+async fn delete_rasterization_profile(Path(id_str): Path<String>) -> impl IntoResponse {
+    let id: DocID = match id_str.parse() {
+        Ok(data) => data,
+        Err(_) => return response(400, format!("Invalid ID: {id_str}")),
+    };
+    return match remove_rasterization_profile(id).await {
+        Ok(_data) => response(204, "".to_string()), //TODO: Return the deleted data?
+        Err(_) => response(404, format!("Unable to delete."))
+    }
+}
+
 /// Deletes a Workflow from the database.
 /// 
 /// ### Arguments
@@ -238,8 +277,9 @@ async fn delete_workflow(Path(id_str): Path<String>) -> impl IntoResponse {
     };
     return match remove_workflow(id).await {
         Ok(_data) => response(204, "".to_string()), //TODO: Return the deleted data?
-        Err(_) => response(404, format!("Workflow not found: {id_str}")), //TODO: Need to handle error 409(conflict) if the workflow can't be deleted
-    };
+        Err(_) => response(404, format!("Unable to delete."))
+        //TODO: Need to handle error 409(conflict) if the workflow can't be deleted
+    }
 }
 
 /// Deletes a Simulation Report from the database.
