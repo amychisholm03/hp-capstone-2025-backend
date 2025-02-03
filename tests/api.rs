@@ -142,8 +142,8 @@ async fn test_get_rasterization_profile() -> DocID {
     let list: Vec<RasterizationProfile> = from_str(&response.text().await.unwrap()).unwrap();
 
     assert!(
-        list.len() >= 1,
-        "Expected at least one rasterization profile"
+        list.len() == 5,
+        "Expected at least five rasterization profiles from dummy-data.sql"
     );
 
     return list[0].id;
@@ -176,12 +176,12 @@ async fn test_post_workflow() -> DocID {
     let payload = json!({
         "Title": "Test Workflow",
         "WorkflowSteps": [
-            { "WorkflowStepID": 1, "Prev": [], "Next": [2] },
+            { "WorkflowStepID": 1, "Prev": [], "Next": [2, 3] },
             { "WorkflowStepID": 2, "Prev": [1], "Next": [6] },
             { "WorkflowStepID": 3, "Prev": [1], "Next": [4] },
             { "WorkflowStepID": 4, "Prev": [3], "Next": [5] },
             { "WorkflowStepID": 5, "Prev": [4], "Next": [6] },
-            { "WorkflowStepID": 6, "Prev": [2, 4], "Next": [] }
+            { "WorkflowStepID": 6, "Prev": [2, 5], "Next": [] }
         ]
     });
 
@@ -191,16 +191,19 @@ async fn test_post_workflow() -> DocID {
         .send()
         .await;
 
-    if let Err(e) = result {
-        println!("Error posting simulation report: {:?}", e);
-        panic!("Test failed due to error");
-    }
-    let response = result.unwrap();
-    assert_eq!(response.status(), StatusCode::CREATED.as_u16());
+    match result {
+        Err(e) => {
+            println!("Error posting workflow: {:?}", e);
+            panic!("Test failed due to error");
+        }
+        Ok(response) => {
+            assert_eq!(response.status(), StatusCode::CREATED.as_u16());
 
-    // Set workflow ID to use for future tests
-    let body = response.text().await.unwrap();
-    return body.parse::<DocID>().unwrap();
+            // Set workflow ID to use for future tests
+            let body = response.text().await.unwrap();
+            return body.parse::<DocID>().unwrap();
+        }
+    }
 }
 
 #[tokio::test]
