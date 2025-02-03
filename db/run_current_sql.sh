@@ -26,5 +26,3 @@ for sql_file in "$SQL_DIR"/*.sql; do
 done
 
 echo "SQL ran successfully."
-
-

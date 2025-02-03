@@ -1,7 +1,21 @@
 use crate::database::*;
 use std::collections::HashSet;
 
-pub fn ensure_direct_acyclic_graph(graph: &Vec<AssignedWorkflowStepArgs>) -> bool {
+pub fn ensure_valid_workflow(workflow: &WorkflowArgs) -> bool {
+    // Check for empty workflow
+    if workflow.WorkflowSteps.len() == 0 {
+        return false;
+    }
+
+    // Check for cycles
+    if !ensure_direct_acyclic_graph(&workflow.WorkflowSteps) {
+        return false;
+    }
+
+    return true;
+}
+
+fn ensure_direct_acyclic_graph(graph: &Vec<AssignedWorkflowStepArgs>) -> bool {
     let mut visited = HashSet::new();
     let mut stack = HashSet::new();
 

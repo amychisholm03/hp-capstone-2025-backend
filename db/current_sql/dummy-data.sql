@@ -12,4 +12,3 @@ INSERT INTO workflow_step (id,title,setup_time,time_per_page) VALUES (NULL, "Ras
 INSERT INTO workflow_step (id,title,setup_time,time_per_page) VALUES (NULL, "Printing",10,7);
 INSERT INTO workflow_step (id,title,setup_time,time_per_page) VALUES (NULL, "Cutting",10,7);
 INSERT INTO workflow_step (id,title,setup_time,time_per_page) VALUES (NULL, "Laminating",10,7);
-

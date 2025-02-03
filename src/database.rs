@@ -553,7 +553,7 @@ pub async fn insert_rasterization_profile(data: RasterizationProfile) -> Result<
 pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,String> {
     let db = DB_CONNECTION.lock().unwrap();
     // Ensure that the workflow is valid
-    if !ensure_direct_acyclic_graph(&data.WorkflowSteps) {
+    if !ensure_valid_workflow(&data) {
         return Err("Invalid workflow".to_string());
     }
 
