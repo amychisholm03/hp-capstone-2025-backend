@@ -657,18 +657,24 @@ pub async fn remove_rasterization_profile(id: DocID) -> Result<usize, String> {
 
 }
 
-
-pub async fn remove_workflow(id: DocID) -> Result<usize,String> {
+/// Deletes the assigned workflow steps associated with this
+/// workflow id, then deletes the workflow itself.
+pub async fn remove_workflow(id: DocID) -> Result<usize, String> {
     let db = DB_CONNECTION.lock().unwrap();
-    
+
+    // Delete all assigned workflow steps associated with the workflow
+    let mut stmt_steps = db.prepare("DELETE FROM assigned_workflow_step WHERE workflow_id=(?)")
+        .map_err(|e| e.to_string())?;
+    stmt_steps.execute([id])
+        .map_err(|e| e.to_string())?;
+
+    // Delete the workflow
     let mut stmt = db.prepare("DELETE FROM workflow WHERE id=(?)")
-    .map_err(|e| return e.to_string())?;
-
+        .map_err(|e| return e.to_string())?;
     let res = stmt.execute([id])
-    .map_err(|e| e.to_string())?;
-    
-    return Ok(res);
+        .map_err(|e| e.to_string())?;
 
+    return Ok(res);
 }
 
 
