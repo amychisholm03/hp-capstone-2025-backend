@@ -6,7 +6,7 @@ use std::{
 use futures::future::join_all;
 
 use crate::database::{*};
-
+use crate::validation::{*};
 
 struct SearchData {
 	visited: Vec<bool>,
@@ -49,11 +49,10 @@ pub async fn simulate(print_job_id : DocID, workflow_id : DocID ) -> Result<Simu
 }
 
 
-// Assumes graph is acyclic and connected
-// TODO: Guarantee the graph is acyclic and connected
-// TODO: I expect we'll probably store the time/cost/other details from each step into the
-// database here. There is a table in the database called ran_workflow_step that associates an
-// AssignedWorkflowStep with a simulation_report_id & time_taken value
+/// Assumes graph is acyclic and connected
+/// TODO: I expect we'll probably store the time/cost/other details from each step into the
+/// database here. There is a table in the database called ran_workflow_step that associates an
+/// AssignedWorkflowStep with a simulation_report_id & time_taken value
 async fn traverse_graph(print_job: &PrintJob, search: &Search, steps: &Vec<AssignedWorkflowStep>, step: usize){
 	if !(search.visit(step)) { return; }
 	

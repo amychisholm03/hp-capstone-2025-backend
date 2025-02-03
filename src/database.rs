@@ -4,6 +4,7 @@ use lazy_static::lazy_static;
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 use crate::simulation::{*};
+use crate::validation::{*};
 use rusqlite::{params, Connection, Row, Result};
 
 pub type DocID = u32;
@@ -233,7 +234,6 @@ pub async fn query_workflow_steps() -> Result<Vec<WorkflowStep>,String> {
 
 pub async fn query_simulation_reports() -> Result<Vec<SimulationReportDetailed>,String> {
     let db = DB_CONNECTION.lock().unwrap();
-
 
     let mut stmt = db.prepare
         ("
@@ -552,6 +552,10 @@ pub async fn insert_rasterization_profile(data: RasterizationProfile) -> Result<
 
 pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,String> {
     let db = DB_CONNECTION.lock().unwrap();
+    // Ensure that the workflow is valid
+    if !ensure_direct_acyclic_graph(&data.WorkflowSteps) {
+        return Err("Invalid workflow".to_string());
+    }
 
     // Insert the Workflow
     db.execute(
