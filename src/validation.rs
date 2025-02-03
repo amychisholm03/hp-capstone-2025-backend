@@ -50,6 +50,9 @@ fn has_cycle(
     stack.insert(step.WorkflowStepID);
 
     for &next_index in &step.Next {
+        if next_index >= steps.len() {
+            return true; // Invalid index, indicates a cycle
+        }
         let next_step = &steps[next_index];
         if !visited.contains(&next_step.WorkflowStepID) {
             if has_cycle(next_step, steps, visited, stack) {

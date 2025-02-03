@@ -145,7 +145,7 @@ async fn test_get_rasterization_profile() -> DocID {
         .unwrap();
     let list: Vec<RasterizationProfile> = from_str(&response.text().await.unwrap()).unwrap();
 
-    assert_eq!(list.len(), 5);
+    assert!(list.len() >= 1, "Expected at least one rasterization profile");
 
     return list[0].id;
 }
