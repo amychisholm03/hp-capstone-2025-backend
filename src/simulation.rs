@@ -4,9 +4,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH}
 };
 use futures::future::join_all;
-
 use crate::database::{*};
-use crate::validation::{*};
 
 struct SearchData {
 	visited: Vec<bool>,
@@ -28,7 +26,7 @@ pub async fn simulate(print_job_id : DocID, workflow_id : DocID ) -> Result<Simu
 	};
 
 	// Return early if the workflow contains no steps
-	// TODO: A workflow with no steps should be made impossible
+	// This should be impossible because of validation in api.rs
 	if workflow.WorkflowSteps.len() == 0 { 
 		return Ok(SimulationReport::new( print_job_id, workflow_id,
 			0, 0, HashMap::new()));
