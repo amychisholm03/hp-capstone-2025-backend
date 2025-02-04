@@ -5,6 +5,7 @@ use std::process;
 pub mod api;
 pub mod database;
 pub mod simulation;
+pub mod validation;
 
 const HOST: &str = "0.0.0.0";
 const PORT: &str = "80"; // production port
