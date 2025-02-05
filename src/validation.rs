@@ -5,7 +5,7 @@ pub fn ensure_valid_workflow(workflow: &WorkflowArgs) -> bool {
     if workflow.WorkflowSteps.is_empty() {
         return false;
     }
-    return !ensure_direct_acyclic_graph(&workflow.WorkflowSteps);
+    return ensure_direct_acyclic_graph(&workflow.WorkflowSteps);
 }
 
 fn ensure_direct_acyclic_graph(steps: &Vec<AssignedWorkflowStepArgs>) -> bool {

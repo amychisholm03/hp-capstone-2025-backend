@@ -153,13 +153,14 @@ impl SimulationReport {
 
 fn print_job_from_row(row: &Row) -> Result<PrintJob> {
     return Ok(PrintJob {
-        id: row.get(0)?,        // Get ID from the first column
-        Title: row.get(1)?,     // Get name from the second column
-        DateCreated: Some(0),
-        PageCount: row.get(2)?,
-        RasterizationProfileID: row.get(3)?,
+        id: row.get(0)?,
+        Title: row.get(1)?,
+        DateCreated: row.get(2)?,
+        PageCount: row.get(3)?,
+        RasterizationProfileID: row.get(4)?,
     });
 }
+
 
 fn workflow_from_row(row: &Row) -> Result<Workflow> {
     return Ok(Workflow {
@@ -238,7 +239,7 @@ pub async fn enable_foreign_key_checking() -> Result<()> {
 pub async fn query_print_jobs() -> Result<Vec<PrintJob>> {
     let db = DB_CONNECTION.lock().unwrap();
 
-    let mut stmt = db.prepare("SELECT id, title, page_count, rasterization_profile_id FROM printjob;")?;
+    let mut stmt = db.prepare("SELECT id, title, creation_time, page_count, rasterization_profile_id FROM printjob;")?;
     let rows = stmt.query_map([], print_job_from_row)?;
 
     let mut results = Vec::new();
