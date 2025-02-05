@@ -5,18 +5,19 @@ use std::process;
 pub mod api;
 pub mod database;
 pub mod simulation;
+pub mod validation;
 
 const HOST: &str = "0.0.0.0";
 const PORT: &str = "80"; // production port
 
 // Runs the server, allowing reuse in tests
 pub async fn run_server(host: &str, port: &str) {
-    // Initialize database
-    database_init();
 
     // Build Routes
     println!("Building Routes");
     let app = build_routes();
+
+    enable_foreign_key_checking();
 
     // Run Server
     println!("Starting server on {host}:{port}");
