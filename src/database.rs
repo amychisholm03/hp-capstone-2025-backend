@@ -240,7 +240,7 @@ pub fn database_init(){
 		TotalTimeTaken: 25,
 		StepTimes: HashMap::from([(2, 15)])
 	});
-
+}
 
 pub async fn query_print_jobs() -> Result<Vec<PrintJob>,String> {
     let db = DB_CONNECTION.lock().unwrap();
