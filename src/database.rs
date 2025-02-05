@@ -151,26 +151,95 @@ impl SimulationReport {
 }
 
 
+fn print_job_from_row(row: &Row) -> Result<PrintJob> {
+    return Ok(PrintJob {
+        id: row.get(0)?,        // Get ID from the first column
+        Title: row.get(1)?,     // Get name from the second column
+        DateCreated: Some(0),
+        PageCount: row.get(2)?,
+        RasterizationProfileID: row.get(3)?,
+    });
+}
+
+fn workflow_from_row(row: &Row) -> Result<Workflow> {
+    return Ok(Workflow {
+        id: row.get(0)?,
+        Title: row.get(1)?,
+        WorkflowSteps: vec![],
+    });
+}
+
+
+fn workflow_step_from_row(row: &Row) -> Result<WorkflowStep> {
+    return Ok(WorkflowStep {
+        id: row.get(0)?,        
+        Title: row.get(1)?, 
+        SetupTime: row.get(2)?,
+        TimePerPage: row.get(3)?,
+    });
+}
+
+
+fn simulation_report_detailed_from_row(row: &Row) -> Result<SimulationReportDetailed> {
+    return Ok(SimulationReportDetailed {
+        id: row.get(0)?, 
+        CreationTime: row.get(2)?,
+        TotalTimeTaken: row.get(3)?,
+        PrintJobID: row.get(4)?,
+        WorkflowID: row.get(5)?,
+        StepTimes: HashMap::from([(2, 15)]),
+        PrintJobTitle: row.get(6)?,
+        WorkflowTitle: row.get(7)?,
+        RasterizationProfile: row.get(8)?,
+    });
+}
+
+
+fn rasterization_profile_from_row(row: &Row) -> Result<RasterizationProfile> {
+    return Ok(RasterizationProfile {
+        id: row.get(0)?, 
+        title: row.get(1)?, 
+        profile: row.get(2)?,
+    });
+}
+
+
+fn simulation_report_from_row(row: &Row) -> Result<SimulationReport> {
+    return Ok(SimulationReport {
+        id: row.get(0)?,
+        CreationTime: row.get(1)?,
+        TotalTimeTaken: row.get(2)?, 
+        PrintJobID: row.get(3)?,
+        WorkflowID: row.get(4)?,
+        StepTimes: HashMap::from([(2, 15)]),
+    });
+}
+
+
+fn assigned_workflow_step_from_row(row: &Row) -> Result<AssignedWorkflowStep> {
+    return Ok(AssignedWorkflowStep {
+        id: row.get(0)?,
+        WorkflowStepID: row.get(2)?,
+        Prev: vec![],
+        Next: vec![],
+    });
+}
+
+
 pub async fn enable_foreign_key_checking() -> Result<()> {
     let db = DB_CONNECTION.lock().unwrap();
     db.execute("PRAGMA foreign_keys = ON;", [])?;
     return Ok(())
 }
 
+// Query Functions
+// TODO: Consolidate query_print_jobs, query_workflows, query_workflow_steps, maybe query_simulation_reports, query_rasterization_profiles
 
 pub async fn query_print_jobs() -> Result<Vec<PrintJob>> {
     let db = DB_CONNECTION.lock().unwrap();
 
     let mut stmt = db.prepare("SELECT id, title, page_count, rasterization_profile_id FROM printjob;")?;
-    let rows = stmt.query_map([], |row: &Row| {
-        Ok(PrintJob {
-            id: row.get(0)?,        // Get ID from the first column
-            Title: row.get(1)?,     // Get name from the second column
-            DateCreated: Some(0),
-            PageCount: row.get(2)?,
-            RasterizationProfileID: row.get(3)?,
-        })
-    })?;
+    let rows = stmt.query_map([], print_job_from_row)?;
 
     let mut results = Vec::new();
     for job_result in rows {
@@ -186,14 +255,7 @@ pub async fn query_workflows() -> Result<Vec<Workflow>> {
     let db = DB_CONNECTION.lock().unwrap();
 
     let mut stmt = db.prepare("SELECT id, title FROM workflow;")?;
-
-    let rows = stmt.query_map([], |row: &Row| {
-        Ok(Workflow {
-            id: row.get(0)?,
-            Title: row.get(1)?,
-            WorkflowSteps: vec![],
-        })
-    })?;
+    let rows = stmt.query_map([], workflow_from_row)?;
 
     let mut results = Vec::new();
     for workflow_result in rows {
@@ -209,14 +271,7 @@ pub async fn query_workflow_steps() -> Result<Vec<WorkflowStep>> {
     let db = DB_CONNECTION.lock().unwrap();
 
     let mut stmt = db.prepare("SELECT id, title, setup_time, time_per_page FROM workflow_step;")?;
-    let rows = stmt.query_map([], |row: &Row| {
-        Ok(WorkflowStep {
-            id: row.get(0)?,        
-            Title: row.get(1)?, 
-            SetupTime: row.get(2)?,
-            TimePerPage: row.get(3)?,
-        })
-    })?;
+    let rows = stmt.query_map([], workflow_step_from_row)?;
 
     let mut results = Vec::new();
     for workflow_step_result in rows {
@@ -251,19 +306,7 @@ pub async fn query_simulation_reports() -> Result<Vec<SimulationReportDetailed>>
             ON printjob.rasterization_profile_id=rasterization_profile.id;
     ")?;
 
-    let rows = stmt.query_map([], |row: &Row| {
-        Ok(SimulationReportDetailed {
-            id: row.get(0)?, 
-            CreationTime: row.get(2)?,
-            TotalTimeTaken: row.get(3)?,
-            PrintJobID: row.get(4)?,
-            WorkflowID: row.get(5)?,
-            StepTimes: HashMap::from([(2, 15)]),
-            PrintJobTitle: row.get(6)?,
-            WorkflowTitle: row.get(7)?,
-            RasterizationProfile: row.get(8)?,
-        })
-    })?;
+    let rows = stmt.query_map([], simulation_report_detailed_from_row)?;
 
     let mut results : Vec<SimulationReportDetailed> = Vec::new();
     for report_result in rows {
@@ -279,13 +322,7 @@ pub async fn query_rasterization_profiles() -> Result<Vec<RasterizationProfile>>
     let db = DB_CONNECTION.lock().unwrap();
     
     let mut stmt = db.prepare("SELECT id, title, profile FROM rasterization_profile;")?;
-    let rows = stmt.query_map([], |row: &Row| {
-        Ok(RasterizationProfile {
-            id: row.get(0)?, 
-            title: row.get(1)?, 
-            profile: row.get(2)?,
-        })
-    })?;
+    let rows = stmt.query_map([], rasterization_profile_from_row)?;
 
     let mut results = Vec::new();
     for profile_result in rows {
@@ -296,20 +333,14 @@ pub async fn query_rasterization_profiles() -> Result<Vec<RasterizationProfile>>
     return Ok(results);
 }
 
+// Find functions
+// TODO: consolidate find_print_job, find_rasterization_profile, find_workflow_step, find_simulation_report
 
 pub async fn find_print_job(id: DocID) -> Result<PrintJob> {
     let db = DB_CONNECTION.lock().unwrap();
 
     let mut stmt = db.prepare("SELECT id, title, creation_time, page_count, rasterization_profile_id FROM printjob WHERE id=(?);")?;
-    let mut rows = stmt.query_map([id], |row: &Row| {
-        Ok(PrintJob {
-            id: row.get(0)?,
-            Title: row.get(1)?,
-            DateCreated: row.get(2)?,
-            PageCount: row.get(3)?,
-            RasterizationProfileID: row.get(4)?,
-        })
-    })?;
+    let mut rows = stmt.query_map([id], print_job_from_row)?;
 
     let val = match rows.next() {
         Some(pj) => pj,
@@ -324,13 +355,7 @@ pub async fn find_rasterization_profile(id: DocID) -> Result<RasterizationProfil
     let db = DB_CONNECTION.lock().unwrap();
 
     let mut stmt = db.prepare("SELECT id, title, profile FROM rasterization_profile WHERE id=(?);")?;
-    let mut rows = stmt.query_map([id], |row: &Row| {
-        Ok(RasterizationProfile {
-            id: row.get(0)?,
-            title: row.get(1)?,
-            profile: row.get(2)?,
-        })
-    })?;
+    let mut rows = stmt.query_map([id], rasterization_profile_from_row)?;
 
     let val = match rows.next() {
         Some(pj) => pj,
@@ -346,13 +371,7 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow> {
 
     // Get the workflow matching the supplied id
     let mut stmt0 = db.prepare("SELECT id, title FROM workflow WHERE id=(?);")?;
-    let mut workflow_iter = stmt0.query_map([id], |row: &Row| {
-        Ok(Workflow {
-            id: row.get(0)?,
-            Title: row.get(1)?,
-            WorkflowSteps: vec![],
-        })
-    })?;
+    let mut workflow_iter = stmt0.query_map([id], workflow_from_row)?;
 
     let mut workflow = match workflow_iter.next() {
         Some(Ok(w)) => w,
@@ -361,14 +380,7 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow> {
 
     // Get all of the steps that belong to this workflow
     let mut stmt1 = db.prepare("SELECT id, workflow_id, workflow_step_id FROM assigned_workflow_step WHERE workflow_id = ?")?;
-    let steps_iter = stmt1.query_map([id], |row| {
-        Ok(AssignedWorkflowStep {
-            id: row.get(0)?,
-            WorkflowStepID: row.get(2)?,
-            Prev: vec![],
-            Next: vec![],
-        })
-    })?;
+    let steps_iter = stmt1.query_map([id], assigned_workflow_step_from_row)?;
 
     // Place all workflow steps in a vector. Keep track of which step is at which index.
     let mut id_to_indice : HashMap<DocID, usize> = HashMap::new();
@@ -423,14 +435,7 @@ pub async fn find_workflow_step(id: DocID) -> Result<WorkflowStep> {
     let db = DB_CONNECTION.lock().unwrap();
 
     let mut stmt = db.prepare("SELECT id, title, setup_time, time_per_page FROM workflow_step WHERE id=(?);")?;
-    let mut rows = stmt.query_map([id], |row: &Row| {
-        Ok(WorkflowStep {
-            id: row.get(0)?,
-            Title: row.get(1)?,
-            SetupTime: row.get(2)?,
-            TimePerPage: row.get(3)?,
-        })
-    })?;
+    let mut rows = stmt.query_map([id], workflow_step_from_row)?;
 
     let val = match rows.next() {
         Some(pj) => pj,
@@ -445,17 +450,7 @@ pub async fn find_simulation_report(id: DocID) -> Result<SimulationReport> {
     let db = DB_CONNECTION.lock().unwrap();
 
     let mut stmt = db.prepare("SELECT id, creation_time, total_time_taken, printjobID, workflowID FROM simulation_report WHERE id=(?);")?;
-    let mut rows = stmt.query_map([id], |row: &Row| {
-        Ok(SimulationReport {
-            id: row.get(0)?,
-            CreationTime: row.get(1)?,
-            TotalTimeTaken: row.get(2)?, 
-            PrintJobID: row.get(3)?,
-            WorkflowID: row.get(4)?,
-            StepTimes: HashMap::from([(2, 15)]),
-
-        })
-    })?;
+    let mut rows = stmt.query_map([id], simulation_report_from_row)?;
 
     let val = match rows.next() {
         Some(pj) => pj,
@@ -464,6 +459,9 @@ pub async fn find_simulation_report(id: DocID) -> Result<SimulationReport> {
 
     return Ok(val.unwrap());
 }
+
+// Insert functions
+// TODO: Consolidate insert_print_job, insert_rasterization_profile
 
 pub async fn insert_print_job(data: PrintJob) -> Result<DocID> {
     let db = DB_CONNECTION.lock().unwrap();
@@ -566,6 +564,8 @@ pub async fn insert_simulation_report(print_job_id: u32, workflow_id: u32) -> Re
     return Ok(inserted_id);
 }
 
+// Remove functions
+// TODO: consolidate remove_print_job, remove_rasterization_profile, remove_simulation_report
 
 pub async fn remove_print_job(id: DocID) -> Result<usize> {
     let db = DB_CONNECTION.lock().unwrap();
