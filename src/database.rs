@@ -1,11 +1,14 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    fmt::Debug,
+    sync::{Arc, Mutex}
+};
+use thiserror;
 use serde::{Serialize, Deserialize};
 use lazy_static::lazy_static;
-use std::fmt::Debug;
-use std::sync::{Arc, Mutex};
+use rusqlite::{params, Connection, Error, Row, Result};
 use crate::simulation::{*};
 use crate::validation::{*};
-use rusqlite::{params, Connection, Row, Result};
 
 pub type DocID = u32;
 const DATABASE_LOCATION: &str = "./db/database.db3";
@@ -15,6 +18,16 @@ lazy_static! {
     pub static ref DB_CONNECTION: Arc<Mutex<Connection>> = Arc::new(Mutex::new(
         Connection::open(DATABASE_LOCATION).expect("Failed to connect to database.")
     ));
+}
+
+
+// This is a wrapper for passing along a rusqlite error or a custom error string
+#[derive(Debug, thiserror::Error)]
+pub enum CustomError {
+    #[error("{0}")]
+    OtherError(String),
+    #[error(transparent)]
+    DatabaseError(#[from] Error)
 }
 
 
@@ -138,36 +151,30 @@ impl SimulationReport {
 }
 
 
-pub async fn enable_foreign_key_checking() -> Result<(), String> {
+pub async fn enable_foreign_key_checking() -> Result<()> {
     let db = DB_CONNECTION.lock().unwrap();
-    db.execute("PRAGMA foreign_keys = ON;", [])
-    .map_err(|e| e.to_string())?;
-    Ok(())
+    db.execute("PRAGMA foreign_keys = ON;", [])?;
+    return Ok(())
 }
 
 
-pub async fn query_print_jobs() -> Result<Vec<PrintJob>,String> {
+pub async fn query_print_jobs() -> Result<Vec<PrintJob>> {
     let db = DB_CONNECTION.lock().unwrap();
 
-    let mut stmt = db
-        .prepare("SELECT id, title, page_count, rasterization_profile_id FROM printjob;")
-        .map_err(|e| e.to_string())?;
-
-    let rows = stmt
-        .query_map([], |row: &Row| {
-            Ok(PrintJob {
-                id: row.get(0)?,        // Get ID from the first column
-                Title: row.get(1)?,     // Get name from the second column
-                DateCreated: Some(0),
-                PageCount: row.get(2)?,
-                RasterizationProfileID: row.get(3)?,
-            })
+    let mut stmt = db.prepare("SELECT id, title, page_count, rasterization_profile_id FROM printjob;")?;
+    let rows = stmt.query_map([], |row: &Row| {
+        Ok(PrintJob {
+            id: row.get(0)?,        // Get ID from the first column
+            Title: row.get(1)?,     // Get name from the second column
+            DateCreated: Some(0),
+            PageCount: row.get(2)?,
+            RasterizationProfileID: row.get(3)?,
         })
-        .map_err(|e| e.to_string())?;
+    })?;
 
     let mut results = Vec::new();
     for job_result in rows {
-        let job = job_result.map_err(|e| e.to_string())?;
+        let job = job_result?;
         results.push(job);
     }
 
@@ -175,224 +182,185 @@ pub async fn query_print_jobs() -> Result<Vec<PrintJob>,String> {
 }
 
 
-pub async fn query_workflows() -> Result<Vec<Workflow>,String> {
+pub async fn query_workflows() -> Result<Vec<Workflow>> {
     let db = DB_CONNECTION.lock().unwrap();
 
-    let mut stmt = db
-        .prepare("SELECT id, title FROM workflow;")
-        .map_err(|e| e.to_string())?;
+    let mut stmt = db.prepare("SELECT id, title FROM workflow;")?;
 
-    let rows = stmt
-        .query_map([], |row: &Row| {
-            Ok(Workflow {
-                id: row.get(0)?,
-                Title: row.get(1)?,
-                WorkflowSteps: vec![],
-            })
+    let rows = stmt.query_map([], |row: &Row| {
+        Ok(Workflow {
+            id: row.get(0)?,
+            Title: row.get(1)?,
+            WorkflowSteps: vec![],
         })
-        .map_err(|e| e.to_string())?;
+    })?;
 
     let mut results = Vec::new();
     for workflow_result in rows {
-        let workflow = workflow_result.map_err(|e| e.to_string())?;
+        let workflow = workflow_result?;
         results.push(workflow);
     }
 
     return Ok(results);
-
 }
 
 
-pub async fn query_workflow_steps() -> Result<Vec<WorkflowStep>,String> {
+pub async fn query_workflow_steps() -> Result<Vec<WorkflowStep>> {
     let db = DB_CONNECTION.lock().unwrap();
 
-    let mut stmt = db
-        .prepare("SELECT id, title, setup_time, time_per_page FROM workflow_step;")
-        .map_err(|e| e.to_string())?;
-
-    let rows = stmt
-        .query_map([], |row: &Row| {
-            Ok(WorkflowStep {
-                id: row.get(0)?,        
-                Title: row.get(1)?, 
-                SetupTime: row.get(2)?,
-                TimePerPage: row.get(3)?,
-            })
+    let mut stmt = db.prepare("SELECT id, title, setup_time, time_per_page FROM workflow_step;")?;
+    let rows = stmt.query_map([], |row: &Row| {
+        Ok(WorkflowStep {
+            id: row.get(0)?,        
+            Title: row.get(1)?, 
+            SetupTime: row.get(2)?,
+            TimePerPage: row.get(3)?,
         })
-        .map_err(|e| e.to_string())?;
+    })?;
 
     let mut results = Vec::new();
     for workflow_step_result in rows {
-        let workflow_step = workflow_step_result.map_err(|e| e.to_string())?;
+        let workflow_step = workflow_step_result?;
         results.push(workflow_step);
     }
 
     return Ok(results);
-
 }
 
 
-pub async fn query_simulation_reports() -> Result<Vec<SimulationReportDetailed>,String> {
+pub async fn query_simulation_reports() -> Result<Vec<SimulationReportDetailed>> {
     let db = DB_CONNECTION.lock().unwrap();
 
-    let mut stmt = db.prepare
-        ("
-            SELECT 
-                simulation_report.id,
-                simulation_report.title,
-                simulation_report.creation_time,
-                simulation_report.total_time_taken,
-                printjobID,
-                workflowID,
-                workflow.title,
-                printjob.title,
-                rasterization_profile.title
-            FROM simulation_report
-            LEFT JOIN workflow
-                ON simulation_report.workflowID=workflow.id
-            LEFT JOIN printjob
-                ON simulation_report.printjobID=printjob.id
-            LEFT JOIN rasterization_profile
-                ON printjob.rasterization_profile_id=rasterization_profile.id;
-        ")
-        .map_err(|e| e.to_string())?;
+    let mut stmt = db.prepare("
+        SELECT 
+            simulation_report.id,
+            simulation_report.title,
+            simulation_report.creation_time,
+            simulation_report.total_time_taken,
+            printjobID,
+            workflowID,
+            workflow.title,
+            printjob.title,
+            rasterization_profile.title
+        FROM simulation_report
+        LEFT JOIN workflow
+            ON simulation_report.workflowID=workflow.id
+        LEFT JOIN printjob
+            ON simulation_report.printjobID=printjob.id
+        LEFT JOIN rasterization_profile
+            ON printjob.rasterization_profile_id=rasterization_profile.id;
+    ")?;
 
-    let rows = stmt
-        .query_map([], |row: &Row| {
-            Ok(SimulationReportDetailed {
-                id: row.get(0)?, 
-                CreationTime: row.get(2)?,
-                TotalTimeTaken: row.get(3)?,
-                PrintJobID: row.get(4)?,
-                WorkflowID: row.get(5)?,
-                StepTimes: HashMap::from([(2, 15)]),
-                PrintJobTitle: row.get(6)?,
-                WorkflowTitle: row.get(7)?,
-                RasterizationProfile: row.get(8)?,
-            })
+    let rows = stmt.query_map([], |row: &Row| {
+        Ok(SimulationReportDetailed {
+            id: row.get(0)?, 
+            CreationTime: row.get(2)?,
+            TotalTimeTaken: row.get(3)?,
+            PrintJobID: row.get(4)?,
+            WorkflowID: row.get(5)?,
+            StepTimes: HashMap::from([(2, 15)]),
+            PrintJobTitle: row.get(6)?,
+            WorkflowTitle: row.get(7)?,
+            RasterizationProfile: row.get(8)?,
         })
-        .map_err(|e| e.to_string())?;
+    })?;
 
     let mut results : Vec<SimulationReportDetailed> = Vec::new();
     for report_result in rows {
-        let report = report_result.map_err(|e| e.to_string())?;
+        let report = report_result?;
         results.push(report);
     }
 
     return Ok(results);
-
 }
 
 
-pub async fn query_rasterization_profiles() -> Result<Vec<RasterizationProfile>, String> {
+pub async fn query_rasterization_profiles() -> Result<Vec<RasterizationProfile>> {
     let db = DB_CONNECTION.lock().unwrap();
     
-    let mut stmt = db
-        .prepare("SELECT id, title, profile FROM rasterization_profile;")
-        .map_err(|e| e.to_string())?;
-
-    let rows = stmt
-        .query_map([], |row: &Row| {
-            Ok(RasterizationProfile {
-                id: row.get(0)?, 
-                title: row.get(1)?, 
-                profile: row.get(2)?,
-            })
+    let mut stmt = db.prepare("SELECT id, title, profile FROM rasterization_profile;")?;
+    let rows = stmt.query_map([], |row: &Row| {
+        Ok(RasterizationProfile {
+            id: row.get(0)?, 
+            title: row.get(1)?, 
+            profile: row.get(2)?,
         })
-        .map_err(|e| e.to_string())?;
+    })?;
 
     let mut results = Vec::new();
     for profile_result in rows {
-        let profile = profile_result.map_err(|e| e.to_string())?;
+        let profile = profile_result?;
         results.push(profile);
     }
 
     return Ok(results);
-
 }
 
-pub async fn find_print_job(id: DocID) -> Result<PrintJob,String> {
+
+pub async fn find_print_job(id: DocID) -> Result<PrintJob> {
     let db = DB_CONNECTION.lock().unwrap();
 
-    let mut stmt = db
-        .prepare("SELECT id, title, creation_time, page_count, rasterization_profile_id FROM printjob WHERE id=(?);")
-        .map_err(|e| e.to_string())?;
-
-    let mut rows = stmt
-        .query_map([id], |row: &Row| {
-            Ok(PrintJob {
-                id: row.get(0)?,
-                Title: row.get(1)?,
-                DateCreated: row.get(2)?,
-                PageCount: row.get(3)?,
-                RasterizationProfileID: row.get(4)?,
-            })
+    let mut stmt = db.prepare("SELECT id, title, creation_time, page_count, rasterization_profile_id FROM printjob WHERE id=(?);")?;
+    let mut rows = stmt.query_map([id], |row: &Row| {
+        Ok(PrintJob {
+            id: row.get(0)?,
+            Title: row.get(1)?,
+            DateCreated: row.get(2)?,
+            PageCount: row.get(3)?,
+            RasterizationProfileID: row.get(4)?,
         })
-        .map_err(|e| e.to_string())?;
-
+    })?;
 
     let val = match rows.next() {
         Some(pj) => pj,
-        None => return Err("Printjob not found.".to_string()),
+        None => return Err(Error::QueryReturnedNoRows),
     };
 
-
     return Ok(val.unwrap());
-
 }
 
 
-pub async fn find_rasterization_profile(id: DocID) -> Result<RasterizationProfile,String> {
+pub async fn find_rasterization_profile(id: DocID) -> Result<RasterizationProfile> {
     let db = DB_CONNECTION.lock().unwrap();
 
-    let mut stmt = db
-        .prepare("SELECT id, title, profile FROM rasterization_profile WHERE id=(?);")
-        .map_err(|e| e.to_string())?;
-
-    let mut rows = stmt
-        .query_map([id], |row: &Row| {
-            Ok(RasterizationProfile {
-                id: row.get(0)?,
-                title: row.get(1)?,
-                profile: row.get(2)?,
-
-            })
+    let mut stmt = db.prepare("SELECT id, title, profile FROM rasterization_profile WHERE id=(?);")?;
+    let mut rows = stmt.query_map([id], |row: &Row| {
+        Ok(RasterizationProfile {
+            id: row.get(0)?,
+            title: row.get(1)?,
+            profile: row.get(2)?,
         })
-        .map_err(|e| e.to_string())?;
+    })?;
 
     let val = match rows.next() {
         Some(pj) => pj,
-        None => return Err("Rasterization profile not found.".to_string()),
+        None => return Err(Error::QueryReturnedNoRows),
     };
 
     return Ok(val.unwrap());
-
 }
 
 
-pub async fn find_workflow(id: DocID) -> Result<Workflow, String> {
+pub async fn find_workflow(id: DocID) -> Result<Workflow> {
     let db = DB_CONNECTION.lock().unwrap();
 
     // Get the workflow matching the supplied id
-    let mut stmt0 = db.prepare("SELECT id, title FROM workflow WHERE id=(?);")
-    .map_err(|e| e.to_string())?;
+    let mut stmt0 = db.prepare("SELECT id, title FROM workflow WHERE id=(?);")?;
     let mut workflow_iter = stmt0.query_map([id], |row: &Row| {
         Ok(Workflow {
             id: row.get(0)?,
             Title: row.get(1)?,
             WorkflowSteps: vec![],
         })
-    })
-    .map_err(|e| e.to_string())?;
+    })?;
 
     let mut workflow = match workflow_iter.next() {
         Some(Ok(w)) => w,
-        _ => return Err("Workflow not found".to_string()),
+        _ => return Err(Error::QueryReturnedNoRows),
     };
 
     // Get all of the steps that belong to this workflow
-    let mut stmt1 = db.prepare("SELECT id, workflow_id, workflow_step_id FROM assigned_workflow_step WHERE workflow_id = ?")
-    .map_err(|e| e.to_string())?;
+    let mut stmt1 = db.prepare("SELECT id, workflow_id, workflow_step_id FROM assigned_workflow_step WHERE workflow_id = ?")?;
     let steps_iter = stmt1.query_map([id], |row| {
         Ok(AssignedWorkflowStep {
             id: row.get(0)?,
@@ -400,168 +368,141 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow, String> {
             Prev: vec![],
             Next: vec![],
         })
-    })
-    .map_err(|e| e.to_string())?;
-
-    let mut id_to_indice : HashMap<DocID, usize> = HashMap::new();
+    })?;
 
     // Place all workflow steps in a vector. Keep track of which step is at which index.
+    let mut id_to_indice : HashMap<DocID, usize> = HashMap::new();
     for step_result in steps_iter {
-        
         let step = match step_result {
             Ok(s) => s,
-            Err(e) => return Err(e.to_string()),
+            Err(e) => return Err(e),
         };
-
         id_to_indice.insert(step.id, workflow.WorkflowSteps.len());
         workflow.WorkflowSteps.push(step);
-
     }
 
     // Add previous and next workflow step information to each step.
     for step in &mut workflow.WorkflowSteps {
-        
         //// Add all of the steps that come next
-        let mut stmt2 = db.prepare("SELECT assigned_workflow_step_id, next_step_id FROM next_workflow_step WHERE assigned_workflow_step_id=(?);")
-        .map_err(|e| e.to_string())?;
-
+        let mut stmt2 = db.prepare("SELECT assigned_workflow_step_id, next_step_id FROM next_workflow_step WHERE assigned_workflow_step_id=(?);")?;
         let next_steps_iter = stmt2.query_map([step.id], |row| {
             let next_step_id: u32 = row.get(1)?;
             Ok(next_step_id)
-        })
-        .map_err(|e| e.to_string())?;
+        })?;
 
         for next_step_result in next_steps_iter {
             let next_step = match next_step_result {
                 Ok(s) => s,
-                Err(e) => return Err(e.to_string()),
+                Err(e) => return Err(e),
             };
             step.Next.push(*id_to_indice.get(&next_step).unwrap());
         }
 
         //// Add all of the steps that come before this step
-        let mut stmt3 = db.prepare("SELECT assigned_workflow_step_id, prev_step_id FROM prev_workflow_step WHERE assigned_workflow_step_id=(?);")
-        .map_err(|e| e.to_string())?;
+        let mut stmt3 = db.prepare("SELECT assigned_workflow_step_id, prev_step_id FROM prev_workflow_step WHERE assigned_workflow_step_id=(?);")?;
 
         let prev_steps_iter = stmt3.query_map([step.id], |row| {
             let next_step_id: u32 = row.get(1)?;
             Ok(next_step_id)
-        })
-        .map_err(|e| e.to_string())?;
+        })?;
 
         for prev_step_result in prev_steps_iter {
             let prev_step = match prev_step_result {
                 Ok(s) => s,
-                Err(e) => return Err(e.to_string()),
+                Err(e) => return Err(e),
             };
             step.Prev.push(*id_to_indice.get(&prev_step).unwrap());
         }
-
     }
 
     return Ok(workflow);
-
 }
 
 
-pub async fn find_workflow_step(id: DocID) -> Result<WorkflowStep,String> {
+pub async fn find_workflow_step(id: DocID) -> Result<WorkflowStep> {
     let db = DB_CONNECTION.lock().unwrap();
 
-    let mut stmt = db
-        .prepare("SELECT id, title, setup_time, time_per_page FROM workflow_step WHERE id=(?);")
-        .map_err(|e| e.to_string())?;
-
-    let mut rows = stmt
-        .query_map([id], |row: &Row| {
-            Ok(WorkflowStep {
-                id: row.get(0)?,
-                Title: row.get(1)?,
-                SetupTime: row.get(2)?,
-                TimePerPage: row.get(3)?,
-            })
+    let mut stmt = db.prepare("SELECT id, title, setup_time, time_per_page FROM workflow_step WHERE id=(?);")?;
+    let mut rows = stmt.query_map([id], |row: &Row| {
+        Ok(WorkflowStep {
+            id: row.get(0)?,
+            Title: row.get(1)?,
+            SetupTime: row.get(2)?,
+            TimePerPage: row.get(3)?,
         })
-        .map_err(|e| e.to_string())?;
+    })?;
 
     let val = match rows.next() {
         Some(pj) => pj,
-        None => return Err("Workflow step not found.".to_string()),
+        None => return Err(Error::QueryReturnedNoRows),
     };
 
     return Ok(val.unwrap());
-
 }
 
 
-pub async fn find_simulation_report(id: DocID) -> Result<SimulationReport,String> {
+pub async fn find_simulation_report(id: DocID) -> Result<SimulationReport> {
     let db = DB_CONNECTION.lock().unwrap();
 
-    let mut stmt = db
-        .prepare("SELECT id, creation_time, total_time_taken, printjobID, workflowID FROM simulation_report WHERE id=(?);")
-        .map_err(|e| e.to_string())?;
+    let mut stmt = db.prepare("SELECT id, creation_time, total_time_taken, printjobID, workflowID FROM simulation_report WHERE id=(?);")?;
+    let mut rows = stmt.query_map([id], |row: &Row| {
+        Ok(SimulationReport {
+            id: row.get(0)?,
+            CreationTime: row.get(1)?,
+            TotalTimeTaken: row.get(2)?, 
+            PrintJobID: row.get(3)?,
+            WorkflowID: row.get(4)?,
+            StepTimes: HashMap::from([(2, 15)]),
 
-    let mut rows = stmt
-        .query_map([id], |row: &Row| {
-            Ok(SimulationReport {
-                id: row.get(0)?,
-                CreationTime: row.get(1)?,
-                TotalTimeTaken: row.get(2)?, 
-                PrintJobID: row.get(3)?,
-                WorkflowID: row.get(4)?,
-                StepTimes: HashMap::from([(2, 15)]),
-
-            })
         })
-        .map_err(|e| e.to_string())?;
+    })?;
 
     let val = match rows.next() {
         Some(pj) => pj,
-        None => return Err("Simulation Report not found.".to_string()),
+        None => return Err(Error::QueryReturnedNoRows),
     };
 
     return Ok(val.unwrap());
-
 }
 
-pub async fn insert_print_job(data: PrintJob) -> Result<DocID,String> {
+pub async fn insert_print_job(data: PrintJob) -> Result<DocID> {
     let db = DB_CONNECTION.lock().unwrap();
     
     db.execute(
         "INSERT INTO printjob (id, title, creation_time, page_count, rasterization_profile_id) VALUES (NULL, ?1, ?2, ?3, ?4)",
         params![data.Title, data.DateCreated, data.PageCount, data.RasterizationProfileID]
-    ).map_err(|e| e.to_string())?;
+    )?;
 
     let inserted_id : u32 = db.last_insert_rowid() as u32;
 	return Ok(inserted_id);
-
 }
 
 
-pub async fn insert_rasterization_profile(data: RasterizationProfile) -> Result<DocID,String> {
+pub async fn insert_rasterization_profile(data: RasterizationProfile) -> Result<DocID> {
     let db = DB_CONNECTION.lock().unwrap();
     
     db.execute(
         "INSERT INTO rasterization_profile (id, title) VALUES (?1, ?2);",
         params![data.id, data.title]
-    ).map_err(|e| e.to_string())?;
+    )?;
 
     let inserted_id : u32 = db.last_insert_rowid() as u32;
 	return Ok(inserted_id);
-
 }
 
 
-pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,String> {
-    let db = DB_CONNECTION.lock().unwrap();
+pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
     // Ensure that the workflow is valid
     if !ensure_valid_workflow(&data) {
-        return Err("Invalid workflow".to_string());
+        return Err(CustomError::OtherError("Invalid workflow".to_string()));
     }
+    let db = DB_CONNECTION.lock().unwrap();
 
     // Insert the Workflow
     db.execute(
         "INSERT INTO workflow (id, title) VALUES (NULL, ?1)",
         params![data.Title]
-    ).map_err(|e| e.to_string())?;
+    )?;
     let inserted_id : DocID = db.last_insert_rowid() as DocID;
     
     // Load all workflow steps into the database.
@@ -571,12 +512,12 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,String> {
         db.execute(
             "INSERT INTO assigned_workflow_step (id, workflow_id, workflow_step_id) VALUES (NULL, ?1, ?2)",
             params![inserted_id, step.WorkflowStepID]
-        ).map_err(|e| e.to_string())?;
+        )?;
 
         // map the primary key of each AssignedWorkflowStep to it's index in the vector.
         let inserted_id : DocID = db.last_insert_rowid() as DocID;
         index_to_id.insert(indexcounter, inserted_id); 
-        indexcounter+=1;
+        indexcounter += 1;
     }
 
     // Now tie each step to it's previous/next workflow steps
@@ -589,7 +530,7 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,String> {
             db.execute(
                 "INSERT INTO next_workflow_step (assigned_workflow_step_id, next_step_id) VALUES (?1, ?2)",
                 params![index_to_id.get(&indexcounter), index_to_id.get(next_step)] 
-            ).map_err(|e| e.to_string())?;
+            )?;
         }
 
 	// TODO: make so we don't have to use queries in a loop at some point. pry fine for now but it's shitty for performance
@@ -598,23 +539,20 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,String> {
             db.execute(
                 "INSERT INTO prev_workflow_step (assigned_workflow_step_id, prev_step_id) VALUES (?1, ?2)",
                 params![index_to_id.get(&indexcounter), index_to_id.get(prev_step)] 
-            ).map_err(|e| e.to_string())?;
+            )?;
         }
-
         indexcounter+=1;
-    
     }
 
     return Ok(inserted_id);
-
 }
 
 
-pub async fn insert_simulation_report(print_job_id: u32, workflow_id: u32) -> Result<DocID,String> {
+pub async fn insert_simulation_report(print_job_id: u32, workflow_id: u32) -> Result<DocID,CustomError> {
     // Run the simulation
     let new_report = match simulate(print_job_id, workflow_id).await {
 		Ok(data) => data,
-		Err(_) => return Err("Error".to_string())
+		Err(e) => return Err(CustomError::OtherError(e))
 	};
 
     // Store resulting simulation data in the db.
@@ -622,72 +560,49 @@ pub async fn insert_simulation_report(print_job_id: u32, workflow_id: u32) -> Re
     db.execute(
         "INSERT INTO simulation_report (id, title, creation_time, total_time_taken, printjobID, workflowID) VALUES (NULL, 'Default', ?1, ?2, ?3, ?4)",
         params![new_report.CreationTime, new_report.TotalTimeTaken, new_report.PrintJobID, new_report.WorkflowID]
-    ).map_err(|e| return e.to_string())?;
+    )?;
     let inserted_id : u32 = db.last_insert_rowid() as u32;
 	
     return Ok(inserted_id);
-
 }
 
 
-pub async fn remove_print_job(id: DocID) -> Result<usize, String> {
+pub async fn remove_print_job(id: DocID) -> Result<usize> {
     let db = DB_CONNECTION.lock().unwrap();
-    
-    let mut stmt = db.prepare("DELETE FROM printjob WHERE id=(?)")
-    .map_err(|e| return e.to_string())?;
-
-    let res = stmt.execute([id])
-    .map_err(|e| e.to_string())?;
-    
+    let mut stmt = db.prepare("DELETE FROM printjob WHERE id=(?)")?;
+    let res = stmt.execute([id])?;
     return Ok(res);
-
 }
 
 
-pub async fn remove_rasterization_profile(id: DocID) -> Result<usize, String> {
+pub async fn remove_rasterization_profile(id: DocID) -> Result<usize> {
     let db = DB_CONNECTION.lock().unwrap();
-    
-    let mut stmt = db.prepare("DELETE FROM rasterization_profile WHERE id=(?)")
-    .map_err(|e| return e.to_string())?;
-
-    let res = stmt.execute([id])
-    .map_err(|e| e.to_string())?;
-    
+    let mut stmt = db.prepare("DELETE FROM rasterization_profile WHERE id=(?)")?;
+    let res = stmt.execute([id])?;
     return Ok(res);
-
 }
+
 
 /// Deletes the assigned workflow steps associated with this
 /// workflow id, then deletes the workflow itself.
-pub async fn remove_workflow(id: DocID) -> Result<usize, String> {
+pub async fn remove_workflow(id: DocID) -> Result<usize> {
     let db = DB_CONNECTION.lock().unwrap();
 
     // Delete all assigned workflow steps associated with the workflow
-    let mut stmt_steps = db.prepare("DELETE FROM assigned_workflow_step WHERE workflow_id=(?)")
-        .map_err(|e| e.to_string())?;
-    stmt_steps.execute([id])
-        .map_err(|e| e.to_string())?;
+    let mut stmt_steps = db.prepare("DELETE FROM assigned_workflow_step WHERE workflow_id=(?)")?;
+    stmt_steps.execute([id])?;
 
     // Delete the workflow
-    let mut stmt = db.prepare("DELETE FROM workflow WHERE id=(?)")
-        .map_err(|e| return e.to_string())?;
-    let res = stmt.execute([id])
-        .map_err(|e| e.to_string())?;
+    let mut stmt = db.prepare("DELETE FROM workflow WHERE id=(?)")?;
+    let res = stmt.execute([id])?;
 
     return Ok(res);
 }
 
 
-pub async fn remove_simulation_report(id: DocID) -> Result<usize,String> {
+pub async fn remove_simulation_report(id: DocID) -> Result<usize> {
     let db = DB_CONNECTION.lock().unwrap();
-    
-    let mut stmt = db.prepare("DELETE FROM simulation_report WHERE id=(?)")
-    .map_err(|e| e.to_string())?;
-
-    let res = stmt.execute([id])
-    .map_err(|e| e.to_string())?;
-    
+    let mut stmt = db.prepare("DELETE FROM simulation_report WHERE id=(?)")?;
+    let res = stmt.execute([id])?;
     return Ok(res);
-
 }
-
