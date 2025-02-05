@@ -53,7 +53,9 @@ pub struct AssignedWorkflowStep {
 pub struct Workflow {
 	#[serde(default)] id: Option<DocID>,
 	Title: String,
-	pub WorkflowSteps: Vec<AssignedWorkflowStep>
+	pub WorkflowSteps: Vec<AssignedWorkflowStep>,
+    pub Parallelizable: bool,
+    pub numOfRIPs: bool,
 }
 
 
@@ -120,7 +122,9 @@ pub struct AssignedWorkflowStepArgs {
 pub struct WorkflowArgs {
 	#[serde(default)] id: Option<DocID>,
 	Title: String,
-	pub WorkflowSteps: Vec<AssignedWorkflowStepArgs>
+	pub WorkflowSteps: Vec<AssignedWorkflowStepArgs>,
+    pub Parallelizable: bool,
+    pub numOfRIPs: u32,
 }
 
 
@@ -188,6 +192,8 @@ pub async fn query_workflows() -> Result<Vec<Workflow>,String> {
                 id: row.get(0)?,
                 Title: row.get(1)?,
                 WorkflowSteps: vec![],
+                Parallelizable: row.get(2)?,
+                numOfRIPs: row.get(3)?,
             })
         })
         .map_err(|e| e.to_string())?;
@@ -381,6 +387,8 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow, String> {
             id: row.get(0)?,
             Title: row.get(1)?,
             WorkflowSteps: vec![],
+            Parallelizable: row.get(2)?,
+            numOfRIPs: row.get(3)?,
         })
     })
     .map_err(|e| e.to_string())?;
