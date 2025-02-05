@@ -6,7 +6,7 @@ use std::{
 use thiserror;
 use serde::{Serialize, Deserialize};
 use lazy_static::lazy_static;
-use rusqlite::{params, Connection, Error, Row, Result};
+use rusqlite::{params, Connection, Error, Row, Result, MappedRows, Params};
 use crate::simulation::{*};
 use crate::validation::{*};
 
@@ -234,60 +234,43 @@ pub async fn enable_foreign_key_checking() -> Result<()> {
 }
 
 // Query Functions
-// TODO: Consolidate query_print_jobs, query_workflows, query_workflow_steps, maybe query_simulation_reports, query_rasterization_profiles
 
-pub async fn query_print_jobs() -> Result<Vec<PrintJob>> {
+fn query<T,P,F>(query: &str, params: P, f: F) -> Result<Vec<T>> 
+where P: Params, F: FnMut(&Row<'_>) -> Result<T> {
     let db = DB_CONNECTION.lock().unwrap();
-
-    let mut stmt = db.prepare("SELECT id, title, creation_time, page_count, rasterization_profile_id FROM printjob;")?;
-    let rows = stmt.query_map([], print_job_from_row)?;
+    let mut stmt = db.prepare(query)?;
+    let rows = stmt.query_map(params, f)?;
 
     let mut results = Vec::new();
     for job_result in rows {
         let job = job_result?;
         results.push(job);
     }
-
+    
     return Ok(results);
+}
+
+
+pub async fn query_print_jobs() -> Result<Vec<PrintJob>> {
+    return query("SELECT id, title, creation_time, page_count, rasterization_profile_id FROM printjob;", 
+        [], print_job_from_row);
 }
 
 
 pub async fn query_workflows() -> Result<Vec<Workflow>> {
-    let db = DB_CONNECTION.lock().unwrap();
-
-    let mut stmt = db.prepare("SELECT id, title FROM workflow;")?;
-    let rows = stmt.query_map([], workflow_from_row)?;
-
-    let mut results = Vec::new();
-    for workflow_result in rows {
-        let workflow = workflow_result?;
-        results.push(workflow);
-    }
-
-    return Ok(results);
+    return query("SELECT id, title FROM workflow;",
+        [], workflow_from_row);
 }
 
 
 pub async fn query_workflow_steps() -> Result<Vec<WorkflowStep>> {
-    let db = DB_CONNECTION.lock().unwrap();
-
-    let mut stmt = db.prepare("SELECT id, title, setup_time, time_per_page FROM workflow_step;")?;
-    let rows = stmt.query_map([], workflow_step_from_row)?;
-
-    let mut results = Vec::new();
-    for workflow_step_result in rows {
-        let workflow_step = workflow_step_result?;
-        results.push(workflow_step);
-    }
-
-    return Ok(results);
+    return query("SELECT id, title, setup_time, time_per_page FROM workflow_step;",
+        [], workflow_step_from_row);
 }
 
 
 pub async fn query_simulation_reports() -> Result<Vec<SimulationReportDetailed>> {
-    let db = DB_CONNECTION.lock().unwrap();
-
-    let mut stmt = db.prepare("
+    return query("
         SELECT 
             simulation_report.id,
             simulation_report.title,
@@ -305,33 +288,13 @@ pub async fn query_simulation_reports() -> Result<Vec<SimulationReportDetailed>>
             ON simulation_report.printjobID=printjob.id
         LEFT JOIN rasterization_profile
             ON printjob.rasterization_profile_id=rasterization_profile.id;
-    ")?;
-
-    let rows = stmt.query_map([], simulation_report_detailed_from_row)?;
-
-    let mut results : Vec<SimulationReportDetailed> = Vec::new();
-    for report_result in rows {
-        let report = report_result?;
-        results.push(report);
-    }
-
-    return Ok(results);
+    ", [], simulation_report_detailed_from_row);
 }
 
 
 pub async fn query_rasterization_profiles() -> Result<Vec<RasterizationProfile>> {
-    let db = DB_CONNECTION.lock().unwrap();
-    
-    let mut stmt = db.prepare("SELECT id, title, profile FROM rasterization_profile;")?;
-    let rows = stmt.query_map([], rasterization_profile_from_row)?;
-
-    let mut results = Vec::new();
-    for profile_result in rows {
-        let profile = profile_result?;
-        results.push(profile);
-    }
-
-    return Ok(results);
+    return query("SELECT id, title, profile FROM rasterization_profile;",
+        [], rasterization_profile_from_row);
 }
 
 // Find functions
