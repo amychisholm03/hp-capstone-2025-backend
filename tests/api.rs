@@ -185,25 +185,18 @@ async fn test_post_workflow() -> DocID {
         ]
     });
 
-    let result = client
+    let response = client
         .post(&format!("http://{}:{}/Workflow", HOST, PORT))
         .json(&payload)
         .send()
-        .await;
+        .await
+        .unwrap();
 
-    match result {
-        Err(e) => {
-            panic!("Test failed due to error: {:?}", e);
-        }
-        Ok(response) => {
-            println!("Response: {:?}", response);
-            assert_eq!(response.status(), StatusCode::CREATED.as_u16());
+    assert_eq!(response.status(), StatusCode::CREATED.as_u16());
 
-            // Set workflow ID to use for future tests
-            let body = response.text().await.unwrap();
-            return body.parse::<DocID>().unwrap();
-        }
-    }
+    // Set workflow ID to use for future tests
+    let body = response.text().await.unwrap();
+    return body.parse::<DocID>().unwrap();
 }
 
 #[tokio::test]
@@ -229,8 +222,8 @@ async fn test_post_empty_workflow() {
 
     assert_eq!(
         response.status(),
-        StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
-        "Workflow with no steps should return 500"
+        StatusCode::UNPROCESSABLE_ENTITY.as_u16(),
+        "Workflow with no steps should return 422"
     );
     server.abort();
 }
@@ -264,8 +257,8 @@ async fn test_post_cyclic_workflow() {
 
     assert_eq!(
         response.status(),
-        StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
-        "Cyclic workflow should return 500"
+        StatusCode::UNPROCESSABLE_ENTITY.as_u16(),
+        "Cyclic workflow should return 422"
     );
     server.abort();
 }
