@@ -194,8 +194,8 @@ pub fn database_init(){
 			WFS{id:6, Next:vec![6], Prev:vec![4]},
 			WFS{id:7, Next:vec![], Prev:vec![5]},
 		],
-        bool: false,
-        u32: 2
+        Parallelizable: false,
+        RIPs: 2
 	});
 
 	let id = next_id();
