@@ -6,7 +6,7 @@ use std::{
 use thiserror;
 use serde::{Serialize, Deserialize};
 use lazy_static::lazy_static;
-use rusqlite::{params, Connection, Error, Row, Result, MappedRows, Params};
+use rusqlite::{params, Connection, Error, Row, Result, Params};
 use crate::simulation::{*};
 use crate::validation::{*};
 
@@ -235,6 +235,7 @@ pub async fn enable_foreign_key_checking() -> Result<()> {
 
 // Query Functions
 
+// TODO: Comment
 fn query<T,P,F>(query: &str, params: P, f: F) -> Result<Vec<T>> 
 where P: Params, F: FnMut(&Row<'_>) -> Result<T> {
     let db = DB_CONNECTION.lock().unwrap();
@@ -298,38 +299,32 @@ pub async fn query_rasterization_profiles() -> Result<Vec<RasterizationProfile>>
 }
 
 // Find functions
-// TODO: consolidate find_print_job, find_rasterization_profile, find_workflow_step, find_simulation_report
 
-pub async fn find_print_job(id: DocID) -> Result<PrintJob> {
-    let db = DB_CONNECTION.lock().unwrap();
-
-    let mut stmt = db.prepare("SELECT id, title, creation_time, page_count, rasterization_profile_id FROM printjob WHERE id=(?);")?;
-    let mut rows = stmt.query_map([id], print_job_from_row)?;
-
-    let val = match rows.next() {
-        Some(pj) => pj,
-        None => return Err(Error::QueryReturnedNoRows),
+// TODO: Comment
+fn check_id_lookup_results<T>(mut rows: Vec<T>) -> Result<T,CustomError> {
+    return match rows.len() {
+        0 => Err(CustomError::DatabaseError(Error::QueryReturnedNoRows)),
+        1 => Ok(rows.pop().unwrap()),
+        _ => Err(CustomError::OtherError("ID search returned multiple rows".to_string()))
     };
-
-    return Ok(val.unwrap());
 }
 
 
-pub async fn find_rasterization_profile(id: DocID) -> Result<RasterizationProfile> {
-    let db = DB_CONNECTION.lock().unwrap();
-
-    let mut stmt = db.prepare("SELECT id, title, profile FROM rasterization_profile WHERE id=(?);")?;
-    let mut rows = stmt.query_map([id], rasterization_profile_from_row)?;
-
-    let val = match rows.next() {
-        Some(pj) => pj,
-        None => return Err(Error::QueryReturnedNoRows),
-    };
-
-    return Ok(val.unwrap());
+pub async fn find_print_job(id: DocID) -> Result<PrintJob,CustomError> {
+    let rows = query("SELECT id, title, creation_time, page_count, rasterization_profile_id FROM printjob WHERE id=(?);",
+        [id], print_job_from_row)?;
+    return check_id_lookup_results(rows);
 }
 
 
+pub async fn find_rasterization_profile(id: DocID) -> Result<RasterizationProfile,CustomError> {
+    let rows = query("SELECT id, title, profile FROM rasterization_profile WHERE id=(?);",
+        [id], rasterization_profile_from_row)?;
+    return check_id_lookup_results(rows);
+}
+
+
+// TODO: refactor similar to other find functions
 pub async fn find_workflow(id: DocID) -> Result<Workflow> {
     let db = DB_CONNECTION.lock().unwrap();
 
@@ -395,33 +390,17 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow> {
 }
 
 
-pub async fn find_workflow_step(id: DocID) -> Result<WorkflowStep> {
-    let db = DB_CONNECTION.lock().unwrap();
-
-    let mut stmt = db.prepare("SELECT id, title, setup_time, time_per_page FROM workflow_step WHERE id=(?);")?;
-    let mut rows = stmt.query_map([id], workflow_step_from_row)?;
-
-    let val = match rows.next() {
-        Some(pj) => pj,
-        None => return Err(Error::QueryReturnedNoRows),
-    };
-
-    return Ok(val.unwrap());
+pub async fn find_workflow_step(id: DocID) -> Result<WorkflowStep,CustomError> {
+    let rows = query("SELECT id, title, setup_time, time_per_page FROM workflow_step WHERE id=(?);",
+        [id], workflow_step_from_row)?;
+    return check_id_lookup_results(rows);
 }
 
 
-pub async fn find_simulation_report(id: DocID) -> Result<SimulationReport> {
-    let db = DB_CONNECTION.lock().unwrap();
-
-    let mut stmt = db.prepare("SELECT id, creation_time, total_time_taken, printjobID, workflowID FROM simulation_report WHERE id=(?);")?;
-    let mut rows = stmt.query_map([id], simulation_report_from_row)?;
-
-    let val = match rows.next() {
-        Some(pj) => pj,
-        None => return Err(Error::QueryReturnedNoRows),
-    };
-
-    return Ok(val.unwrap());
+pub async fn find_simulation_report(id: DocID) -> Result<SimulationReport,CustomError> {
+    let rows = query("SELECT id, creation_time, total_time_taken, printjobID, workflowID FROM simulation_report WHERE id=(?);",
+        [id], simulation_report_from_row)?;
+    return check_id_lookup_results(rows);
 }
 
 // Insert functions
