@@ -160,7 +160,9 @@ async fn test_post_workflow() -> DocID {
     let client = reqwest::Client::new();
     let payload = json!({
         "Title": "Test Workflow",
-        "WorkflowSteps": []
+        "WorkflowSteps": [],
+        "Parallelizable": false,
+        "RIPs": 2
     });
 
     let response = client
