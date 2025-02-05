@@ -194,7 +194,7 @@ pub fn database_init(){
 			WFS{id:6, Next:vec![6], Prev:vec![4]},
 			WFS{id:7, Next:vec![], Prev:vec![5]},
 		]
-	});
+	}, false, 2);
 
 	let id = next_id();
 	simulation_reports.lock().unwrap().insert(id, SimulationReport{
