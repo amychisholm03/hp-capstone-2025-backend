@@ -7,6 +7,7 @@
   <li><code>cargo run l</code>: Runs the server on <code>localhost:5040</code>.</li>
 </ul>
 
+
 <h1>File Structure</h1>
 <table>
   <thead>
@@ -32,13 +33,17 @@
       <td><code>src/simulation.rs</code></td>
       <td>Simulates a print job going through a workflow.</td>
     </tr>
+   <tr>
+      <td><code>src/validation.rs</code></td>
+      <td>Validates a workflow before it gets inserted into the database.</td>
+    </tr>
     <tr>
       <td><code>tests/</code></td>
       <td>Contains test files.</td>
     </tr>
         <tr>
       <td><code>db/</code></td>
-      <td>Contains SQLite database binary file, and SQL>
+      <td>Contains SQLite database binary file, and SQL</td>
     </tr>
   </tbody>
 </table>
@@ -48,11 +53,13 @@
 SQLite stores data in a single file (.db3)<br>
 The database is executed and maintained via the Rusqlite library for Rust.
 
-If you require access to the database to inspect it's contents, or to make changes,<br>you may do so via the sqlite3 program. <br>
-- To access an existing database: 
-	- sqlite3 /path/to/database.db3
+If you require access to the database to inspect it's contents, or to make changes,`<br>`you may do so via the sqlite3 program. `<br>`
+
+- To access an existing database:
+  - sqlite3 /path/to/database.db3
 - To execute SQL on a database
-	- sqlite3 /path/to/database.db3 < /path/to/file.sql
+  - sqlite3 /path/to/database.db3 < /path/to/file.sql
+
 </p>
 
 <h2>rasterization_profile</h2>
@@ -331,8 +338,7 @@ These haven't been implemented yet.
       <li><strong>Title</strong></li>
       <li><strong>WorkflowSteps</strong></li>
     </ul>
-    <ul>
-    </ul>
+    Will return a `422` if invalid workflow (i.e. no workflow steps or cyclic)
   </li>
   <li><code>POST /SimulationReport</code><br>
     Creates a new simulation report. Request body includes:
