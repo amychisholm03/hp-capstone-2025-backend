@@ -18,7 +18,9 @@ CREATE TABLE IF NOT EXISTS printjob (
 -- Create a table to define workflows
 CREATE TABLE IF NOT EXISTS workflow (
     id INTEGER PRIMARY KEY,
-    title TEXT NOT NULL
+    title TEXT NOT NULL,
+    parallelizable BIT,
+    num_of_RIPs INTEGER
 );
 
 -- Create a table to define simulation reports
