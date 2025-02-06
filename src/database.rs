@@ -55,7 +55,7 @@ pub struct Workflow {
 	Title: String,
 	pub WorkflowSteps: Vec<AssignedWorkflowStep>,
     pub Parallelizable: bool,
-    pub numOfRIPs: bool,
+    pub numOfRIPs: u32,
 }
 
 
