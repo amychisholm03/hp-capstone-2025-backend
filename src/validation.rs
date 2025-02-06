@@ -49,7 +49,7 @@ fn has_cycle(
 
     if let Some(step) = step_map.get(&step_id) {
         for &next_id in &step.Next {
-            if has_cycle(next_id.try_into().unwrap(), step_map, visited, stack) {
+            if has_cycle((next_id + 1).try_into().unwrap(), step_map, visited, stack) {
                 return true;
             }
         }
