@@ -192,8 +192,8 @@ pub async fn query_workflows() -> Result<Vec<Workflow>,String> {
                 id: row.get(0)?,
                 Title: row.get(1)?,
                 WorkflowSteps: vec![],
-                // Parallelizable: row.get::<_, i32>(2)? != 0,
-                // numOfRIPs: row.get(3)?,
+                Parallelizable: row.get::<_, i32>(2)? != 0,
+                numOfRIPs: row.get(3)?,
             })
         })
         .map_err(|e| e.to_string())?;
