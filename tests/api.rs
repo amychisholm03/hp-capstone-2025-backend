@@ -182,7 +182,9 @@ async fn test_post_workflow() -> DocID {
             { "WorkflowStepID": 4, "Prev": [2], "Next": [4] },
             { "WorkflowStepID": 5, "Prev": [3], "Next": [5] },
             { "WorkflowStepID": 6, "Prev": [4], "Next": [] }
-        ]
+        ],
+        "Parallelizable": false,
+        "numOfRIPs": 0
     });
 
     let response = client

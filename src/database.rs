@@ -53,7 +53,9 @@ pub struct AssignedWorkflowStep {
 pub struct Workflow {
 	#[serde(default)] id: Option<DocID>,
 	Title: String,
-	pub WorkflowSteps: Vec<AssignedWorkflowStep>
+	pub WorkflowSteps: Vec<AssignedWorkflowStep>,
+    pub Parallelizable: bool,
+    pub numOfRIPs: u32,
 }
 
 
@@ -120,7 +122,9 @@ pub struct AssignedWorkflowStepArgs {
 pub struct WorkflowArgs {
 	#[serde(default)] id: Option<DocID>,
 	Title: String,
-	pub WorkflowSteps: Vec<AssignedWorkflowStepArgs>
+	pub WorkflowSteps: Vec<AssignedWorkflowStepArgs>,
+    pub Parallelizable: bool,
+    pub numOfRIPs: u32,
 }
 
 
@@ -179,7 +183,7 @@ pub async fn query_workflows() -> Result<Vec<Workflow>,String> {
     let db = DB_CONNECTION.lock().unwrap();
 
     let mut stmt = db
-        .prepare("SELECT id, title FROM workflow;")
+        .prepare("SELECT id, title, parallelizable, num_of_RIPs FROM workflow;")
         .map_err(|e| e.to_string())?;
 
     let rows = stmt
@@ -188,6 +192,8 @@ pub async fn query_workflows() -> Result<Vec<Workflow>,String> {
                 id: row.get(0)?,
                 Title: row.get(1)?,
                 WorkflowSteps: vec![],
+                Parallelizable: row.get::<_, i32>(2)? != 0,
+                numOfRIPs: row.get(3)?,
             })
         })
         .map_err(|e| e.to_string())?;
@@ -381,6 +387,8 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow, String> {
             id: row.get(0)?,
             Title: row.get(1)?,
             WorkflowSteps: vec![],
+            Parallelizable: row.get::<_, i32>(2)? != 0,
+            numOfRIPs: row.get(3)?,
         })
     })
     .map_err(|e| e.to_string())?;
@@ -559,8 +567,8 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,String> {
 
     // Insert the Workflow
     db.execute(
-        "INSERT INTO workflow (id, title) VALUES (NULL, ?1)",
-        params![data.Title]
+        "INSERT INTO workflow (id, title, parallelizable, num_of_RIPs) VALUES (NULL, ?1, ?2, ?3)",
+        params![data.Title, data.Parallelizable, data.numOfRIPs]
     ).map_err(|e| e.to_string())?;
     let inserted_id : DocID = db.last_insert_rowid() as DocID;
     

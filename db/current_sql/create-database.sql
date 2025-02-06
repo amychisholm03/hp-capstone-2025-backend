@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS workflow;
+
 -- Create a table to define rasterization profiles
 CREATE TABLE IF NOT EXISTS rasterization_profile (
    id INTEGER PRIMARY KEY,
@@ -18,7 +20,9 @@ CREATE TABLE IF NOT EXISTS printjob (
 -- Create a table to define workflows
 CREATE TABLE IF NOT EXISTS workflow (
     id INTEGER PRIMARY KEY,
-    title TEXT NOT NULL
+    title TEXT NOT NULL,
+    parallelizable BIT,
+    num_of_RIPs INTEGER
 );
 
 -- Create a table to define simulation reports
