@@ -567,7 +567,7 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,String> {
 
     // Insert the Workflow
     db.execute(
-        "INSERT INTO workflow (id, title, parallelizable, num_of_RIPs) VALUES (NULL, ?1, 0, 0)",
+        "INSERT INTO workflow (id, title, parallelizable, num_of_RIPs) VALUES (NULL, ?1, NULL, NULL)",
         params![data.Title]
     ).map_err(|e| e.to_string())?;
     let inserted_id : DocID = db.last_insert_rowid() as DocID;
