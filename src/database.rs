@@ -22,6 +22,7 @@ lazy_static! {
 
 
 // This is a wrapper for passing along a rusqlite error or a custom error string
+// More error types could be added to this enum if needed
 #[derive(Debug, thiserror::Error)]
 pub enum CustomError {
     #[error("{0}")]
@@ -404,7 +405,7 @@ pub async fn find_simulation_report(id: DocID) -> Result<SimulationReport,Custom
 }
 
 // Insert functions
-// TODO: Consolidate insert_print_job, insert_rasterization_profile
+// TODO: Consolidate insert_print_job, insert_rasterization_profile, and maybe insert_simulation_report
 
 pub async fn insert_print_job(data: PrintJob) -> Result<DocID> {
     let db = DB_CONNECTION.lock().unwrap();
