@@ -14,7 +14,7 @@ async fn test_hello_world() {
     let server = tokio::spawn(async {
         backend::run_server(HOST, PORT).await;
     });
-    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
     let client = reqwest::Client::new();
     let response = client
@@ -37,7 +37,7 @@ async fn test_get_print_jobs() {
     let server = tokio::spawn(async {
         backend::run_server(HOST, PORT).await;
     });
-    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
     let client = reqwest::Client::new();
     let response = client
@@ -57,7 +57,7 @@ async fn test_get_workflows() {
     let server = tokio::spawn(async {
         backend::run_server(HOST, PORT).await;
     });
-    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
     let client = reqwest::Client::new();
     let response = client
@@ -77,7 +77,7 @@ async fn test_get_workflow_steps() {
     let server = tokio::spawn(async {
         backend::run_server(HOST, PORT).await;
     });
-    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
     let client = reqwest::Client::new();
     let response = client
@@ -97,7 +97,7 @@ async fn test_get_simulation_reports() {
     let server = tokio::spawn(async {
         backend::run_server(HOST, PORT).await;
     });
-    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
     let client = reqwest::Client::new();
     let response = client
@@ -116,7 +116,7 @@ async fn test_all_post_get_then_delete() {
     let server = tokio::spawn(async {
         backend::run_server(HOST, PORT).await;
     });
-    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
     let rasterization_profile_id = test_get_rasterization_profile().await;
     let print_job_id = test_post_print_job(rasterization_profile_id).await;
@@ -176,12 +176,12 @@ async fn test_post_workflow() -> DocID {
     let payload = json!({
         "Title": "Test Workflow",
         "WorkflowSteps": [
-            { "WorkflowStepID": 1, "Prev": [], "Next": [2] },
-            { "WorkflowStepID": 2, "Prev": [1], "Next": [3] },
-            { "WorkflowStepID": 3, "Prev": [2], "Next": [4] },
-            { "WorkflowStepID": 4, "Prev": [3], "Next": [5] },
-            { "WorkflowStepID": 5, "Prev": [4], "Next": [6] },
-            { "WorkflowStepID": 6, "Prev": [5], "Next": [] }
+            { "WorkflowStepID": 1, "Prev": [], "Next": [1] },
+            { "WorkflowStepID": 2, "Prev": [0], "Next": [2] },
+            { "WorkflowStepID": 3, "Prev": [1], "Next": [3] },
+            { "WorkflowStepID": 4, "Prev": [2], "Next": [4] },
+            { "WorkflowStepID": 5, "Prev": [3], "Next": [5] },
+            { "WorkflowStepID": 6, "Prev": [4], "Next": [] }
         ]
     });
 
@@ -205,7 +205,7 @@ async fn test_post_empty_workflow() {
     let server = tokio::spawn(async {
         backend::run_server(HOST, PORT).await;
     });
-    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
     let client = reqwest::Client::new();
     let payload = json!({
@@ -236,15 +236,15 @@ async fn test_post_cyclic_workflow() {
     let server = tokio::spawn(async {
         backend::run_server(HOST, PORT).await;
     });
-    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
     let client = reqwest::Client::new();
     let payload = json!({
         "Title": "Test Workflow",
         "WorkflowSteps": [
-            { "WorkflowStepID": 1, "Prev": [3], "Next": [2] },
-            { "WorkflowStepID": 2, "Prev": [1], "Next": [3] },
-            { "WorkflowStepID": 3, "Prev": [2], "Next": [1] },
+            { "WorkflowStepID": 1, "Prev": [2], "Next": [1] },
+            { "WorkflowStepID": 2, "Prev": [0], "Next": [2] },
+            { "WorkflowStepID": 3, "Prev": [1], "Next": [0] },
         ]
     });
 
@@ -326,7 +326,7 @@ async fn test_get_workflow_step_by_id() {
     let server = tokio::spawn(async {
         backend::run_server(HOST, PORT).await;
     });
-    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
     let client = reqwest::Client::new();
     let response = client
