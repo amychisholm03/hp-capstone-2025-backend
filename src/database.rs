@@ -183,7 +183,7 @@ pub async fn query_workflows() -> Result<Vec<Workflow>,String> {
     let db = DB_CONNECTION.lock().unwrap();
 
     let mut stmt = db
-        .prepare("SELECT id, title FROM workflow;")
+        .prepare("SELECT id, title, parallelizable, numOfRIPs FROM workflow;")
         .map_err(|e| e.to_string())?;
 
     let rows = stmt
