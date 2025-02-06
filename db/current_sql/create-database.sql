@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS workflow;
+
 -- Create a table to define rasterization profiles
 CREATE TABLE IF NOT EXISTS rasterization_profile (
    id INTEGER PRIMARY KEY,
