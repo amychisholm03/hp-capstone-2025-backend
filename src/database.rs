@@ -192,7 +192,7 @@ pub async fn query_workflows() -> Result<Vec<Workflow>,String> {
                 id: row.get(0)?,
                 Title: row.get(1)?,
                 WorkflowSteps: vec![],
-                Parallelizable: row.get(2)?,
+                Parallelizable: bool(row.get(2)),
                 numOfRIPs: row.get(3)?,
             })
         })
@@ -387,7 +387,7 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow, String> {
             id: row.get(0)?,
             Title: row.get(1)?,
             WorkflowSteps: vec![],
-            Parallelizable: row.get(2)?,
+            Parallelizable: bool(row.get(2)),
             numOfRIPs: row.get(3)?,
         })
     })
