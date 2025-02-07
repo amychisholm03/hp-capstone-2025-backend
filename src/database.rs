@@ -230,17 +230,26 @@ fn assigned_workflow_step_from_row(row: &Row) -> Result<AssignedWorkflowStep> {
 }
 
 
+/// Enables foreign key checking
 pub async fn enable_foreign_key_checking() -> Result<()> {
     let db = DB_CONNECTION.lock().unwrap();
     db.execute("PRAGMA foreign_keys = ON;", [])?;
     return Ok(())
 }
 
-// Query Functions
 
-// TODO: Comment
+/// Returns the results of a database query or an error
+///
+/// ### Arguments
+/// * `query` - SQL query to perform
+/// * `params` - Array of parameters used in the query (see query_map())
+/// * `f` - Function that turns a row from the database into the desired struct
+///
+/// ### Returns
+/// A vector of structs or a rusqlite error
 fn query<T,P,F>(query: &str, params: P, f: F) -> Result<Vec<T>> 
-where P: Params, F: FnMut(&Row<'_>) -> Result<T> {
+    where P: Params, F: FnMut(&Row<'_>) -> Result<T> {
+
     let db = DB_CONNECTION.lock().unwrap();
     let mut stmt = db.prepare(query)?;
     let rows = stmt.query_map(params, f)?;
@@ -255,23 +264,47 @@ where P: Params, F: FnMut(&Row<'_>) -> Result<T> {
 }
 
 
+/// Checks if the results of a database query for an ID is valid
+///
+/// ### Arguments
+/// * `rows` - The vector returned by query()
+///
+/// ### Returns
+/// The single item in the vector, or an error
+fn check_id_lookup_results<T>(mut rows: Vec<T>) -> Result<T,CustomError> {
+    return match rows.len() {
+        0 => Err(CustomError::DatabaseError(Error::QueryReturnedNoRows)),
+        1 => Ok(rows.pop().unwrap()),
+        _ => Err(CustomError::OtherError("ID search returned multiple rows".to_string()))
+    };
+}
+
+
+/**
+ * These functions query the database and return the results of that query
+ * 
+ * The query_ functions return a vector containing every item in the
+ * given table
+ * TODO: Expand these functions to allow for more specific queries
+ * 
+ * The find_ functions return the row matching the given ID, or an
+ * error if it doesn't exist
+ **/
+
 pub async fn query_print_jobs() -> Result<Vec<PrintJob>> {
     return query("SELECT id, title, creation_time, page_count, rasterization_profile_id FROM printjob;", 
         [], print_job_from_row);
 }
-
 
 pub async fn query_workflows() -> Result<Vec<Workflow>> {
     return query("SELECT id, title FROM workflow;",
         [], workflow_from_row);
 }
 
-
 pub async fn query_workflow_steps() -> Result<Vec<WorkflowStep>> {
     return query("SELECT id, title, setup_time, time_per_page FROM workflow_step;",
         [], workflow_step_from_row);
 }
-
 
 pub async fn query_simulation_reports() -> Result<Vec<SimulationReportDetailed>> {
     return query("
@@ -295,23 +328,10 @@ pub async fn query_simulation_reports() -> Result<Vec<SimulationReportDetailed>>
     ", [], simulation_report_detailed_from_row);
 }
 
-
 pub async fn query_rasterization_profiles() -> Result<Vec<RasterizationProfile>> {
     return query("SELECT id, title, profile FROM rasterization_profile;",
         [], rasterization_profile_from_row);
 }
-
-// Find functions
-
-// TODO: Comment
-fn check_id_lookup_results<T>(mut rows: Vec<T>) -> Result<T,CustomError> {
-    return match rows.len() {
-        0 => Err(CustomError::DatabaseError(Error::QueryReturnedNoRows)),
-        1 => Ok(rows.pop().unwrap()),
-        _ => Err(CustomError::OtherError("ID search returned multiple rows".to_string()))
-    };
-}
-
 
 pub async fn find_print_job(id: DocID) -> Result<PrintJob,CustomError> {
     let rows = query("SELECT id, title, creation_time, page_count, rasterization_profile_id FROM printjob WHERE id=(?);",
@@ -319,13 +339,11 @@ pub async fn find_print_job(id: DocID) -> Result<PrintJob,CustomError> {
     return check_id_lookup_results(rows);
 }
 
-
 pub async fn find_rasterization_profile(id: DocID) -> Result<RasterizationProfile,CustomError> {
     let rows = query("SELECT id, title, profile FROM rasterization_profile WHERE id=(?);",
         [id], rasterization_profile_from_row)?;
     return check_id_lookup_results(rows);
 }
-
 
 // TODO: refactor similar to other find functions
 pub async fn find_workflow(id: DocID) -> Result<Workflow> {
@@ -392,13 +410,11 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow> {
     return Ok(workflow);
 }
 
-
 pub async fn find_workflow_step(id: DocID) -> Result<WorkflowStep,CustomError> {
     let rows = query("SELECT id, title, setup_time, time_per_page FROM workflow_step WHERE id=(?);",
         [id], workflow_step_from_row)?;
     return check_id_lookup_results(rows);
 }
-
 
 pub async fn find_simulation_report(id: DocID) -> Result<SimulationReport,CustomError> {
     let rows = query("SELECT id, creation_time, total_time_taken, printjobID, workflowID FROM simulation_report WHERE id=(?);",
@@ -406,8 +422,10 @@ pub async fn find_simulation_report(id: DocID) -> Result<SimulationReport,Custom
     return check_id_lookup_results(rows);
 }
 
-// Insert functions
-// TODO: Consolidate insert_print_job, insert_rasterization_profile, and maybe insert_simulation_report
+
+/**
+ * Functions to insert data into the database
+ **/
 
 pub async fn insert_print_job(data: PrintJob) -> Result<DocID> {
     let db = DB_CONNECTION.lock().unwrap();
@@ -421,7 +439,6 @@ pub async fn insert_print_job(data: PrintJob) -> Result<DocID> {
 	return Ok(inserted_id);
 }
 
-
 pub async fn insert_rasterization_profile(data: RasterizationProfile) -> Result<DocID> {
     let db = DB_CONNECTION.lock().unwrap();
     
@@ -433,7 +450,6 @@ pub async fn insert_rasterization_profile(data: RasterizationProfile) -> Result<
     let inserted_id : u32 = db.last_insert_rowid() as u32;
 	return Ok(inserted_id);
 }
-
 
 pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
     // Ensure that the workflow is valid
@@ -491,7 +507,6 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
     return Ok(inserted_id);
 }
 
-
 pub async fn insert_simulation_report(print_job_id: u32, workflow_id: u32) -> Result<DocID,CustomError> {
     // Run the simulation
     let new_report = match simulate(print_job_id, workflow_id).await {
@@ -510,8 +525,10 @@ pub async fn insert_simulation_report(print_job_id: u32, workflow_id: u32) -> Re
     return Ok(inserted_id);
 }
 
-// Remove functions
-// TODO: consolidate remove_print_job, remove_rasterization_profile, remove_simulation_report
+
+/**
+ * Functions to delete data from the database
+ **/
 
 pub async fn remove_print_job(id: DocID) -> Result<usize> {
     let db = DB_CONNECTION.lock().unwrap();
