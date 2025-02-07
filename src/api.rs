@@ -215,7 +215,10 @@ async fn post_print_job(Json(payload): Json<PrintJob>) -> impl IntoResponse {
 async fn post_workflow(Json(payload): Json<WorkflowArgs>) -> impl IntoResponse {
     return match insert_workflow(payload).await {
         Ok(data) => response(201, data.to_string()),
-        Err(err) => response(500, err.to_string()) //TODO: Better error code/message? What would cause this?
+        Err(err) => {
+            println!("{err}");
+            return response(500, err.to_string()) //TODO: Better error code/message? What would cause this?
+        }
     }
 }
 

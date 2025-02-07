@@ -466,8 +466,8 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
 
     // Insert the Workflow
     db.execute(
-        "INSERT INTO workflow (id, title) VALUES (NULL, ?1)",
-        params![data.Title]
+        "INSERT INTO workflow (id, title, parallelizable, num_of_RIPs) VALUES (NULL, ?1, ?2, ?3)",
+        params![data.Title, data.Parallelizable, data.numOfRIPs]
     )?;
     let inserted_id : DocID = db.last_insert_rowid() as DocID;
     
@@ -476,8 +476,8 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
     let mut index_to_id : HashMap<usize, DocID> = HashMap::new();
     for step in &data.WorkflowSteps {
         db.execute(
-            "INSERT INTO workflow (id, title, parallelizable, num_of_RIPs) VALUES (NULL, ?1, ?2, ?3)",
-            params![data.Title, data.Parallelizable, data.numOfRIPs]
+            "INSERT INTO assigned_workflow_step (id, workflow_id, workflow_step_id) VALUES (NULL, ?1, ?2)",
+            params![inserted_id, step.WorkflowStepID]
         )?;
 
         // map the primary key of each AssignedWorkflowStep to it's index in the vector.
