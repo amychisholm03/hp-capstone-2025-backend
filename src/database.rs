@@ -10,6 +10,7 @@ use rusqlite::{params, Connection, Error, Row, Result, Params};
 use crate::simulation::{*};
 use crate::validation::{*};
 
+
 pub type DocID = u32;
 const DATABASE_LOCATION: &str = "./db/database.db3";
 
@@ -463,6 +464,10 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
         return Err(CustomError::OtherError("Invalid workflow".to_string()));
     }
     let db = DB_CONNECTION.lock().unwrap();
+    // Ensure that the workflow is valid
+    if !ensure_valid_workflow(&data) {
+        return Err("Invalid workflow".to_string());
+    }
 
     // Insert the Workflow
     db.execute(

@@ -10,6 +10,7 @@ use tower::ServiceBuilder;
 use tower_http::cors::{CorsLayer, Any};
 use hyper::StatusCode;
 use crate::database::{*};
+use crate::validation::{*};
 
 /// Builds the routes for the API.
 pub fn build_routes() -> Router {
@@ -148,7 +149,7 @@ async fn get_workflow_by_id(Path(id_str): Path<String>) -> impl IntoResponse {
     };
     return match find_workflow(id).await {
         Ok(data) => response(200, json!(data).to_string()),
-        Err(_) => response(404, "An error occurred.".to_string())
+        Err(e) => response(500, e.to_string())
     };
 }
 
@@ -215,10 +216,7 @@ async fn post_print_job(Json(payload): Json<PrintJob>) -> impl IntoResponse {
 async fn post_workflow(Json(payload): Json<WorkflowArgs>) -> impl IntoResponse {
     return match insert_workflow(payload).await {
         Ok(data) => response(201, data.to_string()),
-        Err(err) => {
-            println!("{err}");
-            return response(500, err.to_string()) //TODO: Better error code/message? What would cause this?
-        }
+        Err(err) => response(500, err.to_string()) //TODO: Better error code/message? What would cause this?
     }
 }
 
