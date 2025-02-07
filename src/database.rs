@@ -175,6 +175,8 @@ fn workflow_from_row(row: &Row) -> Result<Workflow> {
         id: row.get(0)?,
         Title: row.get(1)?,
         WorkflowSteps: vec![],
+        Parallelizable: row.get::<_, i32>(2)? != 0,
+        numOfRIPs: row.get(3)?,
     });
 }
 
@@ -297,7 +299,7 @@ pub async fn query_print_jobs() -> Result<Vec<PrintJob>> {
 }
 
 pub async fn query_workflows() -> Result<Vec<Workflow>> {
-    return query("SELECT id, title FROM workflow;",
+    return query("SELECT id, title, parallelizable, num_of_RIPs FROM workflow;",
         [], workflow_from_row);
 }
 
@@ -470,8 +472,8 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
     let mut index_to_id : HashMap<usize, DocID> = HashMap::new();
     for step in &data.WorkflowSteps {
         db.execute(
-            "INSERT INTO assigned_workflow_step (id, workflow_id, workflow_step_id) VALUES (NULL, ?1, ?2)",
-            params![inserted_id, step.WorkflowStepID]
+            "INSERT INTO workflow (id, title, parallelizable, num_of_RIPs) VALUES (NULL, ?1, ?2, ?3)",
+            params![data.Title, data.Parallelizable, data.numOfRIPs]
         )?;
 
         // map the primary key of each AssignedWorkflowStep to it's index in the vector.
