@@ -357,7 +357,7 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow> {
     let db = DB_CONNECTION.lock().unwrap();
 
     // Get the workflow matching the supplied id
-    let mut stmt0 = db.prepare("SELECT id, title FROM workflow WHERE id=(?);")?;
+    let mut stmt0 = db.prepare("SELECT id, title, parallelizable, num_of_RIPs FROM workflow WHERE id=(?);")?;
     let mut workflow_iter = stmt0.query_map([id], workflow_from_row)?;
 
     let mut workflow = match workflow_iter.next() {
