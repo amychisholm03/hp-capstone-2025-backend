@@ -67,7 +67,9 @@ pub struct AssignedWorkflowStep {
 pub struct Workflow {
 	#[serde(default)] id: Option<DocID>,
 	Title: String,
-	pub WorkflowSteps: Vec<AssignedWorkflowStep>
+	pub WorkflowSteps: Vec<AssignedWorkflowStep>,
+    pub Parallelizable: bool,
+    pub numOfRIPs: u32,
 }
 
 
@@ -134,7 +136,9 @@ pub struct AssignedWorkflowStepArgs {
 pub struct WorkflowArgs {
 	#[serde(default)] id: Option<DocID>,
 	Title: String,
-	pub WorkflowSteps: Vec<AssignedWorkflowStepArgs>
+	pub WorkflowSteps: Vec<AssignedWorkflowStepArgs>,
+    pub Parallelizable: bool,
+    pub numOfRIPs: u32,
 }
 
 
