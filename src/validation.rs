@@ -5,7 +5,6 @@ pub fn ensure_valid_workflow(workflow: &WorkflowArgs) -> bool {
     if workflow.WorkflowSteps.is_empty() {
         return false;
     }
-
     return ensure_direct_acyclic_graph(&workflow.WorkflowSteps);
 }
 
@@ -49,12 +48,12 @@ fn has_cycle(
 
     if let Some(step) = step_map.get(&step_id) {
         for &next_id in &step.Next {
-            if has_cycle((next_id + 1).try_into().unwrap(), step_map, visited, stack) {
+            if has_cycle((next_id + 1).try_into().unwrap(), step_map, visited, stack){
                 return true;
             }
         }
     }
 
     stack.remove(&step_id);
-    false
+    return false;
 }

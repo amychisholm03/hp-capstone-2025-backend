@@ -39,10 +39,10 @@ CREATE TABLE IF NOT EXISTS simulation_report (
 
 -- Workflow Step Definition
 CREATE TABLE IF NOT EXISTS workflow_step (
-	id INTEGER PRIMARY KEY,
-	title TEXT NOT NULL,
-	setup_time INTEGER,
-	time_per_page INTEGER
+    id INTEGER PRIMARY KEY,
+    title TEXT NOT NULL,
+    setup_time INTEGER,
+    time_per_page INTEGER
 );
 
 -- A workflow step which is assigned to a specific workflow
@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS assigned_workflow_step (
 -- Create a table to track workflow steps which are part of a workflow
 CREATE TABLE IF NOT EXISTS next_workflow_step (
     assigned_workflow_step_id INTEGER,  -- the id of the assigned workflow step this is 
-    next_step_id INTEGER, 		          -- which workflow step comes next.
+    next_step_id INTEGER,                 -- which workflow step comes next.
     PRIMARY KEY (assigned_workflow_step_id, next_step_id),
     FOREIGN KEY (next_step_id) REFERENCES assigned_workflow_step(id)
     FOREIGN KEY (assigned_workflow_step_id) REFERENCES assigned_workflow_step(id)
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS next_workflow_step (
 
 CREATE TABLE IF NOT EXISTS prev_workflow_step (
     assigned_workflow_step_id INTEGER,  -- the id of the assigned workflow step this is 
-    prev_step_id INTEGER, 		          -- which workflow step came last.
+    prev_step_id INTEGER,                 -- which workflow step came last.
     PRIMARY KEY (assigned_workflow_step_id, prev_step_id),
     FOREIGN KEY (prev_step_id) REFERENCES assigned_workflow_step(id),
     FOREIGN KEY (assigned_workflow_step_id) REFERENCES assigned_workflow_step(id)

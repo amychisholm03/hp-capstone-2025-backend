@@ -17,7 +17,10 @@ pub async fn run_server(host: &str, port: &str) {
     println!("Building Routes");
     let app = build_routes();
 
-    enable_foreign_key_checking();
+    if let Err(e) = enable_foreign_key_checking().await {
+        println!("Failed to enable foreign key checking: {}", e);
+        process::exit(1);
+    }
 
     // Run Server
     println!("Starting server on {host}:{port}");

@@ -80,7 +80,7 @@ async fn traverse_list(steps: &Vec<usize>, print_job: &PrintJob, search: &Search
 
 
 async fn simulate_step(print_job: &PrintJob, wfs: &AssignedWorkflowStep) -> u32 {
-	let workflow_step = find_workflow_step(wfs.id).await.expect("WorkflowStep not found");
+	let workflow_step = find_workflow_step(wfs.WorkflowStepID).await.expect(&format!("WorkflowStep not found"));
 	return print_job.PageCount * workflow_step.TimePerPage + workflow_step.SetupTime;
 }
 
