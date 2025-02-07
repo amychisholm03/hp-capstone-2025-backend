@@ -152,6 +152,14 @@ impl SimulationReport {
 }
 
 
+/**
+ * Create struct from database row
+ * 
+ * These functions transform a row from a SQL query and creates the
+ * appropriate struct from the result. These functions assume that
+ * the columns in the row are in a specific order
+ **/
+
 fn print_job_from_row(row: &Row) -> Result<PrintJob> {
     return Ok(PrintJob {
         id: row.get(0)?,
@@ -162,7 +170,6 @@ fn print_job_from_row(row: &Row) -> Result<PrintJob> {
     });
 }
 
-
 fn workflow_from_row(row: &Row) -> Result<Workflow> {
     return Ok(Workflow {
         id: row.get(0)?,
@@ -170,7 +177,6 @@ fn workflow_from_row(row: &Row) -> Result<Workflow> {
         WorkflowSteps: vec![],
     });
 }
-
 
 fn workflow_step_from_row(row: &Row) -> Result<WorkflowStep> {
     return Ok(WorkflowStep {
@@ -180,7 +186,6 @@ fn workflow_step_from_row(row: &Row) -> Result<WorkflowStep> {
         TimePerPage: row.get(3)?,
     });
 }
-
 
 fn simulation_report_detailed_from_row(row: &Row) -> Result<SimulationReportDetailed> {
     return Ok(SimulationReportDetailed {
@@ -196,7 +201,6 @@ fn simulation_report_detailed_from_row(row: &Row) -> Result<SimulationReportDeta
     });
 }
 
-
 fn rasterization_profile_from_row(row: &Row) -> Result<RasterizationProfile> {
     return Ok(RasterizationProfile {
         id: row.get(0)?, 
@@ -204,7 +208,6 @@ fn rasterization_profile_from_row(row: &Row) -> Result<RasterizationProfile> {
         profile: row.get(2)?,
     });
 }
-
 
 fn simulation_report_from_row(row: &Row) -> Result<SimulationReport> {
     return Ok(SimulationReport {
@@ -216,7 +219,6 @@ fn simulation_report_from_row(row: &Row) -> Result<SimulationReport> {
         StepTimes: HashMap::from([(2, 15)]),
     });
 }
-
 
 fn assigned_workflow_step_from_row(row: &Row) -> Result<AssignedWorkflowStep> {
     return Ok(AssignedWorkflowStep {
