@@ -74,13 +74,11 @@ async fn traverse_list(steps: &Vec<usize>, print_job: &PrintJob, workflow: &Work
 
 async fn simulate_step(print_job: &PrintJob, workflow: &Workflow, wfs: &AssignedWorkflowStep) -> u32 {
 	let workflow_step = find_workflow_step(wfs.WorkflowStepID).await.expect(&format!("WorkflowStep not found"));
-	// TODO: make this less garbage
 	return match workflow_step.Title.as_str() {
 		"Rasterization" => ((print_job.PageCount as f32 )/(workflow.numOfRIPs as f32)).ceil() as u32
 			* workflow_step.TimePerPage + workflow_step.SetupTime,
 		_ => print_job.PageCount * workflow_step.TimePerPage + workflow_step.SetupTime
 	};
-	// return print_job.PageCount * workflow_step.TimePerPage + workflow_step.SetupTime;
 }
 
 
