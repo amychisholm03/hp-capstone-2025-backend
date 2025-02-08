@@ -10,7 +10,6 @@ use tower::ServiceBuilder;
 use tower_http::cors::{CorsLayer, Any};
 use hyper::StatusCode;
 use crate::database::{*};
-use crate::validation::{*};
 
 /// Builds the routes for the API.
 pub fn build_routes() -> Router {
