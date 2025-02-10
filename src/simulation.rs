@@ -25,16 +25,9 @@ pub async fn simulate(print_job_id : DocID, workflow_id : DocID ) -> Result<Simu
 		Err(_) => return Err("Workflow not found".to_string())
 	};
 
-	// Return early if the workflow contains no steps
-	// This should be impossible because of validation in api.rs
-	if workflow.WorkflowSteps.len() == 0 { 
-		return Ok(SimulationReport::new( print_job_id, workflow_id,
-			0, 0, HashMap::new()));
-	}
-
 	// Graph Search
 	let search = Search::new(&workflow);
-	traverse_graph(&print_job, &search, &workflow.WorkflowSteps.clone(), 0).await;
+	traverse_graph(&print_job, &workflow, &search, &workflow.WorkflowSteps.clone(), 0).await;
 
 	// Pass results to SimulationReport constructor
 	return Ok(SimulationReport::new(
@@ -51,14 +44,14 @@ pub async fn simulate(print_job_id : DocID, workflow_id : DocID ) -> Result<Simu
 /// TODO: I expect we'll probably store the time/cost/other details from each step into the
 /// database here. There is a table in the database called ran_workflow_step that associates an
 /// AssignedWorkflowStep with a simulation_report_id & time_taken value
-async fn traverse_graph(print_job: &PrintJob, search: &Search, steps: &Vec<AssignedWorkflowStep>, step: usize){
+async fn traverse_graph(print_job: &PrintJob, workflow: &Workflow, search: &Search, steps: &Vec<AssignedWorkflowStep>, step: usize){
 	if !(search.visit(step)) { return; }
 	
 	// Recursively visit all previous nodes first
-	traverse_list(&steps[step].Prev, print_job, search, steps).await;
+	traverse_list(&steps[step].Prev, print_job, workflow, search, steps).await;
 
 	// Simulate the current step
-	let result = simulate_step(print_job, &steps[step]).await;
+	let result = simulate_step(print_job, workflow, &steps[step]).await;
 	
 	// Update times
 	search.update_step_time_by_id(&steps[step].id, result);
@@ -68,20 +61,24 @@ async fn traverse_graph(print_job: &PrintJob, search: &Search, steps: &Vec<Assig
 	};
 
 	// Recursively visit next nodes
-	traverse_list(&steps[step].Next, print_job, search, steps).await;
+	traverse_list(&steps[step].Next, print_job, workflow, search, steps).await;
 }
 
 
-async fn traverse_list(steps: &Vec<usize>, print_job: &PrintJob, search: &Search, all_steps: &Vec<AssignedWorkflowStep>){
+async fn traverse_list(steps: &Vec<usize>, print_job: &PrintJob, workflow: &Workflow, search: &Search, all_steps: &Vec<AssignedWorkflowStep>){
 	join_all(steps.iter().map(|&i| 
-		traverse_graph(print_job, search, all_steps, i)
+		traverse_graph(print_job, workflow, search, all_steps, i)
 	).collect::<Vec<_>>()).await;
 }
 
 
-async fn simulate_step(print_job: &PrintJob, wfs: &AssignedWorkflowStep) -> u32 {
+async fn simulate_step(print_job: &PrintJob, workflow: &Workflow, wfs: &AssignedWorkflowStep) -> u32 {
 	let workflow_step = find_workflow_step(wfs.WorkflowStepID).await.expect(&format!("WorkflowStep not found"));
-	return print_job.PageCount * workflow_step.TimePerPage + workflow_step.SetupTime;
+	return match workflow_step.Title.as_str() {
+		"Rasterization" => ((print_job.PageCount as f32 )/(workflow.numOfRIPs as f32)).ceil() as u32
+			* workflow_step.TimePerPage + workflow_step.SetupTime,
+		_ => print_job.PageCount * workflow_step.TimePerPage + workflow_step.SetupTime
+	};
 }
 
 
