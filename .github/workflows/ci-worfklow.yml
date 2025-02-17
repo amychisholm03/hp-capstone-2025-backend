@@ -69,8 +69,8 @@ jobs:
                 script: |
                   export PATH=$PATH:/home/admin/.cargo/bin
                   cd ~/test/db
-                  sudo rm database.db3
-                  ./run_sql.sh
+                  chmod 0777 run_sql.sh
+                  sudo ./run_sql.sh
                   cd ..
                   sudo -E env "PATH=$PATH" cargo test
 

@@ -1,4 +1,6 @@
 -- whip up some of the data that can't be created from the GUI
+DROP TABLE IF EXISTS rasterization_profile;
+DROP TABLE IF EXISTS workflow_step;
 
 INSERT INTO rasterization_profile (id, title, profile) VALUES (NULL, 'BW', 'Standard Color Profile');
 INSERT INTO rasterization_profile (id, title, profile) VALUES (NULL, 'CMY', 'Standard Color Profile');
