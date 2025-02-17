@@ -1,14 +1,30 @@
-<h1>Running the Application</h1>
+# PrintOS
 
-<h5>Run</h5>
-<p>Use the following commands to run the application:</p>
-<ul>
-  <li><code>cargo run</code>: Runs the server with default parameters.</li>
-  <li><code>cargo run l</code>: Runs the server on <code>localhost:5040</code>.</li>
-</ul>
+This is the backend of WSU-V's HP Capstone group project, Fall 2024 - Spring 2025.
 
+We were tasked with creating a full-stack cloud application that supports [Industrial Print](https://www.hp.com/us-en/industrial-digital-presses.html) customers visualize and optimize their print jobs and workflows.
 
-<h1>File Structure</h1>
+## Running the Application
+
+1. Setup the database.
+   * `cd .../hp-capstone-2025-backend`: Navigate to root directory of this project.
+   * `cd db`
+   * `./run_sql.sh`
+2. Test the application.
+   * `cd .../hp-capstone-2025-backend`: Navigate to root directory of this project.
+   * `cargo test`
+3. Start [](https://www.hp.com/us-en/home.html "HP® Official Site | Laptops, Computers, Desktops , Printers, and more")the server.
+   * `cd .../hp-capstone-2025-backend`: Navigate to root directory of this project.
+   * `cargo run`: Runs the server with default parameters.
+     * `cargo run l`: Runs the server on `localhost:5040`.This will *not* interact with our live frontend.
+4. Send requests through our frontend at [wsuv-hp-capstone.com](http://wsuv-hp-capstone.com/).
+
+## Example Workflow
+
+![example_workflow](image/README/example_workflow.png)
+
+## File Structure
+
 <table>
   <thead>
     <tr>
@@ -48,22 +64,21 @@
   </tbody>
 </table>
 
-<h1>Database Schema</h1>
-<p> This project uses SQLite 3. <br> 
-SQLite stores data in a single file (.db3)<br>
-The database is executed and maintained via the Rusqlite library for Rust.
+## Database Schema
 
-If you require access to the database to inspect it's contents, or to make changes,`<br>`you may do so via the sqlite3 program. `<br>`
+This project uses SQLite 3. SQLite stores data in a single file (.db3) The database is executed and maintained via the Rusqlite library for Rust.
+
+If you require access to the database to inspect its contents, or to make changes, you may do so via the `sqlite3` program.
 
 - To access an existing database:
-  - sqlite3 /path/to/database.db3
+  - `sqlite3 /path/to/database.db3`
 - To execute SQL on a database
-  - sqlite3 /path/to/database.db3 < /path/to/file.sql
+  - `sqlite3 /path/to/database.db3 < /path/to/file.sql`
 
-</p>
+### rasterization_profile
 
-<h2>rasterization_profile</h2>
-<p>Stores the various rasterization profile options. Currently, only the title is stored, but more fields may be added soon.</p>
+Stores the various rasterization profile options. Currently, only the title is stored, but more fields may be added soon.
+
 <table>
   <thead>
     <tr>
@@ -83,8 +98,10 @@ If you require access to the database to inspect it's contents, or to make chang
   </tbody>
 </table>
 
-<h2>printjob</h2>
-<p>Print jobs are used in conjunction with workflows to run simulations. Factors such as <code>page_count</code> and <code>rasterization_profile</code> will affect simulation times.</p>
+### printjob
+
+Print jobs are used in conjunction with workflows to run simulations. Factors such as `page_count` and `rasterization_profile` will affect simulation times.
+
 <table>
   <thead>
     <tr>
@@ -116,8 +133,10 @@ If you require access to the database to inspect it's contents, or to make chang
   </tbody>
 </table>
 
-<h2>workflow</h2>
-<p>Workflows simulate print jobs and define the steps involved. The steps of a workflow are stored in the <code>workflow_step</code> table and assigned to workflows via the <code>assigned_workflow_step</code> table.</p>
+### workflow
+
+Workflows simulate print jobs and define the steps involved. The steps of a workflow are stored in the `workflow_step` table and assigned to workflows via the `assigned_workflow_step` table.
+
 <table>
   <thead>
     <tr>
@@ -153,7 +172,8 @@ If you require access to the database to inspect it's contents, or to make chang
   </tbody>
 </table>
 
-<h2>workflow_step</h2>
+### workflow_step
+
 <table>
   <thead>
     <tr>
@@ -181,8 +201,10 @@ If you require access to the database to inspect it's contents, or to make chang
   </tbody>
 </table>
 
-<h2>assigned_workflow_step</h2>
-<p>Assigns workflow steps to specific workflows.</p>
+### assigned_workflow_step
+
+Assigns workflow steps to specific workflows.
+
 <table>
   <thead>
     <tr>
@@ -206,8 +228,10 @@ If you require access to the database to inspect it's contents, or to make chang
   </tbody>
 </table>
 
-<h2>next_workflow_step</h2>
-<p>Defines the sequence of steps in a workflow by linking a workflow step to its next step.</p>
+### next_workflow_step
+
+Defines the sequence of steps in a workflow by linking a workflow step to its next step.
+
 <table>
   <thead>
     <tr>
@@ -227,8 +251,10 @@ If you require access to the database to inspect it's contents, or to make chang
   </tbody>
 </table>
 
-<h2>prev_workflow_step</h2>
-<p>Defines the reverse sequence of steps in a workflow by linking a workflow step to its previous step.</p>
+### prev_workflow_step
+
+Defines the reverse sequence of steps in a workflow by linking a workflow step to its previous step.
+
 <table>
   <thead>
     <tr>
@@ -248,11 +274,10 @@ If you require access to the database to inspect it's contents, or to make chang
   </tbody>
 </table>
 
-<h2>ran_workflow_step</h2>
-<p>
-Tracks the execution of workflow steps within a simulation report.<br>
-These haven't been implemented yet.
-</p>
+### ran_workflow_step
+
+Tracks the execution of workflow steps within a simulation report. These haven't been implemented yet.
+
 <table>
   <thead>
     <tr>
@@ -276,112 +301,82 @@ These haven't been implemented yet.
   </tbody>
 </table>
 
-<h1>Other Data Structures</h1>
-<p>These could either be hardcoded or stored in a database:</p>
-<ul>
-  <li><strong>Rules:</strong> A data structure that enforces constraints on data being entered into the database. For example, ensuring specific workflow steps are performed in a particular order (e.g., printing must occur before laminating). These rules can be requested by the frontend to provide real-time feedback when creating resources. The frontend sends the validated data to the backend, where the same rules are enforced.</li>
-</ul>
+### Other Data Structures
 
-<h1>REST API</h1>
+These could either be hardcoded or stored in a database:
 
-<h2>HTTP Methods</h2>
-<p>For more information, visit the following resources:</p>
-<ul>
-  <li><a href="https://restfulapi.net/">RESTful API Guide</a></li>
-  <li><a href="https://restfulapi.net/http-methods/">HTTP Methods</a></li>
-</ul>
+* **Rules:** A data structure that enforces constraints on data being entered into the database. For example, ensuring specific workflow steps are performed in a particular order (e.g., printing must occur before laminating). These rules can be requested by the frontend to provide real-time feedback when creating resources. The frontend sends the validated data to the backend, where the same rules are enforced.
 
-<h2>GET</h2>
-<ul>
-  <li><code>GET /[COLL]?opt_param1=example1&opt_param2=example2</code><br>
-    Retrieves all documents from a collection matching the given parameters. If no parameters are specified, returns the entire collection.
-    <ul>
-      <li><strong>200 (OK):</strong> Returns a list of documents (can be empty).</li>
-      <li><strong>400 (Bad Request):</strong> Improperly formatted query.</li>
-    </ul>
-  </li>
-  <li><code>GET /[COLL]/:id</code><br>
-    Retrieves a specific document by ID.
-    <ul>
-      <li><strong>200 (OK):</strong> Returns the document.</li>
-      <li><strong>400 (Bad Request):</strong> Invalid ID format.</li>
-      <li><strong>404 (Not Found):</strong> Document does not exist.</li>
-    </ul>
-  </li>
-</ul>
+## REST API
 
-<h2>POST</h2>
-<ul>
-  <li><code>POST /RasterizationProfile</code><br>
-    Creates a new rasterization profile. Request body includes:
-    <ul>
-    <li><strong>id</strong></li>  
-      <li><strong>title</strong></li>  
-    </ul>
-    <ul>
-    </ul>
-  </li>
-  <li><code>POST /PrintJob</code><br>
-    Creates a new print job. Request body includes:
-    <ul>
-      <li><strong>Title</strong></li>
-      <li><strong>DateCreated</strong></li>
-      <li><strong>PageCount</strong></li>
-      <li><strong>RasterizationProfile</strong></li>
-    </ul>
-    <ul>
-    </ul>
-  </li>
-  <li><code>POST /Workflow</code><br>
-    Creates a new workflow. Request body includes:
-    <ul>
-      <li><strong>Title</strong></li>
-      <li><strong>WorkflowSteps</strong></li>
-    </ul>
-    Will return a `422` if invalid workflow (i.e. no workflow steps or cyclic)
-  </li>
-  <li><code>POST /SimulationReport</code><br>
-    Creates a new simulation report. Request body includes:
-    <ul>
-      <li><strong>pj_id</strong></li>
-      <li><strong>wf_id</strong></li>
-    </ul>
-    <ul>
-      <li><strong>201 (Created):</strong> Returns new SimulationReport ID.</li>
-    </ul>
-  </li>
-</ul>
+In this application, we use [RESTful API](https://restfulapi.net/) [HTTP methods](https://restfulapi.net/http-methods/).
 
-<h2>DELETE</h2>
-<ul>
-  <li><code>DELETE /RasterizationProfile/:id</code><br>
-    Deletes a specific print job by ID.
-    <ul>
-      <li><strong>204 (No Content):</strong> Successful deletion.</li>
-      <li><strong>400 (Bad Request):</strong> Invalid ID format.</li>
-      <li><strong>404 (Not Found):</strong> Document does not exist.</li>
-      <li><strong>409 (Conflict):</strong> Existing PrintJob rely on this PrintJob.</li>
-    </ul>
-  </li>
-  <li><code>DELETE /PrintJob/:id</code><br>
-    Deletes a specific print job by ID.
-    <ul>
-      <li><strong>204 (No Content):</strong> Successful deletion.</li>
-      <li><strong>400 (Bad Request):</strong> Invalid ID format.</li>
-      <li><strong>404 (Not Found):</strong> Document does not exist.</li>
-      <li><strong>409 (Conflict):</strong> Existing SimulationReports rely on this PrintJob.</li>
-    </ul>
-  </li>
-  <li><code>DELETE /Workflow/:id</code><br>
-    Deletes a specific workflow by ID.
-    <ul>
-      <li><strong>204 (No Content):</strong> Successful deletion.</li>
-      <li><strong>400 (Bad Request):</strong> Invalid ID format.</li>
-      <li><strong>404 (Not Found):</strong> Document does not exist.</li>
-      <li><strong>409 (Conflict):</strong> Existing SimulationReports rely on this Workflow.</li>
-    </ul>
-  </li>
-  <li><code>DELETE /SimulationReport/:id</code><br>
-    Deletes a specific simulation report by ID.
-    <ul>
-      <li><strong>204 (No Content):</strong> Successful deletion
+### GET
+
+* `GET /[COLL]?opt_param1=example1&opt_param2=example2`
+  Retrieves all documents from a collection matching the given parameters. If no parameters are specified, returns the entire collection.
+
+  * **200 (OK):** Returns a list of documents (can be empty).
+  * **400 (Bad Request):** Improperly formatted query.
+* `GET /[COLL]/:id`
+  Retrieves a specific document by ID.
+
+  * **200 (OK):** Returns the document.
+  * **400 (Bad Request):** Invalid ID format.
+  * **404 (Not Found):** Document does not exist.
+
+### POST
+
+* `POST /RasterizationProfile`
+  Creates a new rasterization profile. Request body includes:
+
+  * `id`
+  * `title`
+* `POST /PrintJob`
+  Creates a new print job. Request body includes:
+
+  * `Title`
+  * `DateCreated`
+  * `PageCount`
+  * `RasterizationProfile`
+* `POST /Workflow`
+  Creates a new workflow. Request body includes:
+
+  * `Title`
+  * `WorkflowSteps`
+  * **201 (Created):** Returns new Workflow ID.
+  * **422 (Unprocessable Entity):** Invalid workflow; does not pass validation rules.
+* `POST /SimulationReport`
+  Creates a new simulation report. Request body includes:
+
+  * `pj_id`
+  * `wf_id`
+  * **201 (Created):** Returns new SimulationReport ID.
+
+### DELETE
+
+* `DELETE /RasterizationProfile/:id`
+  Deletes a specific print job by ID.
+
+  * **204 (No Content):** Successful deletion.
+  * **400 (Bad Request):** Invalid ID format.
+  * **404 (Not Found):** Document does not exist.
+  * **409 (Conflict):** Existing PrintJob rely on this PrintJob.
+* `DELETE /PrintJob/:id`
+  Deletes a specific print job by ID.
+
+  * **204 (No Content):** Successful deletion.
+  * **400 (Bad Request):** Invalid ID format.
+  * **404 (Not Found):** Document does not exist.
+  * **409 (Conflict):** Existing SimulationReports rely on this PrintJob.
+* `DELETE /Workflow/:id`
+  Deletes a specific workflow by ID.
+
+  * **204 (No Content):** Successful deletion.
+  * **400 (Bad Request):** Invalid ID format.
+  * **404 (Not Found):** Document does not exist.
+  * **409 (Conflict):** Existing SimulationReports rely on this Workflow.
+* `DELETE /SimulationReport/:id`
+  Deletes a specific simulation report by ID.
+
+  * **204 (No Content):** Successful deletion
