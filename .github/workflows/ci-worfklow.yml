@@ -70,7 +70,7 @@ jobs:
                   export PATH=$PATH:/home/admin/.cargo/bin
                   cd ~/test/db
                   sudo rm database.db3
-                  ./run_current_sql.sh
+                  ./run_sql.sh
                   cd ..
                   sudo -E env "PATH=$PATH" cargo test
 
