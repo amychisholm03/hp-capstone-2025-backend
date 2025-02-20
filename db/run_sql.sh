@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DB_PATH="./database.db3"
-SQL_DIR="./current_sql"
+SQL_DIR="./sql"
 
 if [ ! -f "$DB_PATH" ]; then
   echo "Warning: Database file not found at $DB_PATH"
