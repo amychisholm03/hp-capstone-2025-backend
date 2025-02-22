@@ -87,7 +87,7 @@ async fn get_rasterization_profiles() -> impl IntoResponse {
 async fn get_workflows() -> impl IntoResponse {
     return match query_workflows().await {
         Ok(data) => response(200, json!(data).to_string()),
-        Err(_) => response(400, "Invalid Query".to_string()),
+        Err(e) => response(400, e.to_string()),
     };
 }
 

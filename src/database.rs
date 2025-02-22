@@ -308,7 +308,7 @@ pub async fn query_print_jobs() -> Result<Vec<PrintJob>> {
 // but I am just going to call it in a loop here for convienence until I get around to rewriting
 // all of it ** soon **.
 pub async fn query_workflows() -> Result<Vec<Workflow>> {
-    let empty_workflows = query("SELECT id workflow;", [], workflow_from_row)?;
+    let empty_workflows = query("SELECT id, title, parallelizable, num_of_RIPs FROM workflow;", [], workflow_from_row)?;
 
     let mut populated_workflows = Vec::new();
     for workflow in empty_workflows {
