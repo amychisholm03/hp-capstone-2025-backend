@@ -303,7 +303,6 @@ pub async fn query_print_jobs() -> Result<Vec<PrintJob>> {
         [], print_job_from_row);
 }
 
-
 // Todo: The method to query a single workflow is kind of a cluster**** right now, and needs rewritten,
 // but I am just going to call it in a loop here for convienence until I get around to rewriting
 // all of it ** soon **.
@@ -319,7 +318,6 @@ pub async fn query_workflows() -> Result<Vec<Workflow>> {
     Ok(populated_workflows)
 
 }
-
 
 pub async fn query_workflow_steps() -> Result<Vec<WorkflowStep>> {
     return query("SELECT id, title, setup_time, time_per_page FROM workflow_step;",
@@ -473,10 +471,9 @@ pub async fn insert_rasterization_profile(data: RasterizationProfile) -> Result<
 
 pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
     // Ensure that the workflow is valid
-    // TODO: uncomment once frontend can actually send valid workflows
-    // if !is_valid_workflow(&data) {
-    //     return Err(CustomError::OtherError("Invalid workflow".to_string()));
-    // }
+    if !ensure_valid_workflow(&data) {
+        return Err(CustomError::OtherError("Invalid workflow".to_string()));
+    }
     let db = DB_CONNECTION.lock().unwrap();
 
     // Insert the Workflow

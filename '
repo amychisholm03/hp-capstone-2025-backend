@@ -304,22 +304,17 @@ pub async fn query_print_jobs() -> Result<Vec<PrintJob>> {
 }
 
 
-// Todo: The method to query a single workflow is kind of a cluster**** right now, and needs rewritten,
-// but I am just going to call it in a loop here for convienence until I get around to rewriting
-// all of it ** soon **.
 pub async fn query_workflows() -> Result<Vec<Workflow>> {
-    let empty_workflows = query("SELECT id workflow;", [], workflow_from_row)?;
+    let mut empty_workflows = query("SELECT id workflow;", [], workflow_from_row)?;
+    let populated_workflows : Vec<Workflow> = empty_workflows.into_iter()
+        .map( |w| {
+            find_workflow(w.id.unwrap())
+        })
+        .collect();
 
-    let mut populated_workflows = Vec::new();
-    for workflow in empty_workflows {
-        let wf = find_workflow(workflow.id.unwrap()).await?;
-        populated_workflows.push(wf);
-    }
-
-    Ok(populated_workflows)
+    Ok(populated_workflows);
 
 }
-
 
 pub async fn query_workflow_steps() -> Result<Vec<WorkflowStep>> {
     return query("SELECT id, title, setup_time, time_per_page FROM workflow_step;",
@@ -473,10 +468,9 @@ pub async fn insert_rasterization_profile(data: RasterizationProfile) -> Result<
 
 pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
     // Ensure that the workflow is valid
-    // TODO: uncomment once frontend can actually send valid workflows
-    // if !is_valid_workflow(&data) {
-    //     return Err(CustomError::OtherError("Invalid workflow".to_string()));
-    // }
+    if !ensure_valid_workflow(&data) {
+        return Err(CustomError::OtherError("Invalid workflow".to_string()));
+    }
     let db = DB_CONNECTION.lock().unwrap();
 
     // Insert the Workflow
