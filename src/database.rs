@@ -460,10 +460,9 @@ pub async fn insert_rasterization_profile(data: RasterizationProfile) -> Result<
 
 pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
     // Ensure that the workflow is valid
-    // TODO: uncomment once frontend can actually send valid workflows
-    // if !is_valid_workflow(&data) {
-    //     return Err(CustomError::OtherError("Invalid workflow".to_string()));
-    // }
+    if !is_valid_workflow(&data) {
+        return Err(CustomError::OtherError("Invalid workflow".to_string()));
+    }
     let db = DB_CONNECTION.lock().unwrap();
 
     // Insert the Workflow
