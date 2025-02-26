@@ -52,7 +52,7 @@ async fn traverse_graph(print_job: &PrintJob, workflow: &Workflow, search: &Sear
 	traverse_list(&steps[step].Prev, print_job, workflow, search, steps).await;
 
 	// Simulate the current step
-	let result = simulate_step(print_job, workflow, &steps[step]).await;
+	let result = simulate_step(print_job, &steps[step]).await;
 	
 	// Update times
 	search.update_step_time_by_id(&steps[step].id, result);
@@ -73,13 +73,16 @@ async fn traverse_list(steps: &Vec<usize>, print_job: &PrintJob, workflow: &Work
 }
 
 
-async fn simulate_step(print_job: &PrintJob, workflow: &Workflow, wfs: &AssignedWorkflowStep) -> u32 {
-	let workflow_step = WorkflowStep::get(wfs.WorkflowStepID).await.expect(&format!("WorkflowStep not found"));
-	return match workflow_step.Title.as_str() {
-		"Rasterization" => ((print_job.PageCount as f32 )/(workflow.numOfRIPs as f32)).ceil() as u32
-			* workflow_step.TimePerPage + workflow_step.SetupTime,
-		_ => print_job.PageCount * workflow_step.TimePerPage + workflow_step.SetupTime
-	};
+async fn simulate_step(print_job: &PrintJob, wfs: &AssignedWorkflowStep) -> u32 {
+	let workflow_step = get_workflow_step_by_id(wfs.WorkflowStepID, wfs.param_id).await
+		.expect("Workflow has invalid step");
+	return match workflow_step {
+		WFSVariant::Rasterization {num_cores} => {
+			return ((print_job.PageCount as f32 )/(num_cores as f32)).ceil() as u32 
+			* workflow_step.time_per_page().await + workflow_step.setup_time().await;
+		}
+		_ => print_job.PageCount * workflow_step.time_per_page().await + workflow_step.setup_time().await
+	}
 }
 
 

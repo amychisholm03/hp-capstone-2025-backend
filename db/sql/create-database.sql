@@ -20,9 +20,7 @@ CREATE TABLE IF NOT EXISTS printjob (
 -- Create a table to define workflows
 CREATE TABLE IF NOT EXISTS workflow (
     id INTEGER PRIMARY KEY,
-    title TEXT NOT NULL,
-    parallelizable BIT,
-    num_of_RIPs INTEGER
+    title TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS workflow_step (
@@ -80,6 +78,7 @@ CREATE TABLE IF NOT EXISTS ran_workflow_step (
 
 --- Workflow Step Paramaters
 CREATE TABLE IF NOT EXISTS rasterization_params (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     assigned_workflow_step_id INTEGER,
     num_of_RIPs INTEGER,
     FOREIGN KEY (assigned_workflow_step_id) REFERENCES assigned_workflow_step(id)

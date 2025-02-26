@@ -34,6 +34,9 @@ pub struct WorkflowStep {
  * the variant has any fields, it must be added to fill_properties()
  * The compiler will give an error if either is missing
  * 
+ * Any variants with additional properties will require an additional 
+ * table in the database, see rasterization_params table for reference
+ * 
  * At runtime, any new enums will be automatically added to the 
  * database and any removed enums will be removed from the database, 
  * giving an error before starting the server if there are any 
@@ -67,13 +70,13 @@ struct Attributes {
 
 // Gets a Workflow Step by its ID and fills its properties, if applicable
 pub async fn get_workflow_step_by_id(wfs_id: DocID, prop_id: Option<DocID>) -> Result<WFSVariant,CustomError> {
-	return get_variant_by_id(wfs_id).await?.fill_properties(prop_id).await;
+	return get_variant_by_id(wfs_id)?.fill_properties(prop_id).await;
 }
 
 
 impl WorkflowStep {
 	pub async fn get(id: DocID) -> Result<WorkflowStep,CustomError> {
-		let wfs = get_variant_by_id(id).await?;
+		let wfs = get_variant_by_id(id)?;
 		return Ok(WorkflowStep {
 			id: Some(id),
 			Title: wfs.title().await,
@@ -107,9 +110,8 @@ impl WFSVariant {
 		use WFSVariant::*;
 		match self {
 			Rasterization { num_cores } => {
-				if let Some(_id) = prop_id {
-					// TODO: Database stuff
-					*num_cores = 5;
+				if let Some(id) = prop_id {
+					*num_cores = find_rasterization_params(id).await?;
 					return Ok(*self);
 				} else { return Err(CustomError::OtherError(
 					"Rasterization requires prop_id".to_string())); }
@@ -204,7 +206,7 @@ impl WFSVariant {
 
 
 static ID_TABLE: OnceCell<HashMap<DocID,WFSVariant>> = OnceCell::const_new();
-async fn get_variant_by_id(id: DocID) -> Result<WFSVariant,CustomError> {
+pub fn get_variant_by_id(id: DocID) -> Result<WFSVariant,CustomError> {
 	return ID_TABLE.get()
 		.and_then(|table| { table.get(&id).copied() })
 		.ok_or_else(|| CustomError::OtherError("WorkflowStep not found".to_string()));
@@ -212,15 +214,27 @@ async fn get_variant_by_id(id: DocID) -> Result<WFSVariant,CustomError> {
 
 
 pub async fn build_workflow_step_table() -> Result<(),CustomError> {
+	if let Some(_) = ID_TABLE.get() { return Ok(()); }
 	let mut lookup_table = HashMap::<DocID,WFSVariant>::new();
 	let mut in_db = HashSet::<DocID>::from_iter(get_workflow_step_ids().await?);
+
 	for variant in WFSVariant::iter() {
 		let id = variant.id().await;
 		lookup_table.insert(id, variant);
 		if in_db.contains(&id) { in_db.remove(&id); }
 		else { insert_workflow_step(id).await?; }
 	}
+	
 	try_join_all(in_db.into_iter().map(|id| remove_workflow_step(id))).await?;
 	ID_TABLE.set(lookup_table)?;
 	return Ok(());
+}
+
+
+pub fn get_wfs_param_table(id: DocID) -> Option<String> {
+	use WFSVariant::*;
+	return match get_variant_by_id(id).expect("") {
+		Rasterization {..} => Some("rasterization_params".to_string()),
+		_ => None
+	}
 }

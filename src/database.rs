@@ -64,6 +64,7 @@ pub struct RasterizationProfile {
 pub struct AssignedWorkflowStep {
 	pub id: DocID,             // primary key for this workflow step
     pub WorkflowStepID: DocID, // foreign key ID pertaining to what type of workflow step this is.
+    pub param_id: Option<DocID>,
 	pub Prev: Vec<usize>,      // list of indices into a vec of AssignedWorkflowSteps, denoting which steps came last.
 	pub Next: Vec<usize>       // list of indicies into a vec of AssignedWorkflowSteps, denoting which steps come next.
 }
@@ -186,8 +187,8 @@ fn workflow_from_row(row: &Row) -> Result<Workflow> {
         id: row.get(0)?,
         Title: row.get(1)?,
         WorkflowSteps: vec![],
-        Parallelizable: row.get::<_, i32>(2)? != 0,
-        numOfRIPs: row.get(3)?,
+        Parallelizable: false,
+        numOfRIPs: 0,
     });
 }
 
@@ -233,10 +234,11 @@ fn simulation_report_from_row(row: &Row) -> Result<SimulationReport> {
     });
 }
 
-fn assigned_workflow_step_from_row(row: &Row, id_row: usize, wfs_id_row: usize) -> Result<AssignedWorkflowStep> {
+fn assigned_workflow_step_from_row(row: &Row) -> Result<AssignedWorkflowStep> {
     return Ok(AssignedWorkflowStep {
-        id: row.get(id_row)?,
-        WorkflowStepID: row.get(wfs_id_row)?,
+        id: row.get(0)?,
+        WorkflowStepID: row.get(2)?,
+        param_id: row.get(3)?,
         Prev: vec![],
         Next: vec![],
     });
@@ -317,7 +319,7 @@ pub async fn query_print_jobs() -> Result<Vec<PrintJob>> {
 }
 
 pub async fn query_workflows() -> Result<Vec<Workflow>> {
-    return query("SELECT id, title, parallelizable, num_of_RIPs FROM workflow;",
+    return query("SELECT id, title FROM workflow;",
         [], workflow_from_row);
 }
 
@@ -365,76 +367,12 @@ pub async fn find_rasterization_profile(id: DocID) -> Result<RasterizationProfil
     return check_id_lookup_results(rows);
 }
 
-// #[allow(non_snake_case)]
-// struct temp {
-//     id: DocID,
-//     Title: String,
-//     Parallelizable: bool,
-//     numOfRIPs: u32,
-//     WorkflowStepID: DocID,
-//     Prev: DocID,
-//     Next: DocID,
-// }
-
-// fn temp_from_row(row: &Row) -> Result<temp> {
-//     return Ok(temp {
-//         id: row.get(0)?, 
-//         Title: row.get(1)?, 
-//         Parallelizable: row.get(2)?, 
-//         numOfRIPs: row.get(3)?, 
-//         WorkflowStepID: row.get(4)?, 
-//         Prev: row.get(5)?, 
-//         Next: row.get(6)?
-//     });
-// }
-
-// pub async fn find_workflow(id: DocID) -> Result<Workflow> {
-//     let mut output = Vec::<Workflow>::new();
-//     query("
-//         SELECT 
-//             workflow.id, 
-//             title, 
-//             parallelizable, 
-//             num_of_RIPs,
-//             assigned_workflow_step.id, 
-//             workflow_step_id, 
-//             prev_step_id, 
-//             next_step_id 
-//         FROM workflow JOIN assigned_workflow_step 
-//         ON workflow.id = assigned_workflow_step.workflow_id 
-//         LEFT JOIN next_workflow_step 
-//         ON assigned_workflow_step.id = next_workflow_step.assigned_workflow_step_id
-//         LEFT JOIN prev_workflow_step 
-//         ON assigned_workflow_step.id = prev_workflow_step.assigned_workflow_step_id
-//         WHERE workflow.id = (?);
-//     ", [id], |row: &Row| {
-//         // Append a new workflow if a new one comes along
-//         let wf_id = row.get(0)?;
-//         if output.last().map_or(true, |last| last.id != wf_id){
-//             output.push(workflow_from_row(row)?);
-//         }
-
-//         // Append new workflow steps
-//         let wfs_id: DocID = row.get(4)?;
-//         if output.last().expect("").WorkflowSteps.last()
-//             .map_or(true, |last| last.id != wfs_id){
-//             output.last_mut().expect("").WorkflowSteps
-//                 .push(assigned_workflow_step_from_row(row, 4, 5)?);
-//         }
-
-//         return Ok(());
-//     })?;
-    
-
-//     return Err(Error::QueryReturnedNoRows);
-// }
-
 // TODO: refactor similar to other find functions
 pub async fn find_workflow(id: DocID) -> Result<Workflow> {
     let db = DB_CONNECTION.lock().unwrap();
 
     // Get the workflow matching the supplied id
-    let mut stmt0 = db.prepare("SELECT id, title, parallelizable, num_of_RIPs FROM workflow WHERE id=(?);")?;
+    let mut stmt0 = db.prepare("SELECT id, title FROM workflow WHERE id=(?);")?;
     let mut workflow_iter = stmt0.query_map([id], workflow_from_row)?;
 
     let mut workflow = match workflow_iter.next() {
@@ -443,8 +381,18 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow> {
     };
 
     // Get all of the steps that belong to this workflow
-    let mut stmt1 = db.prepare("SELECT id, workflow_id, workflow_step_id FROM assigned_workflow_step WHERE workflow_id = ?")?;
-    let steps_iter = stmt1.query_map([id], |row: &Row| assigned_workflow_step_from_row(row, 0, 2))?;
+    let mut stmt1 = db.prepare("
+        SELECT 
+            assigned_workflow_step.id, 
+            workflow_id, 
+            workflow_step_id, 
+            rasterization_params.id 
+        FROM assigned_workflow_step 
+        LEFT JOIN rasterization_params ON 
+        rasterization_params.assigned_workflow_step_id = assigned_workflow_step.id 
+        WHERE workflow_id = ?"
+    )?;
+    let steps_iter = stmt1.query_map([id], |row: &Row| assigned_workflow_step_from_row(row))?;
 
     // Place all workflow steps in a vector. Keep track of which step is at which index.
     let mut id_to_indice : HashMap<DocID, usize> = HashMap::new();
@@ -494,14 +442,14 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow> {
     return Ok(workflow);
 }
 
-// pub async fn find_workflow_step(id: DocID) -> Result<WorkflowStep,CustomError> {
-//     let rows = query("SELECT id, title, setup_time, time_per_page FROM workflow_step WHERE id=(?);",
-//         [id], workflow_step_from_row)?;
-//     return check_id_lookup_results(rows);
-// }
-
 pub async fn get_workflow_step_ids() -> Result<Vec<DocID>> {
     return query("SELECT id FROM workflow_step", [], |row: &Row| { Ok(row.get(0)?) });
+}
+
+pub async fn find_rasterization_params(param_id: DocID) -> Result<u32,CustomError> {
+    let rows = query("SELECT num_of_RIPs FROM rasterization_params WHERE id=(?)", 
+        [param_id], |row: &Row| { Ok(row.get(0)?) })?;
+    return check_id_lookup_results(rows);
 }
 
 pub async fn find_simulation_report(id: DocID) -> Result<SimulationReport,CustomError> {
@@ -549,8 +497,8 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
 
     // Insert the Workflow
     db.execute(
-        "INSERT INTO workflow (id, title, parallelizable, num_of_RIPs) VALUES (NULL, ?1, ?2, ?3)",
-        params![data.Title, data.Parallelizable, data.numOfRIPs]
+        "INSERT INTO workflow (id, title) VALUES (NULL, ?1)",
+        params![data.Title/*, data.Parallelizable, data.numOfRIPs*/]
     )?;
     let inserted_id : DocID = db.last_insert_rowid() as DocID;
     
@@ -567,6 +515,14 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
         let inserted_id : DocID = db.last_insert_rowid() as DocID;
         index_to_id.insert(indexcounter, inserted_id); 
         indexcounter += 1;
+
+        match get_variant_by_id(step.WorkflowStepID)? {
+            WFSVariant::Rasterization {..} => {
+                db.execute("INSERT INTO rasterization_params (id, assigned_workflow_step_id, num_of_RIPs) VALUES (NULL, ?1, ?2)",
+                    params![inserted_id, data.numOfRIPs])?;
+            },
+            _ => {}
+        }
     }
 
     // Now tie each step to it's previous/next workflow steps
