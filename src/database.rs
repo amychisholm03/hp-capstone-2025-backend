@@ -7,8 +7,12 @@ use thiserror;
 use serde::{Serialize, Deserialize};
 use lazy_static::lazy_static;
 use rusqlite::{params, Connection, Error, Row, Result, Params};
-use crate::simulation::{*};
-use crate::validation::{*};
+use tokio::sync::SetError;
+use crate::{
+    simulation::{*},
+    validation::{*},
+    workflow_steps::{*}
+};
 
 
 pub type DocID = u32;
@@ -29,7 +33,9 @@ pub enum CustomError {
     #[error("{0}")]
     OtherError(String),
     #[error(transparent)]
-    DatabaseError(#[from] Error)
+    DatabaseError(#[from] Error),
+    #[error(transparent)]
+    TokioSetError(#[from] SetError<HashMap<u32, WFSVariant>>),
 }
 
 
@@ -74,15 +80,15 @@ pub struct Workflow {
 }
 
 
-#[allow(non_snake_case)]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WorkflowStep {
-    #[serde(default)]
-    pub id: Option<DocID>,
-    pub Title: String,
-    pub SetupTime: u32,
-    pub TimePerPage: u32,
-}
+// #[allow(non_snake_case)]
+// #[derive(Debug, Clone, Serialize, Deserialize)]
+// pub struct WorkflowStep {
+//     #[serde(default)]
+//     pub id: Option<DocID>,
+//     pub Title: String,
+//     pub SetupTime: u32,
+//     pub TimePerPage: u32,
+// }
 
 
 #[allow(non_snake_case)]
@@ -227,18 +233,25 @@ fn simulation_report_from_row(row: &Row) -> Result<SimulationReport> {
     });
 }
 
-fn assigned_workflow_step_from_row(row: &Row) -> Result<AssignedWorkflowStep> {
+fn assigned_workflow_step_from_row(row: &Row, id_row: usize, wfs_id_row: usize) -> Result<AssignedWorkflowStep> {
     return Ok(AssignedWorkflowStep {
-        id: row.get(0)?,
-        WorkflowStepID: row.get(2)?,
+        id: row.get(id_row)?,
+        WorkflowStepID: row.get(wfs_id_row)?,
         Prev: vec![],
         Next: vec![],
     });
 }
 
 
+pub async fn setup_database() -> Result<(),CustomError> {
+    enable_foreign_key_checking().await?;
+    build_workflow_step_table().await?;
+    return Ok(());
+}
+
+
 /// Enables foreign key checking
-pub async fn enable_foreign_key_checking() -> Result<()> {
+async fn enable_foreign_key_checking() -> Result<()> {
     let db = DB_CONNECTION.lock().unwrap();
     db.execute("PRAGMA foreign_keys = ON;", [])?;
     return Ok(())
@@ -352,6 +365,70 @@ pub async fn find_rasterization_profile(id: DocID) -> Result<RasterizationProfil
     return check_id_lookup_results(rows);
 }
 
+// #[allow(non_snake_case)]
+// struct temp {
+//     id: DocID,
+//     Title: String,
+//     Parallelizable: bool,
+//     numOfRIPs: u32,
+//     WorkflowStepID: DocID,
+//     Prev: DocID,
+//     Next: DocID,
+// }
+
+// fn temp_from_row(row: &Row) -> Result<temp> {
+//     return Ok(temp {
+//         id: row.get(0)?, 
+//         Title: row.get(1)?, 
+//         Parallelizable: row.get(2)?, 
+//         numOfRIPs: row.get(3)?, 
+//         WorkflowStepID: row.get(4)?, 
+//         Prev: row.get(5)?, 
+//         Next: row.get(6)?
+//     });
+// }
+
+// pub async fn find_workflow(id: DocID) -> Result<Workflow> {
+//     let mut output = Vec::<Workflow>::new();
+//     query("
+//         SELECT 
+//             workflow.id, 
+//             title, 
+//             parallelizable, 
+//             num_of_RIPs,
+//             assigned_workflow_step.id, 
+//             workflow_step_id, 
+//             prev_step_id, 
+//             next_step_id 
+//         FROM workflow JOIN assigned_workflow_step 
+//         ON workflow.id = assigned_workflow_step.workflow_id 
+//         LEFT JOIN next_workflow_step 
+//         ON assigned_workflow_step.id = next_workflow_step.assigned_workflow_step_id
+//         LEFT JOIN prev_workflow_step 
+//         ON assigned_workflow_step.id = prev_workflow_step.assigned_workflow_step_id
+//         WHERE workflow.id = (?);
+//     ", [id], |row: &Row| {
+//         // Append a new workflow if a new one comes along
+//         let wf_id = row.get(0)?;
+//         if output.last().map_or(true, |last| last.id != wf_id){
+//             output.push(workflow_from_row(row)?);
+//         }
+
+//         // Append new workflow steps
+//         let wfs_id: DocID = row.get(4)?;
+//         if output.last().expect("").WorkflowSteps.last()
+//             .map_or(true, |last| last.id != wfs_id){
+//             output.last_mut().expect("").WorkflowSteps
+//                 .push(assigned_workflow_step_from_row(row, 4, 5)?);
+//         }
+
+//         return Ok(());
+//     })?;
+    
+
+//     return Err(Error::QueryReturnedNoRows);
+// }
+
 // TODO: refactor similar to other find functions
 pub async fn find_workflow(id: DocID) -> Result<Workflow> {
     let db = DB_CONNECTION.lock().unwrap();
@@ -367,7 +444,7 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow> {
 
     // Get all of the steps that belong to this workflow
     let mut stmt1 = db.prepare("SELECT id, workflow_id, workflow_step_id FROM assigned_workflow_step WHERE workflow_id = ?")?;
-    let steps_iter = stmt1.query_map([id], assigned_workflow_step_from_row)?;
+    let steps_iter = stmt1.query_map([id], |row: &Row| assigned_workflow_step_from_row(row, 0, 2))?;
 
     // Place all workflow steps in a vector. Keep track of which step is at which index.
     let mut id_to_indice : HashMap<DocID, usize> = HashMap::new();
@@ -417,10 +494,14 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow> {
     return Ok(workflow);
 }
 
-pub async fn find_workflow_step(id: DocID) -> Result<WorkflowStep,CustomError> {
-    let rows = query("SELECT id, title, setup_time, time_per_page FROM workflow_step WHERE id=(?);",
-        [id], workflow_step_from_row)?;
-    return check_id_lookup_results(rows);
+// pub async fn find_workflow_step(id: DocID) -> Result<WorkflowStep,CustomError> {
+//     let rows = query("SELECT id, title, setup_time, time_per_page FROM workflow_step WHERE id=(?);",
+//         [id], workflow_step_from_row)?;
+//     return check_id_lookup_results(rows);
+// }
+
+pub async fn get_workflow_step_ids() -> Result<Vec<DocID>> {
+    return query("SELECT id FROM workflow_step", [], |row: &Row| { Ok(row.get(0)?) });
 }
 
 pub async fn find_simulation_report(id: DocID) -> Result<SimulationReport,CustomError> {
@@ -515,6 +596,12 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
     return Ok(inserted_id);
 }
 
+pub async fn insert_workflow_step(data: DocID) -> Result<(),CustomError> {
+    let db = DB_CONNECTION.lock().unwrap();
+    db.execute("INSERT INTO workflow_step (id) VALUES (?1)", params![data])?;
+    return Ok(());
+}
+
 pub async fn insert_simulation_report(print_job_id: u32, workflow_id: u32) -> Result<DocID,CustomError> {
     // Run the simulation
     let new_report = match simulate(print_job_id, workflow_id).await {
@@ -567,6 +654,14 @@ pub async fn remove_workflow(id: DocID) -> Result<usize> {
     let mut stmt = db.prepare("DELETE FROM workflow WHERE id=(?)")?;
     let res = stmt.execute([id])?;
 
+    return Ok(res);
+}
+
+
+pub async fn remove_workflow_step(id: DocID) -> Result<usize> {
+    let db = DB_CONNECTION.lock().unwrap();
+    let mut stmt = db.prepare("DELETE FROM workflow_step WHERE id=(?)")?;
+    let res = stmt.execute([id])?;
     return Ok(res);
 }
 
