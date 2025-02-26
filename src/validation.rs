@@ -116,8 +116,40 @@ fn get_validation_rules() -> HashMap<u32, ValidationRule> {
     rules
 }
 
-pub fn is_valid_workflow(workflow: &WorkflowArgs) -> bool {
+pub fn is_valid_workflow(workflow: &mut WorkflowArgs) -> bool {
+    // Frontend now sends no items in the Next and Prev arrays
+    // Attempt to auto-populate them with respect to 
+    // validation rules.
+    let steps = create_next_prev(&mut workflow.WorkflowSteps);
+    workflow.WorkflowSteps = steps;
+
     return !workflow.WorkflowSteps.is_empty() && follows_validation_rules(&workflow.WorkflowSteps);
+}
+
+fn create_next_prev(steps: &mut Vec<AssignedWorkflowStepArgs>) -> Vec<AssignedWorkflowStepArgs> {
+    // TODO: make this work
+    
+    let new_steps = steps.clone();
+    for step in steps{
+        let step_id = step.WorkflowStepID - 1; // WorkflowStepID's are 1-based
+        let rules = get_validation_rules();
+        let rule = match rules.get(&step_id) {
+            Some(rule) => rule,
+            None => continue,
+        };
+
+        // Populate Next steps
+        if step.Next.is_empty() {
+            step.Next = rule.valid_next.iter().cloned().collect();
+        }
+
+        // Populate Prev steps
+        if step.Prev.is_empty() {
+            step.Prev = rule.valid_prev.iter().cloned().collect();
+        }
+    }
+    
+    new_steps
 }
 
 fn follows_validation_rules(steps: &Vec<AssignedWorkflowStepArgs>) -> bool {

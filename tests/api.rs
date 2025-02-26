@@ -153,24 +153,49 @@ async fn test_post_print_job(rasterization_profile_id: DocID) -> DocID {
 async fn test_post_workflow() -> DocID {
     let client = reqwest::Client::new();
     let payload = json!({
-        "Title": "Test Workflow",
-        "WorkflowSteps": [
-            // Remember that WorkflowStepID's are +1 
-            // from how they appear in the Prev and Next
-            // lists.
-            { "WorkflowStepID": 1, "Prev": [], "Next": [1, 2] },       // download file
-            { "WorkflowStepID": 2, "Prev": [0], "Next": [6] },         // preflight
-            { "WorkflowStepID": 3, "Prev": [0], "Next": [3] },         // impose
-            { "WorkflowStepID": 4, "Prev": [2], "Next": [4] },         // analyze
-            { "WorkflowStepID": 5, "Prev": [3], "Next": [5] },         // color setup
-            { "WorkflowStepID": 6, "Prev": [4], "Next": [6] },         // rasterization
-            { "WorkflowStepID": 7, "Prev": [1, 5], "Next": [7, 8] },   // loading
-            { "WorkflowStepID": 8, "Prev": [6], "Next": [8] },         // cutting
-            { "WorkflowStepID": 9, "Prev": [7], "Next": [] }           // laminating
-        ],
-        "Parallelizable": false,
-        "numOfRIPs": 1
-    });
+            "Title": "Test Workflow",
+            "WorkflowSteps": [
+                [
+      {
+        "WorkflowStepID": 1,
+        "Prev": [],
+        "Next": []
+      },
+      {
+        "WorkflowStepID": 2,
+        "Prev": [],
+        "Next": []
+      },
+      {
+        "WorkflowStepID": 3,
+        "Prev": [],
+        "Next": []
+      },
+      {
+        "WorkflowStepID": 4,
+        "Prev": [],
+        "Next": []
+      },
+      {
+        "WorkflowStepID": 5,
+        "Prev": [],
+        "Next": []
+      },
+      {
+        "WorkflowStepID": 6,
+        "Prev": [],
+        "Next": []
+      },
+      {
+        "WorkflowStepID": 7,
+        "Prev": [],
+        "Next": []
+      }
+    ]
+            ],
+            "Parallelizable": false,
+            "numOfRIPs": 1
+        });
 
     let response = client
         .post(&format!("http://{}:{}/Workflow", HOST, PORT))
@@ -185,7 +210,6 @@ async fn test_post_workflow() -> DocID {
     let body = response.text().await.unwrap();
     return body.parse::<DocID>().unwrap();
 }
-
 
 async fn test_post_simulation_report(print_job_id: DocID, workflow_id: DocID) -> DocID {
     let client = reqwest::Client::new();
