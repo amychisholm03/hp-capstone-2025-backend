@@ -318,10 +318,22 @@ pub async fn query_print_jobs() -> Result<Vec<PrintJob>> {
         [], print_job_from_row);
 }
 
+
+// Todo: The method to query a single workflow is kind of a cluster**** right now, and needs rewritten,
+// but I am just going to call it in a loop here for convienence until I get around to rewriting
+// all of it ** soon **.
 pub async fn query_workflows() -> Result<Vec<Workflow>> {
-    return query("SELECT id, title FROM workflow;",
-        [], workflow_from_row);
+    let empty_workflows = query("SELECT id, title, parallelizable, num_of_RIPs FROM workflow;", [], workflow_from_row)?;
+
+    let mut populated_workflows = Vec::new();
+    for workflow in empty_workflows {
+        let wf = find_workflow(workflow.id.unwrap()).await?;
+        populated_workflows.push(wf);
+    }
+
+    Ok(populated_workflows)
 }
+
 
 pub async fn query_workflow_steps() -> Result<Vec<WorkflowStep>> {
     return query("SELECT id, title, setup_time, time_per_page FROM workflow_step;",
