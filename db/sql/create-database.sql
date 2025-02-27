@@ -20,9 +20,11 @@ CREATE TABLE IF NOT EXISTS printjob (
 -- Create a table to define workflows
 CREATE TABLE IF NOT EXISTS workflow (
     id INTEGER PRIMARY KEY,
-    title TEXT NOT NULL,
-    parallelizable BIT,
-    num_of_RIPs INTEGER
+    title TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS workflow_step (
+    id INTEGER PRIMARY KEY
 );
 
 -- Create a table to define simulation reports
@@ -37,22 +39,14 @@ CREATE TABLE IF NOT EXISTS simulation_report (
     FOREIGN KEY (workflowID) REFERENCES workflow(id)
 );
 
--- Workflow Step Definition
-CREATE TABLE IF NOT EXISTS workflow_step (
-    id INTEGER PRIMARY KEY,
-    title TEXT NOT NULL,
-    setup_time INTEGER,
-    time_per_page INTEGER
-);
-
 -- A workflow step which is assigned to a specific workflow
 CREATE TABLE IF NOT EXISTS assigned_workflow_step (
    id INTEGER,
    workflow_id INTEGER,
    workflow_step_id INTEGER,
    PRIMARY KEY (id),
-   FOREIGN KEY (workflow_id) REFERENCES workflow(id), 
-   FOREIGN KEY (workflow_step_id) REFERENCES workflow_step(id) 
+   FOREIGN KEY (workflow_id) REFERENCES workflow(id),
+   FOREIGN KEY (workflow_step_id) REFERENCES workflow_step(id)
 );
 
 -- Create a table to track workflow steps which are part of a workflow
@@ -81,3 +75,11 @@ CREATE TABLE IF NOT EXISTS ran_workflow_step (
    FOREIGN KEY (workflow_step_id) REFERENCES assigned_workflow_step(id),
    FOREIGN KEY (simulation_report_id) REFERENCES simulation_report(id)
 );
+
+--- Workflow Step Paramaters
+CREATE TABLE IF NOT EXISTS rasterization_params (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    assigned_workflow_step_id INTEGER,
+    num_of_RIPs INTEGER,
+    FOREIGN KEY (assigned_workflow_step_id) REFERENCES assigned_workflow_step(id)
+)

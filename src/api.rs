@@ -1,4 +1,5 @@
 use crate::database::*;
+use crate::workflow_steps::*;
 use axum::{
     extract::Path,
     response::IntoResponse,
@@ -92,10 +93,7 @@ async fn get_workflows() -> impl IntoResponse {
 }
 
 async fn get_workflow_steps() -> impl IntoResponse {
-    return match query_workflow_steps().await {
-        Ok(data) => response(200, json!(data).to_string()),
-        Err(_) => response(400, "An error occurred.".to_string()),
-    };
+    return response(200, json!(get_all_workflow_steps().await).to_string());
 }
 
 async fn get_simulation_reports() -> impl IntoResponse {
@@ -164,7 +162,7 @@ async fn get_workflow_step_by_id(Path(id_str): Path<String>) -> impl IntoRespons
         Ok(data) => data,
         Err(_) => return response(400, format!("Invalid ID: {id_str}")),
     };
-    return match find_workflow_step(id).await {
+    return match WorkflowStep::get(id).await {
         Ok(data) => response(200, json!(data).to_string()),
         Err(_) => response(404, format!("WorkflowStep not found: {id_str}")),
     };
@@ -212,13 +210,14 @@ async fn post_print_job(Json(payload): Json<PrintJob>) -> impl IntoResponse {
 }
 
 async fn post_workflow(Json(payload): Json<WorkflowArgs>) -> impl IntoResponse {
-    return match insert_workflow(payload).await {
+    return match insert_workflow(payload.clone()).await {
         Ok(data) => response(201, data.to_string()),
         Err(err) => {
             if err.to_string().to_ascii_lowercase() == "invalid workflow" {
                 response(422, err.to_string())
             } else {
                 println!("Error: {}", err);
+                dbg!(payload);
                 response(500, err.to_string())
             }
         }
