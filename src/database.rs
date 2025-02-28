@@ -611,10 +611,8 @@ pub async fn insert_simulation_report(print_job_id: u32, workflow_id: u32) -> Re
     )?;
     let inserted_id : u32 = db.last_insert_rowid() as u32;
     
-    println!("{:?}", new_report.StepTimes);
     //Store the simulation time data in the db.
     for (id, time) in new_report.StepTimes {
-        println!("{}", id);
         db.execute(
             "INSERT INTO simulation_report_step_time (simulation_report_id, assigned_workflow_step_id, step_time) VALUES (?1, ?2, ?3)",
             params![inserted_id, id, time]
