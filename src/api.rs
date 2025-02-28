@@ -51,7 +51,7 @@ pub fn build_routes() -> Router {
         .route("/SimulationReport", get(get_simulation_reports))
         .route("/SimulationReport/{id}", get(get_simulation_report_by_id))
         .route("/SimulationReport/{id}", delete(delete_simulation_report))
-        .route("/SimulationReport/{id}/WorkflowStep", get(get_simulation_report_workflow_steps_by_id))
+        .route("/SimulationReport/{id}/WorkflowStep/Time", get(get_simulation_report_workflow_steps_by_id))
         // CORS
         .layer(ServiceBuilder::new().layer(cors_layer));
 }
