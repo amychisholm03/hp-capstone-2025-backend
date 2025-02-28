@@ -47,10 +47,11 @@ pub fn build_routes() -> Router {
         .route("/WorkflowStep", get(get_workflow_steps))
         .route("/WorkflowStep/{id}", get(get_workflow_step_by_id))
         // SimulationReport Routes
-        .route("/SimulationReport", get(get_simulation_reports))
         .route("/SimulationReport", post(post_simulation_report))
+        .route("/SimulationReport", get(get_simulation_reports))
         .route("/SimulationReport/{id}", get(get_simulation_report_by_id))
         .route("/SimulationReport/{id}", delete(delete_simulation_report))
+        .route("/SimulationReport/{id}/WorkflowStep", get(get_simulation_report_workflow_steps_by_id))
         // CORS
         .layer(ServiceBuilder::new().layer(cors_layer));
 }
@@ -183,6 +184,17 @@ async fn get_simulation_report_by_id(Path(id_str): Path<String>) -> impl IntoRes
     return match find_simulation_report(id).await {
         Ok(data) => response(200, json!(data).to_string()),
         Err(_) => response(404, format!("SimulationReport not found: {id_str}")),
+    };
+}
+
+async fn get_simulation_report_workflow_steps_by_id(Path(id_str): Path<String>) -> impl IntoResponse {
+    let id: DocID = match id_str.parse() {
+        Ok(data) => data,
+        Err(_) => return response(400, format!("Invalid ID: {id_str}")),
+    };
+    return match find_simulation_report_workflow_steps(id).await {
+        Ok(data) => response(200, json!(data).to_string()),
+        Err(e) => response(404, format!("SimulationReport not found: {e}")),
     };
 }
 
