@@ -15,7 +15,6 @@ const PORT: &str = "80"; // production port
 
 // Runs the server, allowing reuse in tests
 pub async fn run_server(host: &str, port: &str) {
-    wf_test();
 
     // Build Routes
     println!("Building Routes");
@@ -25,6 +24,7 @@ pub async fn run_server(host: &str, port: &str) {
         println!("Failed to setup database: {}", e);
         process::exit(1);
     }
+    wf_test();
 
     // Run Server
     println!("Starting server on {host}:{port}");

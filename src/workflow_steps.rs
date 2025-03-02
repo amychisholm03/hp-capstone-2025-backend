@@ -10,6 +10,8 @@ use crate::database::*;
 use futures::future::try_join_all;
 use serde::{Serialize, Deserialize};
 use serde::ser::{Serializer, SerializeStruct};
+use serde::de::{Deserializer, Error};
+use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
@@ -55,7 +57,6 @@ pub enum WFSVariant {
     Metrics,
 }
 
-#[derive(Serialize)]
 struct Attributes {
     id: DocID,
     title: String,
@@ -230,6 +231,33 @@ impl Serialize for WFSVariant {
         }
 
         return state.end();
+    }
+}
+
+impl<'de> Deserialize<'de> for WFSVariant {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where D: Deserializer<'de>,{
+        let mut fields: serde_json::Map<String,Value> = Deserialize::deserialize(deserializer)?;
+        
+        let mut output = get_variant_by_id(serde_json::from_value(fields.remove("id")
+            .ok_or_else(|| Error::custom(format!("TODO")))?)
+            .map_err(|_| Error::custom(format!("TODO")))?)
+            .map_err(|_| Error::custom(format!("TODO")))?;
+
+        match output {
+            WFSVariant::Rasterization {ref mut num_cores} => {
+                *num_cores = serde_json::from_value(fields.remove("num_cores")
+                    .ok_or_else(|| Error::custom(format!("TODO")))?)
+                    .map_err(|_| Error::custom(format!("TODO")))?;
+            },
+            _ => {}
+        }
+
+        if !fields.is_empty() {
+            return Err(D::Error::custom(format!("TODO")));
+        }
+
+        return Ok(output);
     }
 }
 
