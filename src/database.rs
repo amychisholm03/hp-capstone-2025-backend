@@ -10,7 +10,6 @@ use rusqlite::{params, Connection, Error, Row, Result, Params};
 use tokio::sync::SetError;
 use crate::{
     simulation::{*},
-    validation::{*},
     workflow_steps::{*}
 };
 
@@ -79,17 +78,6 @@ pub struct Workflow {
     pub Parallelizable: bool,
     pub numOfRIPs: u32,
 }
-
-
-// #[allow(non_snake_case)]
-// #[derive(Debug, Clone, Serialize, Deserialize)]
-// pub struct WorkflowStep {
-//     #[serde(default)]
-//     pub id: Option<DocID>,
-//     pub Title: String,
-//     pub SetupTime: u32,
-//     pub TimePerPage: u32,
-// }
 
 
 #[allow(non_snake_case)]
@@ -503,10 +491,6 @@ pub async fn insert_rasterization_profile(data: RasterizationProfile) -> Result<
 
 pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
     // Ensure that the workflow is valid
-    // TODO: uncomment once validation works with new workflow step semantics
-    // if !is_valid_workflow(&data) {
-    //     return Err(CustomError::OtherError("Invalid workflow".to_string()));
-    // }
     let db = DB_CONNECTION.lock().unwrap();
 
     // Insert the Workflow

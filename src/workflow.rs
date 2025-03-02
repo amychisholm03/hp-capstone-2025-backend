@@ -56,7 +56,7 @@ pub struct Workflow {
     pub steps: Vec<WorkflowNode>,
 }
 
-fn deserialize_steps<'de, D>(deserializer: D) -> Result<Vec<WorkflowNode>, D::Error>
+fn deserialize_steps<'de, D>(deserializer: D) -> Result<Vec<WorkflowNode>, (D::Error)>
 where
     D: Deserializer<'de>,
 {
@@ -70,11 +70,23 @@ where
         });
     }
 
-    return Ok(fill_edges(steps));
+	fill_edges(steps).map_err(|_| Error::custom("Failed to fill edges, likely an invalid workflow"))
 }
 
 /// Given a list of nodes with no edges, fill in the edges to create a graph
-fn fill_edges(steps: Vec<WorkflowNode>) -> Vec<WorkflowNode> {
-    // For Amy
-    return steps;
+fn fill_edges(steps: Vec<WorkflowNode>) -> Result<Vec<WorkflowNode>, ()> {
+    let mut new_steps = steps.clone();
+	for (i, step) in steps.iter().enumerate() {
+		for (j, other_step) in steps.iter().enumerate() {
+			if i != j {
+				if step.data.valid_prev().contains(&other_step.data) {
+					new_steps[i].prev.push(j);
+				}
+				if step.data.valid_next().contains(&other_step.data) {
+					new_steps[i].next.push(j);
+				}
+			}
+		}
+	}
+    return Ok(new_steps);
 }

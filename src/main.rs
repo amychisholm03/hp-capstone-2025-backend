@@ -5,7 +5,6 @@ use std::process;
 pub mod api;
 pub mod database;
 pub mod simulation;
-pub mod validation;
 pub mod workflow;
 pub mod workflow_steps;
 
