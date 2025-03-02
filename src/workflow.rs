@@ -1,9 +1,8 @@
 use crate::database::DocID;
 use crate::workflow_steps::*;
-use serde::{Deserialize, Serialize};
 use serde::de::{Deserializer, Error};
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-
 
 /**
  * Expected JSON input (from a POST):
@@ -15,7 +14,7 @@ use serde_json::{json, Value};
  * 			{"id": 5, "num_cores": 7},
  * 		]
  * 	}
- * 
+ *
  * JSON output (sent in response to a GET):
  * 	{
  * 		"id": 0,
@@ -38,78 +37,44 @@ use serde_json::{json, Value};
  * 	}
  **/
 
-
+/// A node in the workflow graph
 #[derive(Debug, Clone, Serialize)]
-struct WorkflowNode {
-	data: WFSVariant,
-	prev: Vec<usize>, // List of indices corresponding to previous nodes
-	next: Vec<usize>  // List of indices corresponding to subsequent nodes
+pub struct WorkflowNode {
+    pub data: WFSVariant,
+    /// List of indices corresponding to previous nodes
+    pub prev: Vec<usize>,
+    /// List of indices corresponding to subsequent nodes
+    pub next: Vec<usize>,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct Workflow {
-	#[serde(default)] 
-	id: Option<DocID>,
-	title: String,
-	#[serde(deserialize_with="deserialize_steps")]
-	steps: Vec<WorkflowNode>
+pub struct Workflow {
+    #[serde(default)]
+    pub id: Option<DocID>,
+    pub title: String,
+    #[serde(deserialize_with = "deserialize_steps")]
+    pub steps: Vec<WorkflowNode>,
 }
-
 
 fn deserialize_steps<'de, D>(deserializer: D) -> Result<Vec<WorkflowNode>, D::Error>
-where D: Deserializer<'de> {
-	let json_vector: Vec<Value> = Deserialize::deserialize(deserializer)?;
-	let mut steps = Vec::<WorkflowNode>::new();
-	for object in json_vector {
-		steps.push(WorkflowNode {
-			data: serde_json::from_value(object)
-				.map_err(|_| Error::custom(format!("TODO")))?,
-			prev: vec![],
-			next: vec![]
-		});
-	}
-	
-	return Ok(fill_edges(steps));
+where
+    D: Deserializer<'de>,
+{
+    let json_vector: Vec<Value> = Deserialize::deserialize(deserializer)?;
+    let mut steps = Vec::<WorkflowNode>::new();
+    for object in json_vector {
+        steps.push(WorkflowNode {
+            data: serde_json::from_value(object).map_err(|_| Error::custom(format!("TODO")))?,
+            prev: vec![],
+            next: vec![],
+        });
+    }
+
+    return Ok(fill_edges(steps));
 }
 
-
-// Given a list of nodes with no edges, fill in the edges to create a graph
+/// Given a list of nodes with no edges, fill in the edges to create a graph
 fn fill_edges(steps: Vec<WorkflowNode>) -> Vec<WorkflowNode> {
-	// For Amy
-	return steps;
-}
-
-
-// Testing serialization and deserialization
-pub fn wf_test() {
-	let wf = Workflow {
-		id: Some(5),
-		title: "Test Workflow".to_string(),
-		steps: vec![
-			WorkflowNode { 
-				data: WFSVariant::DownloadFile,
-				prev: vec![],
-				next: vec![1]
-			},
-			WorkflowNode {
-				data: WFSVariant::Rasterization {num_cores: 7},
-				prev: vec![0],
-				next: vec![]
-			}
-		]
-	};
-	println!("Serialized:\n{}\n", json!(wf));
-
-
-	let data = "{
-		\"title\": \"Test Workflow 2\", 
-		\"steps\": [
-			{\"id\": 0}, 
-			{\"id\": 1}, 
-			{\"id\": 5, \"num_cores\": 3}
-		]
-	}";
-	println!("Deserialized:");
-	dbg!(serde_json::from_str::<Workflow>(data));
+    // For Amy
+    return steps;
 }

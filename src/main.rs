@@ -1,6 +1,5 @@
 use crate::api::*;
 use crate::database::*;
-use crate::workflow::wf_test;
 use std::env;
 use std::process;
 pub mod api;
@@ -15,7 +14,6 @@ const PORT: &str = "80"; // production port
 
 // Runs the server, allowing reuse in tests
 pub async fn run_server(host: &str, port: &str) {
-
     // Build Routes
     println!("Building Routes");
     let app = build_routes();
@@ -24,7 +22,6 @@ pub async fn run_server(host: &str, port: &str) {
         println!("Failed to setup database: {}", e);
         process::exit(1);
     }
-    wf_test();
 
     // Run Server
     println!("Starting server on {host}:{port}");
