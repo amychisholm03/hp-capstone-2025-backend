@@ -8,7 +8,8 @@ use crate::database::*;
  * }
  **/
 use futures::future::try_join_all;
-use serde::{Deserialize, Serialize};
+use serde::{Serialize, Deserialize};
+use serde::ser::{Serializer, SerializeStruct};
 use std::collections::{HashMap, HashSet};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
@@ -54,6 +55,7 @@ pub enum WFSVariant {
     Metrics,
 }
 
+#[derive(Serialize)]
 struct Attributes {
     id: DocID,
     title: String,
@@ -92,16 +94,16 @@ pub async fn get_all_workflow_steps() -> Vec<WorkflowStep> {
 impl WFSVariant {
     // Retrieve a specific attribute for a given Workflow Step
     pub async fn id(&self) -> DocID {
-        self.get_attributes().await.id
+        self.get_attributes().id
     }
     pub async fn title(&self) -> String {
-        self.get_attributes().await.title
+        self.get_attributes().title
     }
     pub async fn setup_time(&self) -> u32 {
-        self.get_attributes().await.setup_time
+        self.get_attributes().setup_time
     }
     pub async fn time_per_page(&self) -> u32 {
-        self.get_attributes().await.time_per_page
+        self.get_attributes().time_per_page
     }
 
     // For enum variants with fields, this function retrieves them from
@@ -135,7 +137,7 @@ impl WFSVariant {
 
     // This is where a Workflow Step's static attributes are defined
     // Public functions call this one to retrieve specific attributes
-    async fn get_attributes(&self) -> Attributes {
+    fn get_attributes(&self) -> Attributes {
         use WFSVariant::*;
         return match self {
             DownloadFile => Attributes {
@@ -208,6 +210,26 @@ impl WFSVariant {
                 time_per_page: 1,
             },
         };
+    }
+}
+
+impl Serialize for WFSVariant {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where S: Serializer {
+        use WFSVariant::*;
+        let attr = self.get_attributes();
+        let mut state = serializer.serialize_struct("Attributes", 4)?;
+        state.serialize_field("id", &attr.id)?;
+        state.serialize_field("title", &attr.title)?;
+        state.serialize_field("setup_time", &attr.setup_time)?;
+        state.serialize_field("time_per_page", &attr.time_per_page)?;
+
+        match self {
+            Rasterization { num_cores } => state.serialize_field("num_cores", num_cores)?,
+            _ => {}
+        }
+
+        return state.end();
     }
 }
 
