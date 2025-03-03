@@ -2,7 +2,7 @@ use crate::database::DocID;
 use crate::workflow_steps::*;
 use serde::de::{Deserializer, Error};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::Value;
 
 /**
  * Expected JSON input (from a POST):
@@ -56,7 +56,7 @@ pub struct Workflow {
     pub steps: Vec<WorkflowNode>,
 }
 
-fn deserialize_steps<'de, D>(deserializer: D) -> Result<Vec<WorkflowNode>, (D::Error)>
+fn deserialize_steps<'de, D>(deserializer: D) -> Result<Vec<WorkflowNode>, D::Error>
 where
     D: Deserializer<'de>,
 {

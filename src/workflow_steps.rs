@@ -1,16 +1,11 @@
 use crate::database::*;
-/**
- * {
- * 		step_val, 		Enum variant of the step
- * 		step_props,		Database ID of the step's properties, such as num_cores, can be NULL
- * 		prev [],		List of indices of previous steps
- * 		next [],		List of indices of next steps
- * }
- **/
 use futures::future::try_join_all;
-use serde::de::{Deserializer, Error};
-use serde::ser::{SerializeStruct, Serializer};
-use serde::{Deserialize, Serialize};
+use serde::{
+    Serialize, 
+    Deserialize,
+    ser::{Serializer, SerializeStruct},
+    de::{Deserializer, Error}
+};
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 use strum::IntoEnumIterator;
@@ -30,9 +25,10 @@ pub struct WorkflowStep {
 
 /**
  * To add a new Workflow Step, add a new variant to the enum below,
- * define its WFSAttributes in the get_WFSAttributes() function, and if
- * the variant has any fields, it must be added to fill_properties()
- * The compiler will give an error if either is missing
+ * define its attributes in the get_attributes() function, and add it 
+ * to the EMPTY_WFS_VARIANT macro if it has no additional fields, 
+ * otherwise add the variant to all relevant match statements
+ * Compiler will give an error if neither is done
  *
  * Any variants with additional properties will require an additional
  * table in the database, see rasterization_params table for reference
@@ -73,33 +69,13 @@ struct WFSAttributes {
     no_next_valid: bool,
 }
 
-// Gets a Workflow Step by its ID and fills its properties, if applicable
-pub async fn get_workflow_step_by_id(
-    wfs_id: DocID,
-    prop_id: Option<DocID>,
-) -> Result<WFSVariant, CustomError> {
-    return get_variant_by_id(wfs_id)?.fill_properties(prop_id).await;
-}
-
-impl WorkflowStep {
-    pub async fn get(id: DocID) -> Result<WorkflowStep, CustomError> {
-        let wfs = get_variant_by_id(id)?;
-        return Ok(WorkflowStep {
-            id: Some(id),
-            Title: wfs.title(),
-            SetupTime: wfs.setup_time(),
-            TimePerPage: wfs.time_per_page(),
-        });
-    }
-}
-
-pub async fn get_all_workflow_steps() -> Vec<WorkflowStep> {
-    let mut output = Vec::<WorkflowStep>::new();
-    for variant in WFSVariant::iter() {
-        output.push(WorkflowStep::get(variant.id()).await.expect(""));
-    }
-    return output;
-}
+// List variants which apply some default behavior in most match statements
+#[macro_export]
+macro_rules! EMPTY_WFS_VARIANT { () => {
+    WFSVariant::DownloadFile | WFSVariant::Preflight | WFSVariant::Impose | 
+    WFSVariant::Analyzer | WFSVariant::ColorSetup | WFSVariant::Loader | 
+    WFSVariant::Cutting | WFSVariant::Laminating | WFSVariant::Metrics
+}}
 
 impl WFSVariant {
     // Retrieve a specific attribute for a given Workflow Step
@@ -126,35 +102,6 @@ impl WFSVariant {
     }
     pub fn no_next_valid(&self) -> bool {
         self.get_wf_step_attributes().no_next_valid
-    }
-
-    /// For enum variants with fields, this function retrieves them from
-    /// the database, otherwise it does nothing
-    async fn fill_properties(&mut self, prop_id: Option<DocID>) -> Result<WFSVariant, CustomError> {
-        use WFSVariant::*;
-        match self {
-            Rasterization { num_cores } => {
-                if let Some(id) = prop_id {
-                    *num_cores = find_rasterization_params(id).await?;
-                    return Ok(*self);
-                } else {
-                    return Err(CustomError::OtherError(
-                        "Rasterization requires prop_id".to_string(),
-                    ));
-                }
-            }
-
-            _ => {
-                // This will only match enum variants without fields
-                if let Some(_) = prop_id {
-                    return Err(CustomError::OtherError(
-                        "Given WorkflowStep doesn't require prop_id".to_string(),
-                    ));
-                } else {
-                    return Ok(*self);
-                }
-            }
-        }
     }
 
     /// This is where a Workflow Step's static aAttributes are defined
@@ -279,13 +226,61 @@ impl WFSVariant {
             },
         };
     }
+
+    // List the names of any tables with additional parameters
+    pub async fn get_wfs_param_table(&self) -> Option<String> {
+        use WFSVariant::*;
+        return match self {
+            Rasterization {..} => Some("rasterization_params".to_string()),
+            EMPTY_WFS_VARIANT!() => None
+        };
+    }
+
+    // For enum variants with fields, this function retrieves them from
+    // the database, otherwise it does nothing
+    // TODO: At some point, the entire workflow should be constructed 
+    // from the database before being handed off to other parts of 
+    // the program, meaning this should either be moved to database.rs 
+    // or be removed
+    async fn fill_properties(&mut self, prop_id: Option<DocID>) -> Result<(),CustomError> {
+        use WFSVariant::*;
+        match (self, prop_id) {
+            (Rasterization {num_cores}, Some(id)) => 
+                *num_cores = find_rasterization_params(id).await?,
+            (Rasterization {..}, None) => return Err(CustomError::OtherError(
+                "Rasterization requires prop_id".to_string(),)),
+            
+            (EMPTY_WFS_VARIANT!(), Some(_)) => return Err(CustomError::OtherError(
+                "Given WorkflowStep doesn't require prop_id".to_string(),)),
+            (EMPTY_WFS_VARIANT!(), None) => {}
+        }
+        return Ok(());
+    }
 }
+
+/**
+ * Custom serialize and deserialize functions for converting WFSVariant
+ * to and from JSON.
+ * 
+ * JSON Input:
+ *  {
+ *      "id": 5,        // Workflow step ID
+ *      "num_cores": 4  // Optional fields for specific variants
+ *  }
+ * 
+ * JSON Output:
+ *  {
+ *      "id": 5,
+ *      "title": "Rasterization",
+ *      "setup_time": 50,
+ *      "time_per_page": 15,
+ *      "num_cores": 4          // Includes extra paramaters
+ *  }
+ **/
 
 impl Serialize for WFSVariant {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
+    where S: Serializer {
         use WFSVariant::*;
         let attr = self.get_wf_step_attributes();
         let mut state = serializer.serialize_struct("WFSAttributes", 4)?;
@@ -296,7 +291,7 @@ impl Serialize for WFSVariant {
 
         match self {
             Rasterization { num_cores } => state.serialize_field("num_cores", num_cores)?,
-            _ => {}
+            EMPTY_WFS_VARIANT!() => {}
         }
 
         return state.end();
@@ -305,49 +300,41 @@ impl Serialize for WFSVariant {
 
 impl<'de> Deserialize<'de> for WFSVariant {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let mut fields: serde_json::Map<String, Value> = Deserialize::deserialize(deserializer)?;
-
-        let mut output = get_variant_by_id(
-            serde_json::from_value(
-                fields
-                    .remove("id")
-                    .ok_or_else(|| Error::custom(format!("TODO")))?,
-            )
-            .map_err(|_| Error::custom(format!("TODO")))?,
-        )
-        .map_err(|_| Error::custom(format!("TODO")))?;
+    where D: Deserializer<'de> {
+        let mut fields: serde_json::Map<String,Value> = Deserialize::deserialize(deserializer)?;
+        
+        let mut output = get_variant_by_id(serde_json::from_value(fields.remove("id")
+            .ok_or_else(|| Error::custom(format!("TODO")))?)
+            .map_err(|_| Error::custom(format!("TODO")))?)
+            .map_err(|_| Error::custom(format!("TODO")))?;
 
         match output {
-            WFSVariant::Rasterization { ref mut num_cores } => {
-                *num_cores = serde_json::from_value(
-                    fields
-                        .remove("num_cores")
-                        .ok_or_else(|| Error::custom(format!("TODO")))?,
-                )
-                .map_err(|_| Error::custom(format!("TODO")))?;
-            }
-            _ => {}
+            WFSVariant::Rasterization {ref mut num_cores} => {
+                *num_cores = serde_json::from_value(fields.remove("num_cores")
+                    .ok_or_else(|| Error::custom(format!("TODO")))?)
+                    .map_err(|_| Error::custom(format!("TODO")))?;
+            },
+            EMPTY_WFS_VARIANT!() => {}
         }
 
         if !fields.is_empty() {
-            return Err(D::Error::custom(format!("TODO")));
+            return Err(Error::custom(format!("TODO")));
         }
 
         return Ok(output);
     }
 }
 
-static ID_TABLE: OnceCell<HashMap<DocID, WFSVariant>> = OnceCell::const_new();
-pub fn get_variant_by_id(id: DocID) -> Result<WFSVariant, CustomError> {
-    return ID_TABLE
-        .get()
-        .and_then(|table| table.get(&id).copied())
-        .ok_or_else(|| CustomError::OtherError("WorkflowStep not found".to_string()));
-}
+/**
+ * Various functions related to getting WFSVariants
+ **/
 
+// Run on program startup, after connecting to database to build a lookup
+// table for getting a WFSVariant given its ID
+// Will insert any newly defined variants into the database and remove
+// any that have been removed
+// Returns an error if any workflows rely on the removed workflow step
+static ID_TABLE: OnceCell<HashMap<DocID, WFSVariant>> = OnceCell::const_new();
 pub async fn build_workflow_step_table() -> Result<(), CustomError> {
     if let Some(_) = ID_TABLE.get() {
         return Ok(());
@@ -370,10 +357,46 @@ pub async fn build_workflow_step_table() -> Result<(), CustomError> {
     return Ok(());
 }
 
-pub fn get_wfs_param_table(id: DocID) -> Option<String> {
-    use WFSVariant::*;
-    return match get_variant_by_id(id).expect("") {
-        Rasterization { .. } => Some("rasterization_params".to_string()),
-        _ => None,
-    };
+// Returns the variant corresponding to the given ID
+// If the returned variant has additional fields, those fields will
+// have default values, so this should primarily be used for pattern 
+// matching and get_workflow_step_by_id() should be used otherwise
+pub fn get_variant_by_id(id: DocID) -> Result<WFSVariant, CustomError> {
+    return ID_TABLE
+        .get()
+        .and_then(|table| table.get(&id).copied())
+        .ok_or_else(|| CustomError::OtherError("WorkflowStep not found".to_string()));
+}
+
+// Gets a Workflow Step by its ID and fills its properties, if applicable
+pub async fn get_workflow_step_by_id(wfs_id: DocID, prop_id: Option<DocID>,)
+-> Result<WFSVariant, CustomError> {
+   let mut output = get_variant_by_id(wfs_id)?;
+    output.fill_properties(prop_id).await?;
+    return Ok(output);
+}
+
+/**
+ * WorkflowStep functions
+ * TODO: Update this to use Attributes struct and remove WorkflowStep 
+ **/
+
+impl WorkflowStep {
+    pub async fn get(id: DocID) -> Result<WorkflowStep, CustomError> {
+        let wfs = get_variant_by_id(id)?;
+        return Ok(WorkflowStep {
+            id: Some(id),
+            Title: wfs.title(),
+            SetupTime: wfs.setup_time(),
+            TimePerPage: wfs.time_per_page(),
+        });
+    }
+}
+
+pub async fn get_all_workflow_steps() -> Vec<WorkflowStep> {
+    let mut output = Vec::<WorkflowStep>::new();
+    for variant in WFSVariant::iter() {
+        output.push(WorkflowStep::get(variant.id()).await.expect(""));
+    }
+    return output;
 }

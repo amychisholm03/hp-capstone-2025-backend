@@ -10,7 +10,8 @@ use rusqlite::{params, Connection, Error, Row, Result, Params};
 use tokio::sync::SetError;
 use crate::{
     simulation::{*},
-    workflow_steps::{*}
+    workflow_steps::{*},
+    EMPTY_WFS_VARIANT
 };
 
 
@@ -519,7 +520,7 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
                 db.execute("INSERT INTO rasterization_params (id, assigned_workflow_step_id, num_of_RIPs) VALUES (NULL, ?1, ?2)",
                     params![inserted_id, data.numOfRIPs])?;
             },
-            _ => {}
+            EMPTY_WFS_VARIANT!() => {}
         }
     }
 
