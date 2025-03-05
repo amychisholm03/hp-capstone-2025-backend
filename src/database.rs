@@ -62,7 +62,7 @@ pub struct RasterizationProfile {
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AssignedWorkflowStep {
-	pub id: DocID,             // primary key for this workflow step
+	pub id: DocID,             // primary key for this assigned workflow step
     pub WorkflowStepID: DocID, // foreign key ID pertaining to what type of workflow step this is.
     pub param_id: Option<DocID>,
 	pub Prev: Vec<usize>,      // list of indices into a vec of AssignedWorkflowSteps, denoting which steps came last.
@@ -79,7 +79,6 @@ pub struct Workflow {
     pub Parallelizable: bool,
     pub numOfRIPs: u32,
 }
-
 
 // #[allow(non_snake_case)]
 // #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -208,7 +207,7 @@ fn simulation_report_detailed_from_row(row: &Row) -> Result<SimulationReportDeta
         TotalTimeTaken: row.get(3)?,
         PrintJobID: row.get(4)?,
         WorkflowID: row.get(5)?,
-        StepTimes: HashMap::from([(2, 15)]),
+        StepTimes: HashMap::from([]),
         PrintJobTitle: row.get(6)?,
         WorkflowTitle: row.get(7)?,
         RasterizationProfile: row.get(8)?,
@@ -381,6 +380,31 @@ pub async fn find_rasterization_profile(id: DocID) -> Result<RasterizationProfil
     return check_id_lookup_results(rows);
 }
 
+pub async fn find_simulation_report_workflow_steps(id: DocID) -> Result<HashMap<u32,u32>> {
+    let db = DB_CONNECTION.lock().unwrap();
+    let mut stmt0 = db.prepare("
+        SELECT
+            simulation_report_step_time.assigned_workflow_step_id,
+            simulation_report_step_time.step_time
+        FROM simulation_report_step_time
+        WHERE simulation_report_step_time.simulation_report_id = (?);
+    ")?;
+    let mut step_times : HashMap<u32,u32> = HashMap::from([]);
+    let rows = stmt0.query_map([id], |row| {
+        let key : u32 = row.get(0)?;
+        let value : u32 = row.get(1)?;
+        Ok((key,value))
+    })?;
+
+    for row in rows {
+        let (key, value) = row?;
+        step_times.insert(key,value);
+    }
+
+    Ok(step_times)
+
+}
+
 // TODO: refactor similar to other find functions
 pub async fn find_workflow(id: DocID) -> Result<Workflow> {
     let db = DB_CONNECTION.lock().unwrap();
@@ -402,8 +426,8 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow> {
             workflow_step_id, 
             rasterization_params.id 
         FROM assigned_workflow_step 
-        LEFT JOIN rasterization_params ON 
-        rasterization_params.assigned_workflow_step_id = assigned_workflow_step.id 
+        LEFT JOIN rasterization_params 
+            ON rasterization_params.assigned_workflow_step_id = assigned_workflow_step.id 
         WHERE workflow_id = ?"
     )?;
     let steps_iter = stmt1.query_map([id], |row: &Row| assigned_workflow_step_from_row(row))?;
@@ -576,7 +600,7 @@ pub async fn insert_simulation_report(print_job_id: u32, workflow_id: u32) -> Re
     // Run the simulation
     let new_report = match simulate(print_job_id, workflow_id).await {
 		Ok(data) => data,
-		Err(e) => return Err(CustomError::OtherError(e))
+		Err(e) => return Err(CustomError::OtherError(e)),
 	};
 
     // Store resulting simulation data in the db.
@@ -586,7 +610,15 @@ pub async fn insert_simulation_report(print_job_id: u32, workflow_id: u32) -> Re
         params![new_report.CreationTime, new_report.TotalTimeTaken, new_report.PrintJobID, new_report.WorkflowID]
     )?;
     let inserted_id : u32 = db.last_insert_rowid() as u32;
-	
+    
+    //Store the simulation time data in the db.
+    for (id, time) in new_report.StepTimes {
+        db.execute(
+            "INSERT INTO simulation_report_step_time (simulation_report_id, assigned_workflow_step_id, step_time) VALUES (?1, ?2, ?3)",
+            params![inserted_id, id, time]
+        )?;
+    }
+
     return Ok(inserted_id);
 }
 

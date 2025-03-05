@@ -49,12 +49,22 @@ CREATE TABLE IF NOT EXISTS assigned_workflow_step (
    FOREIGN KEY (workflow_step_id) REFERENCES workflow_step(id)
 );
 
+-- Create a table to track how long each simulated step took
+CREATE TABLE IF NOT EXISTS simulation_report_step_time (
+  simulation_report_id INTEGER,
+  assigned_workflow_step_id INTEGER,
+  step_time INTEGER,
+  PRIMARY KEY (simulation_report_id, assigned_workflow_step_id),
+  FOREIGN KEY (simulation_report_id) REFERENCES simulation_report(id),
+  FOREIGN KEY (assigned_workflow_step_id) REFERENCES assigned_workflow_step(id)
+);
+
 -- Create a table to track workflow steps which are part of a workflow
 CREATE TABLE IF NOT EXISTS next_workflow_step (
     assigned_workflow_step_id INTEGER,  -- the id of the assigned workflow step this is 
     next_step_id INTEGER,                 -- which workflow step comes next.
     PRIMARY KEY (assigned_workflow_step_id, next_step_id),
-    FOREIGN KEY (next_step_id) REFERENCES assigned_workflow_step(id)
+    FOREIGN KEY (next_step_id) REFERENCES assigned_workflow_step(id),
     FOREIGN KEY (assigned_workflow_step_id) REFERENCES assigned_workflow_step(id)
 );
 
