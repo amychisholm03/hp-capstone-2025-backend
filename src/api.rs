@@ -238,6 +238,20 @@ async fn post_simulation_report(Json(payload): Json<SimulationReportArgs>) -> im
     };
 }
 
+/// Inserts a user into the database
+///
+/// # Arguments
+/// * `payload` - A JSON object containing email and password
+///
+/// ### Returns
+/// The status code of the insertion.
+async fn post_user(Json(payload): Json<user>) -> impl IntoResponse {
+    return match insert_user(payload.email, payload.password).await {
+        Ok(data) => response(201, data.to_string()),
+        Err(err) => response(500, err.to_string()),
+    };
+}
+
 /// Deletes a Print Job from the database.
 ///
 /// ### Arguments
