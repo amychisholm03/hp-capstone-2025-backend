@@ -13,6 +13,7 @@ use crate::{
     workflow_steps::{*},
     EMPTY_WFS_VARIANT
 };
+use sha2::{Sha256, Digest};
 
 
 pub type DocID = u32;
@@ -138,6 +139,12 @@ pub struct WorkflowArgs {
     pub numOfRIPs: u32,
 }
 
+#[allow(non_snake_case)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct user {
+    pub email: String,
+    pub password: String,
+}
 
 impl SimulationReport {
 	pub fn new(print_job_id: DocID, workflow_id: DocID, creation_time: u32, total_time_taken: u32, step_times: HashMap<DocID,u32>) -> SimulationReport {
@@ -659,4 +666,18 @@ pub async fn remove_simulation_report(id: DocID) -> Result<usize> {
     let mut stmt = db.prepare("DELETE FROM simulation_report WHERE id=(?)")?;
     let res = stmt.execute([id])?;
     return Ok(res);
+}
+
+pub async fn insert_user(email: String, password: String) -> Result<DocID,CustomError> {
+    let mut hasher = Sha256::new();
+    hasher.update(password.as_bytes());
+    let password_hash = hasher.finalize().to_vec();
+
+    let db = DB_CONNECTION.lock().unwrap();
+    db.execute(
+        "INSERT INTO user (email, password_hash) VALUES (?1, ?2)",
+        params![email, password_hash]
+    )?;
+    let inserted_id : u32 = db.last_insert_rowid() as u32;
+    return Ok(inserted_id);
 }

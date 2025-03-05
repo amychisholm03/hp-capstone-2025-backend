@@ -92,4 +92,13 @@ CREATE TABLE IF NOT EXISTS rasterization_params (
     assigned_workflow_step_id INTEGER,
     num_of_RIPs INTEGER,
     FOREIGN KEY (assigned_workflow_step_id) REFERENCES assigned_workflow_step(id)
-)
+);
+
+-- Create table to keep track of user login information
+CREATE TABLE IF NOT EXISTS user (
+    user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL, -- use a secure hashing function for passwords, should be handled by backend
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
