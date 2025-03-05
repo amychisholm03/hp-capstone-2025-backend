@@ -79,9 +79,9 @@ async fn simulate_step(print_job: &PrintJob, wfs: &AssignedWorkflowStep) -> u32 
 	return match workflow_step {
 		WFSVariant::Rasterization {num_cores} => {
 			return ((print_job.PageCount as f32 )/(num_cores as f32)).ceil() as u32 
-			* workflow_step.time_per_page().await + workflow_step.setup_time().await;
+			* workflow_step.time_per_page() + workflow_step.setup_time();
 		}
-		_ => print_job.PageCount * workflow_step.time_per_page().await + workflow_step.setup_time().await
+		_ => print_job.PageCount * workflow_step.time_per_page() + workflow_step.setup_time()
 	}
 }
 

@@ -34,5 +34,8 @@ jobs:
           username: ${{ secrets.EC2_USER}}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            cd ~/src/db
+            sudo rm database.db3
+            sudo ./run_sql.sh
             cd ~/src
             sudo systemctl restart server.service
