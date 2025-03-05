@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS rasterization_params (
     assigned_workflow_step_id INTEGER,
     num_of_RIPs INTEGER,
     FOREIGN KEY (assigned_workflow_step_id) REFERENCES assigned_workflow_step(id)
-)
+);
 
 -- Create table to keep track of user login information
 CREATE TABLE IF NOT EXISTS user (
