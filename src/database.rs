@@ -150,6 +150,12 @@ pub struct WorkflowArgs {
     pub numOfRIPs: u32,
 }
 
+#[allow(non_snake_case)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct user {
+    pub email: String,
+    pub password: String,
+}
 
 impl SimulationReport {
 	pub fn new(print_job_id: DocID, workflow_id: DocID, creation_time: u32, total_time_taken: u32, step_times: HashMap<DocID,u32>) -> SimulationReport {
