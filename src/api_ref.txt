@@ -1,0 +1,32 @@
+/**
+ * Expected JSON input (from a POST):
+ * 	{
+ * 		"title": "Workflow Title",	// The title of the workflow
+ * 		"steps": [					// A list of steps, to be made into a graph
+ * 			{"id": 0},
+ * 			{"id": 1},
+ * 			{"id": 5, "num_cores": 7},
+ * 		]
+ * 	}
+ *
+ * JSON output (sent in response to a GET):
+ * 	{
+ * 		"id": 0,
+ * 		"title": "Workflow Title",
+ * 		"steps": [
+ * 			{
+ * 				"data": {"id": 0, "title": "Download File", "setup_time": 0, "time_per_page": 1},
+ * 				"prev": [],
+ * 				"next": [1]
+ * 			},{
+ * 				"data": {"id": 1, "title": "Preflight", "setup_time": 10, "time_per_page": 20},
+ * 				"prev": [0],
+ * 				"next": [2]
+ * 			},{
+ * 				"data": {"id": 5, "title": "Rasterization", "setup_time": 50, "time_per_page": 15, "num_cores": 7},
+ * 				"prev": [1],
+ * 				"next": []
+ * 			},
+ * 		]
+ * 	}
+ **/

@@ -12,7 +12,7 @@ use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 use tokio::sync::OnceCell;
 
-// This is the workflow step struct that gets returned from API calls
+/// Workflow step that will be returned to the user
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkflowStep {
@@ -21,6 +21,43 @@ pub struct WorkflowStep {
     pub Title: String,
     pub SetupTime: u32,
     pub TimePerPage: u32,
+}
+
+impl WorkflowStep {
+    pub async fn get(id: DocID) -> Result<WorkflowStep, CustomError> {
+        let wfs = get_variant_by_id(id)?;
+        return Ok(WorkflowStep {
+            id: Some(id),
+            Title: wfs.title(),
+            SetupTime: wfs.setup_time(),
+            TimePerPage: wfs.time_per_page(),
+        });
+    }
+}
+
+/// The arguments from the frontend to assign a workflow step to a new workflow
+#[allow(non_snake_case)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AssignedWorkflowStepArgs {
+    /// The ID of the workflow step to assign; [0-9]
+    pub StepID: u32, 
+    /// Number of RIPs, only applies to Rasterization step
+    pub NumCores: Option<u32>,   
+}
+
+/// The assigned workflow step in a workflow
+#[allow(non_snake_case)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AssignedWorkflowStep {
+    /// primary key for this assigned workflow step
+	pub id: DocID,     
+    /// foreign key ID pertaining to what type of workflow step this is.        
+    pub WorkflowStepID: DocID,
+    pub param_id: Option<DocID>,
+    /// list of indices into a vec of AssignedWorkflowSteps, denoting which steps came last.
+	pub Prev: Vec<usize>,   
+    /// list of indicies into a vec of AssignedWorkflowSteps, denoting which steps come next.
+	pub Next: Vec<usize>       
 }
 
 /**
@@ -39,6 +76,8 @@ pub struct WorkflowStep {
  * foreign key constraints
  **/
 
+
+/// The different types of workflow steps
 #[derive(Clone, Copy, Debug, EnumIter, PartialEq)]
 pub enum WFSVariant {
     DownloadFile,
@@ -52,6 +91,14 @@ pub enum WFSVariant {
     Laminating,
     Metrics,
 }
+
+/// List variants which apply some default behavior in most match statements
+#[macro_export]
+macro_rules! EMPTY_WFS_VARIANT { () => {
+    WFSVariant::DownloadFile | WFSVariant::Preflight | WFSVariant::Impose | 
+    WFSVariant::Analyzer | WFSVariant::ColorSetup | WFSVariant::Loader | 
+    WFSVariant::Cutting | WFSVariant::Laminating | WFSVariant::Metrics
+}}
 
 /// Static properties of each Workflow Step
 struct WFSAttributes {
@@ -68,14 +115,6 @@ struct WFSAttributes {
     /// Can this type of step be the last step in a workflow?
     no_next_valid: bool,
 }
-
-// List variants which apply some default behavior in most match statements
-#[macro_export]
-macro_rules! EMPTY_WFS_VARIANT { () => {
-    WFSVariant::DownloadFile | WFSVariant::Preflight | WFSVariant::Impose | 
-    WFSVariant::Analyzer | WFSVariant::ColorSetup | WFSVariant::Loader | 
-    WFSVariant::Cutting | WFSVariant::Laminating | WFSVariant::Metrics
-}}
 
 impl WFSVariant {
     // Retrieve a specific attribute for a given Workflow Step
@@ -104,7 +143,7 @@ impl WFSVariant {
         self.get_wf_step_attributes().no_next_valid
     }
 
-    /// This is where a Workflow Step's static aAttributes are defined
+    /// This is where a Workflow Step's static attributes are defined
     /// Public functions call this one to retrieve specific attributes
     fn get_wf_step_attributes(&self) -> WFSAttributes {
         use WFSVariant::*;
@@ -277,7 +316,6 @@ impl WFSVariant {
  *      "num_cores": 4          // Includes extra paramaters
  *  }
  **/
-
 impl Serialize for WFSVariant {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where S: Serializer {
@@ -325,16 +363,13 @@ impl<'de> Deserialize<'de> for WFSVariant {
     }
 }
 
-/**
- * Various functions related to getting WFSVariants
- **/
 
-// Run on program startup, after connecting to database to build a lookup
-// table for getting a WFSVariant given its ID
-// Will insert any newly defined variants into the database and remove
-// any that have been removed
-// Returns an error if any workflows rely on the removed workflow step
 static ID_TABLE: OnceCell<HashMap<DocID, WFSVariant>> = OnceCell::const_new();
+/// Run on program startup, after connecting to database to build a lookup
+/// table for getting a WFSVariant given its ID.
+/// Will insert any newly defined variants into the database and remove
+/// any that have been removed.
+/// Returns an error if any workflows rely on the removed workflow step
 pub async fn build_workflow_step_table() -> Result<(), CustomError> {
     if let Some(_) = ID_TABLE.get() {
         return Ok(());
@@ -357,10 +392,10 @@ pub async fn build_workflow_step_table() -> Result<(), CustomError> {
     return Ok(());
 }
 
-// Returns the variant corresponding to the given ID
-// If the returned variant has additional fields, those fields will
-// have default values, so this should primarily be used for pattern 
-// matching and get_workflow_step_by_id() should be used otherwise
+/// Returns the variant corresponding to the given ID
+/// If the returned variant has additional fields, those fields will
+/// have default values, so this should primarily be used for pattern 
+/// matching and get_workflow_step_by_id() should be used otherwise
 pub fn get_variant_by_id(id: DocID) -> Result<WFSVariant, CustomError> {
     return ID_TABLE
         .get()
@@ -368,29 +403,12 @@ pub fn get_variant_by_id(id: DocID) -> Result<WFSVariant, CustomError> {
         .ok_or_else(|| CustomError::OtherError("WorkflowStep not found".to_string()));
 }
 
-// Gets a Workflow Step by its ID and fills its properties, if applicable
+/// Gets a Workflow Step by its ID and fills its properties, if applicable
 pub async fn get_workflow_step_by_id(wfs_id: DocID, prop_id: Option<DocID>,)
 -> Result<WFSVariant, CustomError> {
    let mut output = get_variant_by_id(wfs_id)?;
     output.fill_properties(prop_id).await?;
     return Ok(output);
-}
-
-/**
- * WorkflowStep functions
- * TODO: Update this to use Attributes struct and remove WorkflowStep 
- **/
-
-impl WorkflowStep {
-    pub async fn get(id: DocID) -> Result<WorkflowStep, CustomError> {
-        let wfs = get_variant_by_id(id)?;
-        return Ok(WorkflowStep {
-            id: Some(id),
-            Title: wfs.title(),
-            SetupTime: wfs.setup_time(),
-            TimePerPage: wfs.time_per_page(),
-        });
-    }
 }
 
 pub async fn get_all_workflow_steps() -> Vec<WorkflowStep> {

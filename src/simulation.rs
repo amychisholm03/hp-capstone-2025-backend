@@ -25,10 +25,11 @@ pub async fn simulate(print_job_id : DocID, workflow_id : DocID ) -> Result<Simu
 		Ok(wfid) => wfid,
 		Err(_) => return Err("Workflow not found".to_string())
 	};
-
++
+-
 	// Graph Search
 	let search = Search::new(&workflow);
-	traverse_graph(&print_job, &workflow, &search, &workflow.WorkflowSteps.clone(), 0).await;
+	traverse_graph(&print_job, &workflow, &search, &workflow.steps.clone(), 0).await;
 
 	// Pass results to SimulationReport constructor
 	return Ok(SimulationReport::new(
