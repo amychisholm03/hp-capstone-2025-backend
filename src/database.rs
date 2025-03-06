@@ -484,7 +484,8 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
             return Err(CustomError::OtherError("Invalid workflow step ID".to_string()));
         }
     }
-    let workflow = Workflow{id: data.id, title: data.Title, steps: vec![]};
+    let wf_title = data.Title.clone();
+    let workflow = Workflow{id: data.id, title: wf_title, steps: vec![]};
     //TODO: check if fill_edges() fire when Workflow is created
 
     // Open db connection

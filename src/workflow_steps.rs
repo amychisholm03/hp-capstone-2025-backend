@@ -49,11 +49,12 @@ pub struct AssignedWorkflowStepArgs {
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AssignedWorkflowStep {
-    /// primary key for this assigned workflow step
+    /// Primary key for this assigned workflow step
 	pub id: DocID,     
-    /// foreign key ID pertaining to what type of workflow step this is.        
+    /// Foreign key ID pertaining to what type of workflow step this is i.e. [0-9]        
     pub WorkflowStepID: DocID,
     pub param_id: Option<DocID>,
+    // TODO: are these still required?
     /// list of indices into a vec of AssignedWorkflowSteps, denoting which steps came last.
 	pub Prev: Vec<usize>,   
     /// list of indicies into a vec of AssignedWorkflowSteps, denoting which steps come next.
@@ -143,7 +144,7 @@ impl WFSVariant {
         self.get_wf_step_attributes().no_next_valid
     }
 
-    /// This is where a Workflow Step's static attributes are defined
+    /// This is where a Workflow Step's static attributes are defined.
     /// Public functions call this one to retrieve specific attributes
     fn get_wf_step_attributes(&self) -> WFSAttributes {
         use WFSVariant::*;
@@ -297,25 +298,7 @@ impl WFSVariant {
     }
 }
 
-/**
- * Custom serialize and deserialize functions for converting WFSVariant
- * to and from JSON.
- * 
- * JSON Input:
- *  {
- *      "id": 5,        // Workflow step ID
- *      "num_cores": 4  // Optional fields for specific variants
- *  }
- * 
- * JSON Output:
- *  {
- *      "id": 5,
- *      "title": "Rasterization",
- *      "setup_time": 50,
- *      "time_per_page": 15,
- *      "num_cores": 4          // Includes extra paramaters
- *  }
- **/
+
 impl Serialize for WFSVariant {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where S: Serializer {
@@ -404,6 +387,10 @@ pub fn get_variant_by_id(id: DocID) -> Result<WFSVariant, CustomError> {
 }
 
 /// Gets a Workflow Step by its ID and fills its properties, if applicable
+/// 
+/// ### Arguments
+/// * wfs_id - The ID of the Workflow Step to retrieve
+/// * prop_id - The ID of the step's property table if applicable (e.g. Rasterization)
 pub async fn get_workflow_step_by_id(wfs_id: DocID, prop_id: Option<DocID>,)
 -> Result<WFSVariant, CustomError> {
    let mut output = get_variant_by_id(wfs_id)?;

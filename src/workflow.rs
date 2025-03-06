@@ -1,3 +1,5 @@
+use std::string;
+
 use crate::database::DocID;
 use crate::workflow_steps::*;
 use serde::de::{Deserializer, Error};
@@ -30,7 +32,7 @@ pub struct Workflow {
 pub struct WorkflowArgs {
 	#[serde(default)] 
     pub id: Option<DocID>,
-	pub Title: String,
+	pub Title: string::String,
 	pub WorkflowSteps: Vec<AssignedWorkflowStepArgs>
 }
 

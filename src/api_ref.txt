@@ -1,3 +1,4 @@
+WORKFLOW
 /**
  * Expected JSON input (from a POST):
  * 	{
@@ -29,4 +30,26 @@
  * 			},
  * 		]
  * 	}
+ **/
+
+
+WORKFLOW STEP
+ /**
+ * Custom serialize and deserialize functions for converting WFSVariant
+ * to and from JSON.
+ * 
+ * JSON Input:
+ *  {
+ *      "id": 5,        // Workflow step ID
+ *      "num_cores": 4  // Optional fields for specific variants
+ *  }
+ * 
+ * JSON Output:
+ *  {
+ *      "id": 5,
+ *      "title": "Rasterization",
+ *      "setup_time": 50,
+ *      "time_per_page": 15,
+ *      "num_cores": 4          // Includes extra paramaters
+ *  }
  **/
