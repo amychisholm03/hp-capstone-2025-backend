@@ -1,5 +1,4 @@
-use crate::database::*;
-use crate::workflow_steps::*;
+use crate::{database::*, workflow::*, workflow_steps::*};
 use axum::{
     extract::Path,
     response::IntoResponse,
@@ -51,7 +50,10 @@ pub fn build_routes() -> Router {
         .route("/SimulationReport", get(get_simulation_reports))
         .route("/SimulationReport/{id}", get(get_simulation_report_by_id))
         .route("/SimulationReport/{id}", delete(delete_simulation_report))
-        .route("/SimulationReport/{id}/WorkflowStep/Time", get(get_simulation_report_workflow_steps_by_id))
+        .route(
+            "/SimulationReport/{id}/WorkflowStep/Time",
+            get(get_simulation_report_workflow_steps_by_id),
+        )
         // CORS
         .layer(ServiceBuilder::new().layer(cors_layer));
 }
@@ -187,7 +189,9 @@ async fn get_simulation_report_by_id(Path(id_str): Path<String>) -> impl IntoRes
     };
 }
 
-async fn get_simulation_report_workflow_steps_by_id(Path(id_str): Path<String>) -> impl IntoResponse {
+async fn get_simulation_report_workflow_steps_by_id(
+    Path(id_str): Path<String>,
+) -> impl IntoResponse {
     let id: DocID = match id_str.parse() {
         Ok(data) => data,
         Err(_) => return response(400, format!("Invalid ID: {id_str}")),
@@ -221,6 +225,13 @@ async fn post_print_job(Json(payload): Json<PrintJob>) -> impl IntoResponse {
     };
 }
 
+/// Inserts a Workflow into the database.
+///
+/// ### Arguments
+/// * `payload` - A JSON object of a Workflow to insert.
+///
+/// ### Returns
+/// The status code of the insertion.
 async fn post_workflow(Json(payload): Json<WorkflowArgs>) -> impl IntoResponse {
     return match insert_workflow(payload.clone()).await {
         Ok(data) => response(201, data.to_string()),
@@ -277,7 +288,7 @@ async fn delete_print_job(Path(id_str): Path<String>) -> impl IntoResponse {
         Err(_) => return response(400, format!("Invalid ID: {id_str}")),
     };
     return match remove_print_job(id).await {
-        Ok(_data) => response(204, "".to_string()), //TODO: Return the deleted data?
+        Ok(_data) => response(204, "".to_string()), 
         Err(_) => response(404, format!("PrintJob not found: {id_str}")), //TODO: Need to handle error 409(conflict) if the printjob can't be deleted
     };
 }
@@ -288,7 +299,7 @@ async fn delete_rasterization_profile(Path(id_str): Path<String>) -> impl IntoRe
         Err(_) => return response(400, format!("Invalid ID: {id_str}")),
     };
     return match remove_rasterization_profile(id).await {
-        Ok(_data) => response(204, "".to_string()), //TODO: Return the deleted data?
+        Ok(_data) => response(204, "".to_string()),
         Err(_) => response(404, format!("Unable to delete.")),
     };
 }
@@ -306,7 +317,7 @@ async fn delete_workflow(Path(id_str): Path<String>) -> impl IntoResponse {
         Err(_) => return response(400, format!("Invalid ID: {id_str}")),
     };
     return match remove_workflow(id).await {
-        Ok(_data) => response(204, "".to_string()), //TODO: Return the deleted data?
+        Ok(_data) => response(204, "".to_string()), 
         Err(_) => response(404, format!("Unable to delete.")), //TODO: Need to handle error 409(conflict) if the workflow can't be deleted
     };
 }
@@ -324,7 +335,7 @@ async fn delete_simulation_report(Path(id_str): Path<String>) -> impl IntoRespon
         Err(_) => return response(400, format!("Invalid ID: {id_str}")),
     };
     return match remove_simulation_report(id).await {
-        Ok(_data) => response(204, "".to_string()), //TODO: Return the deleted data?
+        Ok(_data) => response(204, "".to_string()), 
         Err(_) => response(404, format!("SimulationReport not found: {id_str}")),
     };
 }
