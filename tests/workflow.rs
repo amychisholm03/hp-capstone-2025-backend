@@ -24,19 +24,3 @@ async fn workflow_serialization() {
     assert!(json!(wf).is_object());
 	println!("Serialized:\n{}\n", json!(wf));
 }
-
-/// Testing workflow deserialization
-#[tokio::test]
-async fn workflow_deserialization() {
-	let data = "{
-		\"title\": \"Test Workflow 2\", 
-		\"steps\": [
-			{\"id\": 0}, 
-			{\"id\": 1}, 
-			{\"id\": 5, \"num_cores\": 3}
-		]
-	}";
-    // TODO: caleb fix this
-    // let json = serde_json::from_str::<Workflow>(data).unwrap();
-	// println!("Deserialized: {:?}", &json);
-}

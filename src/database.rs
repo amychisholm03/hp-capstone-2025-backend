@@ -283,8 +283,8 @@ pub async fn query_workflows() -> Result<Vec<Workflow>> {
         populated_workflows.push(wf);
     }
 
+    // TODO: returning [Object object] to the frontend, need to fix this
     Ok(populated_workflows)
-
 }
 
 
@@ -477,13 +477,8 @@ pub async fn insert_rasterization_profile(data: RasterizationProfile) -> Result<
 	return Ok(inserted_id);
 }
 
+/// Inserts a new workflow into the database
 pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
-    // Ensure that the workflow is valid
-    for step in &data.WorkflowSteps {
-        if get_variant_by_id(step.StepID).is_err() {
-            return Err(CustomError::OtherError("Invalid workflow step ID".to_string()));
-        }
-    }
     let wf_title = data.Title.clone();
     let workflow = Workflow{id: data.id, title: wf_title, steps: vec![]};
     //TODO: check if fill_edges() fire when Workflow is created

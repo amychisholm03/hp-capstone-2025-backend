@@ -7,14 +7,11 @@ We were tasked with creating a full-stack cloud application that supports [Indus
 ## Running the Application
 
 1. Setup the database.
-   * `cd .../hp-capstone-2025-backend`: Navigate to root directory of this project.
    * `cd db`
    * `./run_sql.sh`
 2. Test the application.
-   * `cd .../hp-capstone-2025-backend`: Navigate to root directory of this project.
    * `cargo test`
-3. Start [](https://www.hp.com/us-en/home.html "HP® Official Site | Laptops, Computers, Desktops , Printers, and more")the server.
-   * `cd .../hp-capstone-2025-backend`: Navigate to root directory of this project.
+3. Start the server.
    * `cargo run`: Runs the server with default parameters.
      * `cargo run l`: Runs the server on `localhost:5040`.This will *not* interact with our live frontend.
 4. Send requests through our frontend at [wsuv-hp-capstone.com](http://wsuv-hp-capstone.com/).
@@ -324,7 +321,6 @@ In this application, we use [RESTful API](https://restfulapi.net/) [HTTP methods
   * **200 (OK):** Returns the document.
   * **400 (Bad Request):** Invalid ID format.
   * **404 (Not Found):** Document does not exist.
-
 * `GET /SimulationReport/:id/WorkflowStep/Time`
   Retrieves the assigned workflow step times for a given simulation report
 

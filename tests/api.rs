@@ -91,7 +91,7 @@ async fn test_get_simulation_reports() {
 /// TODO: figure out why simulation report is not passing
 #[tokio::test]
 #[serial]
-async fn test_all_post_get_then_delete() {
+async fn test_printjob_post_get_delete() {
     let server = tokio::spawn(async {
         backend::run_server(HOST, PORT).await;
     });
@@ -99,13 +99,25 @@ async fn test_all_post_get_then_delete() {
 
     let rasterization_profile_id = test_get_rasterization_profile().await;
     let print_job_id = test_post_print_job(rasterization_profile_id).await;
-    let workflow_id = test_post_workflow().await;
     test_get_print_job_by_id(print_job_id).await;
-    test_get_workflow_by_id(workflow_id).await;
     //let sim_report_id = test_post_simulation_report(print_job_id, workflow_id).await; //TODO: not passing
     //test_get_simulation_report_by_id(sim_report_id).await;
     //test_delete_simulation_report(sim_report_id).await;
     test_delete_print_job(print_job_id).await;
+
+    server.abort();
+}
+
+#[tokio::test]
+#[serial]
+async fn test_workflow_post_get_delete(){
+    let server = tokio::spawn(async {
+        backend::run_server(HOST, PORT).await;
+    });
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+
+    let workflow_id = test_post_workflow().await;
+    test_get_workflow_by_id(workflow_id).await;
     //test_delete_workflow(workflow_id).await;
 
     server.abort();
@@ -155,21 +167,14 @@ async fn test_post_workflow() -> DocID {
     let payload = json!({
         "Title": "Test Workflow",
         "WorkflowSteps": [
-            // Remember that WorkflowStepID's are +1 
-            // from how they appear in the Prev and Next
-            // lists.
-            { "WorkflowStepID": 1, "Prev": [], "Next": [1, 2] },       // download file
-            { "WorkflowStepID": 2, "Prev": [0], "Next": [6] },         // preflight
-            { "WorkflowStepID": 3, "Prev": [0], "Next": [3] },         // impose
-            { "WorkflowStepID": 4, "Prev": [2], "Next": [4] },         // analyze
-            { "WorkflowStepID": 5, "Prev": [3], "Next": [5] },         // color setup
-            { "WorkflowStepID": 6, "Prev": [4], "Next": [6] },         // rasterization
-            { "WorkflowStepID": 7, "Prev": [1, 5], "Next": [7, 8] },   // loading
-            { "WorkflowStepID": 8, "Prev": [6], "Next": [8] },         // cutting
-            { "WorkflowStepID": 9, "Prev": [7], "Next": [] }           // laminating
-        ],
-        "Parallelizable": false,
-        "numOfRIPs": 1
+            { "StepID": 0 },       // download file
+            { "StepID": 1 },         // preflight
+            { "StepID": 2 },         // impose
+            { "StepID": 3 },         // analyze
+            { "StepID": 4 },         // color setup
+            { "StepID": 5, "NumCores": 1 },         // rasterization
+            { "StepID": 6 }   // loading
+        ]
     });
 
     let response = client
