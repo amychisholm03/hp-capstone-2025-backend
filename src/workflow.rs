@@ -17,13 +17,14 @@ pub struct WorkflowNode {
 }
 
 /// A workflow, represented as a graph of nodes
+#[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Workflow {
     #[serde(default)]
     pub id: Option<DocID>,
-    pub title: String,
+    pub Title: String,
     #[serde(deserialize_with = "deserialize_steps")]
-    pub steps: Vec<WorkflowNode>,
+    pub Steps: Vec<WorkflowNode>,
 }
 
 /// Arguments for creating a new workflow, sent by the frontend

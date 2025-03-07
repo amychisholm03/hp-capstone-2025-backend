@@ -288,7 +288,7 @@ async fn delete_print_job(Path(id_str): Path<String>) -> impl IntoResponse {
         Err(_) => return response(400, format!("Invalid ID: {id_str}")),
     };
     return match remove_print_job(id).await {
-        Ok(_data) => response(204, "".to_string()), //TODO: Return the deleted data?
+        Ok(_data) => response(204, "".to_string()), 
         Err(_) => response(404, format!("PrintJob not found: {id_str}")), //TODO: Need to handle error 409(conflict) if the printjob can't be deleted
     };
 }
@@ -299,7 +299,7 @@ async fn delete_rasterization_profile(Path(id_str): Path<String>) -> impl IntoRe
         Err(_) => return response(400, format!("Invalid ID: {id_str}")),
     };
     return match remove_rasterization_profile(id).await {
-        Ok(_data) => response(204, "".to_string()), //TODO: Return the deleted data?
+        Ok(_data) => response(204, "".to_string()),
         Err(_) => response(404, format!("Unable to delete.")),
     };
 }
@@ -317,7 +317,7 @@ async fn delete_workflow(Path(id_str): Path<String>) -> impl IntoResponse {
         Err(_) => return response(400, format!("Invalid ID: {id_str}")),
     };
     return match remove_workflow(id).await {
-        Ok(_data) => response(204, "".to_string()), //TODO: Return the deleted data?
+        Ok(_data) => response(204, "".to_string()), 
         Err(_) => response(404, format!("Unable to delete.")), //TODO: Need to handle error 409(conflict) if the workflow can't be deleted
     };
 }
@@ -335,7 +335,7 @@ async fn delete_simulation_report(Path(id_str): Path<String>) -> impl IntoRespon
         Err(_) => return response(400, format!("Invalid ID: {id_str}")),
     };
     return match remove_simulation_report(id).await {
-        Ok(_data) => response(204, "".to_string()), //TODO: Return the deleted data?
+        Ok(_data) => response(204, "".to_string()), 
         Err(_) => response(404, format!("SimulationReport not found: {id_str}")),
     };
 }

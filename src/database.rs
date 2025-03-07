@@ -138,8 +138,8 @@ fn print_job_from_row(row: &Row) -> Result<PrintJob> {
 fn workflow_from_row(row: &Row) -> Result<Workflow> {
     return Ok(Workflow {
         id: row.get(0)?,
-        title: row.get(1)?,
-        steps: vec![],
+        Title: row.get(1)?,
+        Steps: vec![],
     });
 }
 
@@ -283,7 +283,6 @@ pub async fn query_workflows() -> Result<Vec<Workflow>> {
         populated_workflows.push(wf);
     }
 
-    // TODO: returning [Object object] to the frontend, need to fix this
     Ok(populated_workflows)
 }
 
@@ -392,9 +391,9 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow> {
             Ok(s) => s,
             Err(e) => return Err(e),
         };
-        id_to_indice.insert(step.id, workflow.steps.len());
+        id_to_indice.insert(step.id, workflow.Steps.len());
         let variant = get_variant_by_id(step.WorkflowStepID).unwrap();
-        workflow.steps.push(WorkflowNode {
+        workflow.Steps.push(WorkflowNode {
             data: variant,
             prev: vec![],
             next: vec![],
@@ -402,7 +401,7 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow> {
     }
 
     // Add previous and next workflow step information to each step.
-    for step in &mut workflow.steps {
+    for step in &mut workflow.Steps {
         let step_id = step.data.id();
 
         // Add all of the steps that come next
@@ -480,9 +479,8 @@ pub async fn insert_rasterization_profile(data: RasterizationProfile) -> Result<
 /// Inserts a new workflow into the database
 pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
     let wf_title = data.Title.clone();
-    let workflow = Workflow{id: data.id, title: wf_title, steps: vec![]};
-    //TODO: check if fill_edges() fire when Workflow is created
-
+    let workflow = Workflow{id: data.id, Title: wf_title, Steps: vec![]};
+    
     // Open db connection
     let db = DB_CONNECTION.lock().unwrap();
 
@@ -518,7 +516,7 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
 
     // Now tie each step to it's previous/next workflow steps
     indexcounter = 0;
-    for step in &workflow.steps {
+    for step in &workflow.Steps {
 	    // TODO: make so we don't have to use queries in a loop at some point. pry fine for now but it's shitty for performance
         // ... all steps that come after this step
         for next_step in &step.next {

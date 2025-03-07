@@ -29,7 +29,7 @@ pub async fn simulate(print_job_id: DocID, workflow_id: DocID) -> Result<Simulat
 
     // Graph Search
     let search = Search::new(&workflow);
-    traverse_graph(&print_job, &workflow, &search, &workflow.steps.clone(), 0).await;
+    traverse_graph(&print_job, &workflow, &search, &workflow.Steps.clone(), 0).await;
 
     // Pass results to SimulationReport constructor
     return Ok(SimulationReport::new(
@@ -113,9 +113,10 @@ async fn simulate_step(print_job: &PrintJob, wfs: &WorkflowNode) -> u32 {
 
 impl Search {
     fn new(workflow: &Workflow) -> Search {
+		let length = workflow.Steps.len();	
         return Search(RwLock::new(SearchData {
-            visited: vec![false; workflow.steps.len()],
-            step_times_cumulative: vec![0; workflow.steps.len()],
+            visited: vec![false; length],
+            step_times_cumulative: vec![0; length],
             step_times_by_id: HashMap::new(),
             cumulative_time: 0,
         }));
