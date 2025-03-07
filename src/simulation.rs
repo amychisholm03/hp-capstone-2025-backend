@@ -1,6 +1,6 @@
 use std::{
-	sync::RwLock,
-	collections::HashMap,
+	  sync::RwLock,
+	  collections::HashMap,
     time::{SystemTime, UNIX_EPOCH}
 };
 use futures::future::join_all;

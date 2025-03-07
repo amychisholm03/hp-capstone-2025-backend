@@ -1,5 +1,16 @@
 DROP TABLE IF EXISTS workflow;
 
+-- Create a table to define detailed error reports
+CREATE TABLE IF NOT EXISTS errors_detailed (
+  id INTEGER PRIMARY KEY,
+  date_occured INTEGER,
+  status INTEGER,
+  domain TEXT NOT NULL,
+  request TEXT NOT NULL,
+  method TEXT NOT NULL,
+  response TEXT NOT NULL
+);
+
 -- Create a table to define rasterization profiles
 CREATE TABLE IF NOT EXISTS rasterization_profile (
    id INTEGER PRIMARY KEY,

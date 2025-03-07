@@ -8,7 +8,7 @@ use serde::{Serialize, Deserialize};
 use lazy_static::lazy_static;
 use rusqlite::{params, Connection, Error, Row, Result, Params};
 use crate::simulation::{*};
-use crate::validation::{*};
+// use crate::validation::{*}; // Not needed?
 
 
 pub type DocID = u32;
@@ -31,6 +31,19 @@ pub enum CustomError {
     #[error(transparent)]
     DatabaseError(#[from] Error)
 }
+
+
+#[allow(non_snake_case)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ErrorDetailed {
+    #[serde(default)] pub id: Option<DocID>,
+    pub Date: u32,
+    pub Status: u32,
+    pub Domain: String,
+    pub Request: String,
+    pub Method: String,
+    pub Response: String
+} 
 
 
 #[allow(non_snake_case)]
@@ -143,6 +156,21 @@ pub struct WorkflowArgs {
 }
 
 
+impl ErrorDetailed {
+	pub fn new(date: u32, status: u32, domain: String, request: String, method: String, response: String) -> ErrorDetailed {
+		return ErrorDetailed{
+			  id: None,
+		    Date: date,
+        Status: status,
+        Domain: domain,
+        Request: request,
+        Method: method,
+        Response: response,
+    }
+	}
+}
+
+
 impl SimulationReport {
 	pub fn new(print_job_id: DocID, workflow_id: DocID, creation_time: u32, total_time_taken: u32, step_times: HashMap<DocID,u32>) -> SimulationReport {
 		return SimulationReport{
@@ -164,6 +192,18 @@ impl SimulationReport {
  * appropriate struct from the result. These functions assume that
  * the columns in the row are in a specific order
  **/
+
+fn error_detailed_from_row(row: &Row) -> Result<ErrorDetailed> {
+    return Ok(ErrorDetailed {
+        id: row.get(0)?,
+        Date: row.get(1)?,
+        Status: row.get(2)?,
+        Domain: row.get(3)?,
+        Request: row.get(4)?,
+        Method: row.get(5)?,
+        Response: row.get(6)?,
+    });
+}
 
 fn print_job_from_row(row: &Row) -> Result<PrintJob> {
     return Ok(PrintJob {
@@ -297,6 +337,11 @@ fn check_id_lookup_results<T>(mut rows: Vec<T>) -> Result<T,CustomError> {
  * The find_ functions return the row matching the given ID, or an
  * error if it doesn't exist
  **/
+
+pub async fn query_errors_detailed() -> Result<Vec<ErrorDetailed>> {
+    return query("SELECT id, date_occured, status, domain, request, method, response", 
+        [], error_detailed_from_row);
+}
 
 pub async fn query_print_jobs() -> Result<Vec<PrintJob>> {
     return query("SELECT id, title, creation_time, page_count, rasterization_profile_id FROM printjob;", 
@@ -433,6 +478,18 @@ pub async fn find_simulation_report(id: DocID) -> Result<SimulationReport,Custom
 /**
  * Functions to insert data into the database
  **/
+    
+pub async fn insert_error_detailed(data: ErrorDetailed) -> Result<u32> {
+    let db = DB_CONNECTION.lock().unwrap();
+    
+    db.execute(
+        "INSERT INTO errors_detailed (id, date_occured, status, domain, request, method, response) VALUES (NULL, ?1, ?2, ?3, ?4, ?5, ?6)",
+        params![data.Date, data.Status, data.Domain, data.Request, data.Method, data.Response]
+    )?;
+
+    let inserted_id : u32 = db.last_insert_rowid() as u32;
+    return Ok(inserted_id);
+}
 
 pub async fn insert_print_job(data: PrintJob) -> Result<DocID> {
     let db = DB_CONNECTION.lock().unwrap();
