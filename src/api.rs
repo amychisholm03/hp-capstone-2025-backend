@@ -23,7 +23,7 @@ pub fn build_routes() -> Router {
     return Router::new()
         .route("/", get(hello_world))
         // Error logging route(s)
-        .route("/ErrorLog", get(get_errors_detailed))
+        .route("/Log/Error", get(get_errors_detailed))
         // PrintJob Routes
         .route("/PrintJob", get(get_print_jobs))
         .route("/PrintJob", post(post_print_job))
@@ -101,15 +101,15 @@ async fn error_response(code: u16, message: String, domain: String, method:  Str
 }
 
 async fn hello_world() -> String {
-    return "Hello, World".to_string();
+    return "Thanks for using the PrintOS API! For more information, check out the readme on our GitHub: https://github.com/amychisholm03/hp-capstone-2025-backend".to_string();
 }
-        
+
 async fn get_errors_detailed() -> Response {
     return match query_errors_detailed().await {
         Ok(data) => response(200, json!(data).to_string()),
         Err(_) => error_response(
             400, "An error occured.".to_string(),
-            "/ErrorLog".to_string(), "GET".to_string(),
+            "/Log/Error".to_string(), "GET".to_string(),
             "".to_string(),
         ).await,
     };

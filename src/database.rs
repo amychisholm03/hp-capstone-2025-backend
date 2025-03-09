@@ -339,7 +339,7 @@ fn check_id_lookup_results<T>(mut rows: Vec<T>) -> Result<T,CustomError> {
  **/
 
 pub async fn query_errors_detailed() -> Result<Vec<ErrorDetailed>> {
-    return query("SELECT id, date_occured, status, domain, request, method, response", 
+    return query("SELECT id, date_occured, status, domain, request, method, response FROM errors_detailed", 
         [], error_detailed_from_row);
 }
 
