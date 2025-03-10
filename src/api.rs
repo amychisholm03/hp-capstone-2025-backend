@@ -4,10 +4,10 @@ use axum::{
     extract::Path,
     response::{Response, IntoResponse},
     routing::{delete, get, post},
+    http::{StatusCode, Request},
     Json, Router,
 };
 use http::Method;
-use hyper::StatusCode;
 use serde_json::json;
 use tower::ServiceBuilder;
 use tower_http::cors::{Any, CorsLayer};
@@ -53,7 +53,7 @@ pub fn build_routes() -> Router {
         .route("/SimulationReport", post(post_simulation_report))
         .route("/SimulationReport/{id}", get(get_simulation_report_by_id))
         .route("/SimulationReport/{id}", delete(delete_simulation_report))
-        
+        .fallback(endpoint_not_found)
         // CORS
         .layer(ServiceBuilder::new().layer(cors_layer));
 }
@@ -107,19 +107,33 @@ async fn hello_world() -> String {
 async fn get_errors_detailed() -> Response {
     return match query_errors_detailed().await {
         Ok(data) => response(200, json!(data).to_string()),
-        Err(_) => error_response(
-            400, "An error occured.".to_string(),
+        Err(e) => error_response(
+            400, e.to_string(),
             "/Log/Error".to_string(), "GET".to_string(),
             "".to_string(),
         ).await,
     };
 }
 
+
+async fn endpoint_not_found(req: Request<axum::body::Body>) -> (StatusCode, String) {
+    let method = req.method().clone();
+    let uri = req.uri().clone();
+    error_response(
+        404, "Endpoint not found.".to_string(),
+        uri.to_string(), method.to_string(),
+        "".to_string(),
+    ).await;
+
+    (StatusCode::NOT_FOUND, "Endpoint not found.".to_string())
+
+}
+
 async fn get_print_jobs() -> Response {
     return match query_print_jobs().await {
         Ok(data) => response(200, json!(data).to_string()),
-        Err(_) => error_response(
-            400, "Invalid Query".to_string(),
+        Err(e) => error_response(
+            400, e.to_string(),
             "/PrintJob".to_string(), "GET".to_string(),
             "".to_string(),
         ).await,
@@ -129,8 +143,8 @@ async fn get_print_jobs() -> Response {
 async fn get_rasterization_profiles() -> Response {
     return match query_rasterization_profiles().await {
         Ok(data) => response(200, json!(data).to_string()),
-        Err(_) => error_response(
-            400, "An error occurred.".to_string(),
+        Err(e) => error_response(
+            400, e.to_string(),
             "/RasterizationProfile".to_string(), "GET".to_string(),
             "".to_string(),
         ).await,
@@ -140,8 +154,8 @@ async fn get_rasterization_profiles() -> Response {
 async fn get_workflows() -> Response {
     return match query_workflows().await {
         Ok(data) => response(200, json!(data).to_string()),
-        Err(_) => error_response(
-            400, "Invalid Query".to_string(),
+        Err(e) => error_response(
+            400, e.to_string(),
             "/Workflow".to_string(), "GET".to_string(),
             "".to_string(),
         ).await,
@@ -151,8 +165,8 @@ async fn get_workflows() -> Response {
 async fn get_workflow_steps() -> Response {
     return match query_workflow_steps().await {
         Ok(data) => response(200, json!(data).to_string()),
-        Err(_) => error_response(
-            400, "An error occurred.".to_string(),
+        Err(e) => error_response(
+            400, e.to_string(),
             "/WorkflowStep".to_string(), "GET".to_string(),
             "".to_string(),
         ).await,
@@ -162,8 +176,8 @@ async fn get_workflow_steps() -> Response {
 async fn get_simulation_reports() -> Response {
     return match query_simulation_reports().await {
         Ok(data) => response(200, json!(data).to_string()),
-        Err(_) => error_response(
-            400, "An error occurred.".to_string(),
+        Err(e) => error_response(
+            400, e.to_string(),
             "/SimulationReport".to_string(), "GET".to_string(),
             "".to_string(),
         ).await,
@@ -180,12 +194,12 @@ async fn get_simulation_reports() -> Response {
 async fn get_print_job_by_id(Path(id_str): Path<String>) -> Response {
     let id: DocID = match id_str.parse() {
         Ok(data) => data,
-        Err(_) => return response(400, format!("Invalid ID: {id_str}")),
+        Err(e) => return response(400, format!("Invalid ID: {id_str}")),
     };
     return match find_print_job(id).await {
         Ok(data) => response(200, json!(data).to_string()),
-        Err(_) => error_response(
-            404, format!("PrintJob not found: {id_str}"),
+        Err(e) => error_response(
+            404, e.to_string(),
             format!("/PrintJob/{id_str}"), "GET".to_string(),
             "".to_string(),
         ).await,
@@ -195,16 +209,16 @@ async fn get_print_job_by_id(Path(id_str): Path<String>) -> Response {
 async fn get_rasterization_profile_by_id(Path(id_str): Path<String>) -> Response {
     let id: DocID = match id_str.parse() {
         Ok(data) => data,
-        Err(_) => return error_response(
-            400, format!("Invalid ID: {id_str}"),
+        Err(e) => return error_response(
+            400, e.to_string(),
             format!("/RasterizationProfile/{id_str}"), "GET".to_string(),
             "".to_string(),
         ).await,
     };
     return match find_rasterization_profile(id).await {
         Ok(data) => response(200, json!(data).to_string()),
-        Err(_) => error_response(
-            404, "An error occurred.".to_string(),
+        Err(e) => error_response(
+            404, e.to_string(),
             format!("/RasterizationProfile/{id_str}"), "GET".to_string(),
             "".to_string(),
         ).await,
@@ -221,8 +235,8 @@ async fn get_rasterization_profile_by_id(Path(id_str): Path<String>) -> Response
 async fn get_workflow_by_id(Path(id_str): Path<String>) -> Response {
     let id: DocID = match id_str.parse() {
         Ok(data) => data,
-        Err(_) => return error_response(
-            400, format!("Invalid ID: {id_str}"),
+        Err(e) => return error_response(
+            400, e.to_string(),
             format!("/Workflow/{id_str}"), "GET".to_string(),
             "".to_string(),
         ).await,
@@ -247,16 +261,16 @@ async fn get_workflow_by_id(Path(id_str): Path<String>) -> Response {
 async fn get_workflow_step_by_id(Path(id_str): Path<String>) -> Response {
     let id: DocID = match id_str.parse() {
         Ok(data) => data,
-        Err(_) => return error_response(
-            400, format!("Invalid ID: {id_str}"),
+        Err(e) => return error_response(
+            400, e.to_string(),
             format!("/WorkflowStep/{id_str}"), "GET".to_string(),
             "".to_string(),
         ).await,
     };
     return match find_workflow_step(id).await {
         Ok(data) => response(200, json!(data).to_string()),
-        Err(_) => error_response(
-            404, format!("WorkflowStep not found: {id_str}"),
+        Err(e) => error_response(
+            404, e.to_string(),
             format!("/WorkflowStep/{id_str}"), "GET".to_string(),
             "".to_string(),
         ).await,
@@ -273,16 +287,16 @@ async fn get_workflow_step_by_id(Path(id_str): Path<String>) -> Response {
 async fn get_simulation_report_by_id(Path(id_str): Path<String>) -> Response {
     let id: DocID = match id_str.parse() {
         Ok(data) => data,
-        Err(_) => return error_response(
-            400, format!("Invalid ID: {id_str}"),
+        Err(e) => return error_response(
+            400, e.to_string(),
             format!("/SimulationReport/{id_str}"), "GET".to_string(),
             "".to_string(),
         ).await,
     };
     return match find_simulation_report(id).await {
         Ok(data) => response(200, json!(data).to_string()),
-        Err(_) => error_response(
-            404, format!("SimulationReport not found: {id_str}"),
+        Err(e) => error_response(
+            404, e.to_string(),
             format!("/SimulationReport/{id_str}"), "GET".to_string(),
             "".to_string(),
         ).await,
@@ -292,8 +306,8 @@ async fn get_simulation_report_by_id(Path(id_str): Path<String>) -> Response {
 async fn post_rasterization_profile(Json(payload): Json<RasterizationProfile>) -> Response {
     return match insert_rasterization_profile(payload.clone()).await {
         Ok(data) => response(201, data.to_string()),
-        Err(_) => error_response(
-            500, "Failed to insert rasterization profile".to_string(),
+        Err(e) => error_response(
+            500, e.to_string(),
             "/RasterizationProfile".to_string(), "POST".to_string(),
             serde_json::to_string(&payload).unwrap_or("".to_string()),
         ).await, 
@@ -310,8 +324,8 @@ async fn post_rasterization_profile(Json(payload): Json<RasterizationProfile>) -
 async fn post_print_job(Json(payload): Json<PrintJob>) -> Response {
     return match insert_print_job(payload.clone()).await {
         Ok(data) => response(201, data.to_string()),
-        Err(_) => error_response(
-            500, "Failed to insert print job".to_string(),
+        Err(e) => error_response(
+            500, e.to_string(),
             "/PrintJob".to_string(), "POST".to_string(),
             serde_json::to_string(&payload).unwrap_or("".to_string()),
         ).await,     
@@ -363,22 +377,22 @@ async fn post_simulation_report(Json(payload): Json<SimulationReportArgs>) -> Re
 async fn delete_print_job(Path(id_str): Path<String>) -> Response {
     let id: DocID = match id_str.parse() {
         Ok(data) => data,
-        Err(_) => return response(400, format!("Invalid ID: {id_str}")),
+        Err(e) => return response(400, e.to_string()),
     };
     return match remove_print_job(id).await {
         Ok(_data) => response(204, "".to_string()), //TODO: Return the deleted data?
-        Err(_) => response(404, format!("PrintJob not found: {id_str}")), //TODO: Need to handle error 409(conflict) if the printjob can't be deleted
+        Err(e) => response(404, e.to_string()),  //FIX_ERROR
     };
 }
 
 async fn delete_rasterization_profile(Path(id_str): Path<String>) -> Response {
     let id: DocID = match id_str.parse() {
         Ok(data) => data,
-        Err(_) => return response(400, format!("Invalid ID: {id_str}")),
+        Err(e) => return response(400, format!("Invalid ID: {id_str}")),
     };
     return match remove_rasterization_profile(id).await {
         Ok(_data) => response(204, "".to_string()), //TODO: Return the deleted data?
-        Err(_) => response(404, format!("Unable to delete.")),
+        Err(e) => response(404, e.to_string()), //FIX_ERROR
     };
 }
 
@@ -392,11 +406,11 @@ async fn delete_rasterization_profile(Path(id_str): Path<String>) -> Response {
 async fn delete_workflow(Path(id_str): Path<String>) -> Response {
     let id: DocID = match id_str.parse() {
         Ok(data) => data,
-        Err(_) => return response(400, format!("Invalid ID: {id_str}")),
+        Err(e) => return response(400, format!("Invalid ID: {id_str}")), //FIX_ERROR
     };
     return match remove_workflow(id).await {
         Ok(_data) => response(204, "".to_string()), //TODO: Return the deleted data?
-        Err(_) => response(404, format!("Unable to delete.")), //TODO: Need to handle error 409(conflict) if the workflow can't be deleted
+        Err(e) => response(404, format!("Unable to delete.")),  //FIX_ERROR
     };
 }
 
@@ -410,10 +424,10 @@ async fn delete_workflow(Path(id_str): Path<String>) -> Response {
 async fn delete_simulation_report(Path(id_str): Path<String>) -> Response {
     let id: DocID = match id_str.parse() {
         Ok(data) => data,
-        Err(_) => return response(400, format!("Invalid ID: {id_str}")),
+        Err(e) => return response(400, format!("Invalid ID: {id_str}")), //FIX_ERROR
     };
     return match remove_simulation_report(id).await {
         Ok(_data) => response(204, "".to_string()), //TODO: Return the deleted data?
-        Err(_) => response(404, format!("SimulationReport not found: {id_str}")),
+        Err(e) => response(404, format!("SimulationReport not found: {id_str}")), //FIX_ERROR
     };
 }
