@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    fmt::Debug,
+    fmt::{Debug, Display},
     sync::{Arc, Mutex}
 };
 use thiserror;
@@ -398,7 +398,7 @@ pub async fn find_rasterization_profile(id: DocID) -> Result<RasterizationProfil
 }
 
 // TODO: refactor similar to other find functions
-pub async fn find_workflow(id: DocID) -> Result<Workflow> {
+pub async fn find_workflow(id: DocID) -> Result<Workflow, CustomError> {
     let db = DB_CONNECTION.lock().unwrap();
 
     // Get the workflow matching the supplied id
@@ -407,7 +407,7 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow> {
 
     let mut workflow = match workflow_iter.next() {
         Some(Ok(w)) => w,
-        _ => return Err(Error::QueryReturnedNoRows),
+        _ => return Err(CustomError::DatabaseError(Error::QueryReturnedNoRows)),
     };
 
     // Get all of the steps that belong to this workflow
@@ -419,7 +419,7 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow> {
     for step_result in steps_iter {
         let step = match step_result {
             Ok(s) => s,
-            Err(e) => return Err(e),
+            Err(_) => return Err(CustomError::OtherError("Failed to find steps for workflow.".to_string())),
         };
         id_to_indice.insert(step.id, workflow.WorkflowSteps.len());
         workflow.WorkflowSteps.push(step);
@@ -437,7 +437,7 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow> {
         for next_step_result in next_steps_iter {
             let next_step = match next_step_result {
                 Ok(s) => s,
-                Err(e) => return Err(e),
+                Err(_) => return Err(CustomError::OtherError("Failed to find steps for workflow.".to_string())),
             };
             step.Next.push(*id_to_indice.get(&next_step).unwrap());
         }
@@ -453,7 +453,7 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow> {
         for prev_step_result in prev_steps_iter {
             let prev_step = match prev_step_result {
                 Ok(s) => s,
-                Err(e) => return Err(e),
+                Err(_) => return Err(CustomError::OtherError("Failed to find steps for workflow.".to_string())),
             };
             step.Prev.push(*id_to_indice.get(&prev_step).unwrap());
         }
