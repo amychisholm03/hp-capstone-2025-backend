@@ -1,5 +1,6 @@
 use std::{time::{SystemTime, UNIX_EPOCH}};
 use crate::database::*;
+use crate::workflow_steps::*;
 use axum::{
     extract::Path,
     response::{Response, IntoResponse},
@@ -49,11 +50,12 @@ pub fn build_routes() -> Router {
         .route("/WorkflowStep", get(get_workflow_steps))
         .route("/WorkflowStep/{id}", get(get_workflow_step_by_id))
         // SimulationReport Routes
-        .route("/SimulationReport", get(get_simulation_reports))
         .route("/SimulationReport", post(post_simulation_report))
+        .route("/SimulationReport", get(get_simulation_reports))
         .route("/SimulationReport/{id}", get(get_simulation_report_by_id))
         .route("/SimulationReport/{id}", delete(delete_simulation_report))
         .fallback(endpoint_not_found)
+        .route("/SimulationReport/{id}/WorkflowStep/Time", get(get_simulation_report_workflow_steps_by_id))
         // CORS
         .layer(ServiceBuilder::new().layer(cors_layer));
 }
@@ -311,7 +313,7 @@ async fn get_workflow_step_by_id(Path(id_str): Path<String>) -> Response {
             "".to_string(),
         ).await,
     };
-    return match find_workflow_step(id).await {
+    return match WorkflowStep::get(id).await {
         Ok(data) => response(200, json!(data).to_string()),
         Err(e) => return error_response(
             500, 
@@ -355,8 +357,22 @@ async fn get_simulation_report_by_id(Path(id_str): Path<String>) -> Response {
     };
 }
 
-async fn post_rasterization_profile(Json(payload): Json<RasterizationProfile>) -> Response {
-    return match insert_rasterization_profile(payload.clone()).await {
+
+async fn get_simulation_report_workflow_steps_by_id(Path(id_str): Path<String>) -> impl IntoResponse {
+    let id: DocID = match id_str.parse() {
+        Ok(data) => data,
+        Err(_) => return response(400, format!("Invalid ID: {id_str}")),
+    };
+    return match find_simulation_report_workflow_steps(id).await {
+        Ok(data) => response(200, json!(data).to_string()),
+        Err(e) => response(404, format!("SimulationReport not found: {e}")),
+    };
+}
+
+async fn post_rasterization_profile(
+    Json(payload): Json<RasterizationProfile>,
+) -> impl IntoResponse {
+    return match insert_rasterization_profile(payload).await {
         Ok(data) => response(201, data.to_string()),
         Err(e) => return error_response(
             500,
@@ -407,7 +423,7 @@ async fn post_workflow(Json(payload): Json<WorkflowArgs>) -> Response {
                 serde_json::to_string(&payload).unwrap_or("".to_string()),
             ).await
         } 
-    };
+  };
 }
 
 /// Inserts a Simulation Report into the database.
@@ -428,6 +444,20 @@ async fn post_simulation_report(Json(payload): Json<SimulationReportArgs>) -> Re
             "POST".to_string(),
             serde_json::to_string(&payload).unwrap_or("".to_string()),
         ).await, 
+    };
+}
+
+/// Inserts a user into the database
+///
+/// # Arguments
+/// * `payload` - A JSON object containing email and password
+///
+/// ### Returns
+/// The status code of the insertion.
+async fn post_user(Json(payload): Json<user>) -> impl IntoResponse {
+    return match insert_user(payload.email, payload.password).await {
+        Ok(data) => response(201, data.to_string()),
+        Err(err) => response(500, err.to_string()),
     };
 }
 

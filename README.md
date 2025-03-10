@@ -368,6 +368,12 @@ In this application, we use [RESTful API](https://restfulapi.net/) [HTTP methods
   * **400 (Bad Request):** Invalid ID format.
   * **404 (Not Found):** Document does not exist.
 
+* `GET /SimulationReport/:id/WorkflowStep/Time`
+  Retrieves the assigned workflow step times for a given simulation report
+
+  * **200 (OK):** Returns an object with {step_id->time} key-value pairs
+  * **404 (Not Found):** Simulation Report does not exist.
+
 ### POST
 
 * `POST /RasterizationProfile`

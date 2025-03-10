@@ -8,7 +8,13 @@ use serde::{Serialize, Deserialize};
 use lazy_static::lazy_static;
 use rusqlite::{params, Connection, Error, Row, Result, Params};
 use crate::simulation::{*};
-// use crate::validation::{*}; // Not needed?
+use tokio::sync::SetError;
+use crate::{
+    simulation::{*},
+    workflow_steps::{*},
+    EMPTY_WFS_VARIANT
+};
+use sha2::{Sha256, Digest};
 
 
 pub type DocID = u32;
@@ -29,7 +35,9 @@ pub enum CustomError {
     #[error("{0}")]
     OtherError(String),
     #[error(transparent)]
-    DatabaseError(#[from] Error)
+    DatabaseError(#[from] Error),
+    #[error(transparent)]
+    TokioSetError(#[from] SetError<HashMap<u32, WFSVariant>>),
 }
 
 
@@ -69,8 +77,9 @@ pub struct RasterizationProfile {
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AssignedWorkflowStep {
-	pub id: DocID,             // primary key for this workflow step
+	pub id: DocID,             // primary key for this assigned workflow step
     pub WorkflowStepID: DocID, // foreign key ID pertaining to what type of workflow step this is.
+    pub param_id: Option<DocID>,
 	pub Prev: Vec<usize>,      // list of indices into a vec of AssignedWorkflowSteps, denoting which steps came last.
 	pub Next: Vec<usize>       // list of indicies into a vec of AssignedWorkflowSteps, denoting which steps come next.
 }
@@ -84,17 +93,6 @@ pub struct Workflow {
 	pub WorkflowSteps: Vec<AssignedWorkflowStep>,
     pub Parallelizable: bool,
     pub numOfRIPs: u32,
-}
-
-
-#[allow(non_snake_case)]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WorkflowStep {
-    #[serde(default)]
-    pub id: Option<DocID>,
-    pub Title: String,
-    pub SetupTime: u32,
-    pub TimePerPage: u32,
 }
 
 
@@ -155,6 +153,12 @@ pub struct WorkflowArgs {
     pub numOfRIPs: u32,
 }
 
+#[allow(non_snake_case)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct user {
+    pub email: String,
+    pub password: String,
+}
 
 impl ErrorDetailed {
 	pub fn new(date: u32, status: u32, domain: String, request: String, method: String, response: String) -> ErrorDetailed {
@@ -220,8 +224,8 @@ fn workflow_from_row(row: &Row) -> Result<Workflow> {
         id: row.get(0)?,
         Title: row.get(1)?,
         WorkflowSteps: vec![],
-        Parallelizable: row.get::<_, i32>(2)? != 0,
-        numOfRIPs: row.get(3)?,
+        Parallelizable: false,
+        numOfRIPs: 0,
     });
 }
 
@@ -241,7 +245,7 @@ fn simulation_report_detailed_from_row(row: &Row) -> Result<SimulationReportDeta
         TotalTimeTaken: row.get(3)?,
         PrintJobID: row.get(4)?,
         WorkflowID: row.get(5)?,
-        StepTimes: HashMap::from([(2, 15)]),
+        StepTimes: HashMap::from([]),
         PrintJobTitle: row.get(6)?,
         WorkflowTitle: row.get(7)?,
         RasterizationProfile: row.get(8)?,
@@ -271,14 +275,22 @@ fn assigned_workflow_step_from_row(row: &Row) -> Result<AssignedWorkflowStep> {
     return Ok(AssignedWorkflowStep {
         id: row.get(0)?,
         WorkflowStepID: row.get(2)?,
+        param_id: row.get(3)?,
         Prev: vec![],
         Next: vec![],
     });
 }
 
 
+pub async fn setup_database() -> Result<(),CustomError> {
+    enable_foreign_key_checking().await?;
+    build_workflow_step_table().await?;
+    return Ok(());
+}
+
+
 /// Enables foreign key checking
-pub async fn enable_foreign_key_checking() -> Result<()> {
+async fn enable_foreign_key_checking() -> Result<()> {
     let db = DB_CONNECTION.lock().unwrap();
     db.execute("PRAGMA foreign_keys = ON;", [])?;
     return Ok(())
@@ -348,10 +360,24 @@ pub async fn query_print_jobs() -> Result<Vec<PrintJob>> {
         [], print_job_from_row);
 }
 
+
+// Todo: The method to query a single workflow is kind of a cluster**** right now, and needs rewritten,
+// but I am just going to call it in a loop here for convienence until I get around to rewriting
+// all of it ** soon **.
 pub async fn query_workflows() -> Result<Vec<Workflow>> {
-    return query("SELECT id, title, parallelizable, num_of_RIPs FROM workflow;",
-        [], workflow_from_row);
+    let empty_workflows = query("SELECT id, title FROM workflow;",
+     [], workflow_from_row)?;
+
+    let mut populated_workflows = Vec::new();
+    for workflow in empty_workflows {
+        let wf = find_workflow(workflow.id.unwrap()).await?;
+        populated_workflows.push(wf);
+    }
+
+    Ok(populated_workflows)
+
 }
+
 
 pub async fn query_workflow_steps() -> Result<Vec<WorkflowStep>> {
     return query("SELECT id, title, setup_time, time_per_page FROM workflow_step;",
@@ -397,12 +423,37 @@ pub async fn find_rasterization_profile(id: DocID) -> Result<RasterizationProfil
     return check_id_lookup_results(rows);
 }
 
+pub async fn find_simulation_report_workflow_steps(id: DocID) -> Result<HashMap<u32,u32>> {
+    let db = DB_CONNECTION.lock().unwrap();
+    let mut stmt0 = db.prepare("
+        SELECT
+            simulation_report_step_time.assigned_workflow_step_id,
+            simulation_report_step_time.step_time
+        FROM simulation_report_step_time
+        WHERE simulation_report_step_time.simulation_report_id = (?);
+    ")?;
+    let mut step_times : HashMap<u32,u32> = HashMap::from([]);
+    let rows = stmt0.query_map([id], |row| {
+        let key : u32 = row.get(0)?;
+        let value : u32 = row.get(1)?;
+        Ok((key,value))
+    })?;
+
+    for row in rows {
+        let (key, value) = row?;
+        step_times.insert(key,value);
+    }
+
+    Ok(step_times)
+
+}
+
 // TODO: refactor similar to other find functions
 pub async fn find_workflow(id: DocID) -> Result<Workflow, CustomError> {
     let db = DB_CONNECTION.lock().unwrap();
 
     // Get the workflow matching the supplied id
-    let mut stmt0 = db.prepare("SELECT id, title, parallelizable, num_of_RIPs FROM workflow WHERE id=(?);")?;
+    let mut stmt0 = db.prepare("SELECT id, title FROM workflow WHERE id=(?);")?;
     let mut workflow_iter = stmt0.query_map([id], workflow_from_row)?;
 
     let mut workflow = match workflow_iter.next() {
@@ -411,8 +462,18 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow, CustomError> {
     };
 
     // Get all of the steps that belong to this workflow
-    let mut stmt1 = db.prepare("SELECT id, workflow_id, workflow_step_id FROM assigned_workflow_step WHERE workflow_id = ?")?;
-    let steps_iter = stmt1.query_map([id], assigned_workflow_step_from_row)?;
+    let mut stmt1 = db.prepare("
+        SELECT 
+            assigned_workflow_step.id, 
+            workflow_id, 
+            workflow_step_id, 
+            rasterization_params.id 
+        FROM assigned_workflow_step 
+        LEFT JOIN rasterization_params 
+            ON rasterization_params.assigned_workflow_step_id = assigned_workflow_step.id 
+        WHERE workflow_id = ?"
+    )?;
+    let steps_iter = stmt1.query_map([id], |row: &Row| assigned_workflow_step_from_row(row))?;
 
     // Place all workflow steps in a vector. Keep track of which step is at which index.
     let mut id_to_indice : HashMap<DocID, usize> = HashMap::new();
@@ -462,9 +523,13 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow, CustomError> {
     return Ok(workflow);
 }
 
-pub async fn find_workflow_step(id: DocID) -> Result<WorkflowStep,CustomError> {
-    let rows = query("SELECT id, title, setup_time, time_per_page FROM workflow_step WHERE id=(?);",
-        [id], workflow_step_from_row)?;
+pub async fn get_workflow_step_ids() -> Result<Vec<DocID>> {
+    return query("SELECT id FROM workflow_step", [], |row: &Row| { Ok(row.get(0)?) });
+}
+
+pub async fn find_rasterization_params(param_id: DocID) -> Result<u32,CustomError> {
+    let rows = query("SELECT num_of_RIPs FROM rasterization_params WHERE id=(?)", 
+        [param_id], |row: &Row| { Ok(row.get(0)?) })?;
     return check_id_lookup_results(rows);
 }
 
@@ -517,16 +582,12 @@ pub async fn insert_rasterization_profile(data: RasterizationProfile) -> Result<
 
 pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
     // Ensure that the workflow is valid
-    // TODO: uncomment once frontend can actually send valid workflows
-    // if !is_valid_workflow(&data) {
-    //     return Err(CustomError::OtherError("Invalid workflow".to_string()));
-    // }
     let db = DB_CONNECTION.lock().unwrap();
 
     // Insert the Workflow
     db.execute(
-        "INSERT INTO workflow (id, title, parallelizable, num_of_RIPs) VALUES (NULL, ?1, ?2, ?3)",
-        params![data.Title, data.Parallelizable, data.numOfRIPs]
+        "INSERT INTO workflow (id, title) VALUES (NULL, ?1)",
+        params![data.Title/*, data.Parallelizable, data.numOfRIPs*/]
     )?;
     let inserted_id : DocID = db.last_insert_rowid() as DocID;
     
@@ -543,6 +604,14 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
         let inserted_id : DocID = db.last_insert_rowid() as DocID;
         index_to_id.insert(indexcounter, inserted_id); 
         indexcounter += 1;
+
+        match get_variant_by_id(step.WorkflowStepID)? {
+            WFSVariant::Rasterization {..} => {
+                db.execute("INSERT INTO rasterization_params (id, assigned_workflow_step_id, num_of_RIPs) VALUES (NULL, ?1, ?2)",
+                    params![inserted_id, data.numOfRIPs])?;
+            },
+            EMPTY_WFS_VARIANT!() => {}
+        }
     }
 
     // Now tie each step to it's previous/next workflow steps
@@ -572,11 +641,17 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
     return Ok(inserted_id);
 }
 
+pub async fn insert_workflow_step(data: DocID) -> Result<(),CustomError> {
+    let db = DB_CONNECTION.lock().unwrap();
+    db.execute("INSERT INTO workflow_step (id) VALUES (?1)", params![data])?;
+    return Ok(());
+}
+
 pub async fn insert_simulation_report(print_job_id: u32, workflow_id: u32) -> Result<DocID,CustomError> {
     // Run the simulation
     let new_report = match simulate(print_job_id, workflow_id).await {
 		Ok(data) => data,
-		Err(e) => return Err(CustomError::OtherError(e))
+		Err(e) => return Err(CustomError::OtherError(e)),
 	};
 
     // Store resulting simulation data in the db.
@@ -586,7 +661,15 @@ pub async fn insert_simulation_report(print_job_id: u32, workflow_id: u32) -> Re
         params![new_report.CreationTime, new_report.TotalTimeTaken, new_report.PrintJobID, new_report.WorkflowID]
     )?;
     let inserted_id : u32 = db.last_insert_rowid() as u32;
-	
+    
+    //Store the simulation time data in the db.
+    for (id, time) in new_report.StepTimes {
+        db.execute(
+            "INSERT INTO simulation_report_step_time (simulation_report_id, assigned_workflow_step_id, step_time) VALUES (?1, ?2, ?3)",
+            params![inserted_id, id, time]
+        )?;
+    }
+
     return Ok(inserted_id);
 }
 
@@ -628,9 +711,31 @@ pub async fn remove_workflow(id: DocID) -> Result<usize> {
 }
 
 
+pub async fn remove_workflow_step(id: DocID) -> Result<usize> {
+    let db = DB_CONNECTION.lock().unwrap();
+    let mut stmt = db.prepare("DELETE FROM workflow_step WHERE id=(?)")?;
+    let res = stmt.execute([id])?;
+    return Ok(res);
+}
+
+
 pub async fn remove_simulation_report(id: DocID) -> Result<usize> {
     let db = DB_CONNECTION.lock().unwrap();
     let mut stmt = db.prepare("DELETE FROM simulation_report WHERE id=(?)")?;
     let res = stmt.execute([id])?;
     return Ok(res);
+}
+
+pub async fn insert_user(email: String, password: String) -> Result<DocID,CustomError> {
+    let mut hasher = Sha256::new();
+    hasher.update(password.as_bytes());
+    let password_hash = hasher.finalize().to_vec();
+
+    let db = DB_CONNECTION.lock().unwrap();
+    db.execute(
+        "INSERT INTO user (email, password_hash) VALUES (?1, ?2)",
+        params![email, password_hash]
+    )?;
+    let inserted_id : u32 = db.last_insert_rowid() as u32;
+    return Ok(inserted_id);
 }
