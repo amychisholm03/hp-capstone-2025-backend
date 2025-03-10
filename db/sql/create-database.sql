@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS errors_detailed (
 -- Limit the number of records in the error table to 100
 CREATE TRIGGER ensure_max_rows
 AFTER INSERT ON errors_detailed
-WHEN (SELECT COUNT(*) FROM errors_detailed) > 5
+WHEN (SELECT COUNT(*) FROM errors_detailed) > 128
 BEGIN
     DELETE FROM errors_detailed WHERE id = (SELECT id FROM errors_detailed ORDER BY id ASC LIMIT 1);
 END;
