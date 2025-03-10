@@ -370,12 +370,13 @@ pub async fn query_workflows() -> Result<Vec<Workflow>> {
 
     let mut populated_workflows = Vec::new();
     for workflow in empty_workflows {
-        let wf = find_workflow(workflow.id.unwrap()).await?;
-        populated_workflows.push(wf);
+        let wf = find_workflow(workflow.id.unwrap()).await;
+        if let Ok(wf) = wf {
+            populated_workflows.push(wf);
+        }
     }
 
     Ok(populated_workflows)
-
 }
 
 

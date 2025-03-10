@@ -1,4 +1,4 @@
-use std::{time::{SystemTime, UNIX_EPOCH}};
+use std::time::{SystemTime, UNIX_EPOCH};
 use crate::database::*;
 use crate::workflow_steps::*;
 use axum::{
@@ -372,7 +372,7 @@ async fn get_simulation_report_workflow_steps_by_id(Path(id_str): Path<String>) 
 async fn post_rasterization_profile(
     Json(payload): Json<RasterizationProfile>,
 ) -> impl IntoResponse {
-    return match insert_rasterization_profile(payload).await {
+    return match insert_rasterization_profile(payload.clone()).await {
         Ok(data) => response(201, data.to_string()),
         Err(e) => return error_response(
             500,
