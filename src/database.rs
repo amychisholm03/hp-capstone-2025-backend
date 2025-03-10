@@ -37,12 +37,12 @@ pub enum CustomError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ErrorDetailed {
     #[serde(default)] pub id: Option<DocID>,
-    pub Date: u32,
-    pub Status: u32,
-    pub Domain: String,
-    pub Request: String,
-    pub Method: String,
-    pub Response: String
+    pub date: u32,
+    pub status: u32,
+    pub domain: String,
+    pub request: String,
+    pub method: String,
+    pub response: String
 } 
 
 
@@ -160,12 +160,12 @@ impl ErrorDetailed {
 	pub fn new(date: u32, status: u32, domain: String, request: String, method: String, response: String) -> ErrorDetailed {
 		return ErrorDetailed{
 			  id: None,
-		    Date: date,
-        Status: status,
-        Domain: domain,
-        Request: request,
-        Method: method,
-        Response: response,
+		    date: date,
+        status: status,
+        domain: domain,
+        request: request,
+        method: method,
+        response: response,
     }
 	}
 }
@@ -196,12 +196,12 @@ impl SimulationReport {
 fn error_detailed_from_row(row: &Row) -> Result<ErrorDetailed> {
     return Ok(ErrorDetailed {
         id: row.get(0)?,
-        Date: row.get(1)?,
-        Status: row.get(2)?,
-        Domain: row.get(3)?,
-        Request: row.get(4)?,
-        Method: row.get(5)?,
-        Response: row.get(6)?,
+        date: row.get(1)?,
+        status: row.get(2)?,
+        domain: row.get(3)?,
+        request: row.get(4)?,
+        method: row.get(5)?,
+        response: row.get(6)?,
     });
 }
 
@@ -484,7 +484,7 @@ pub async fn insert_error_detailed(data: ErrorDetailed) -> Result<u32> {
     
     db.execute(
         "INSERT INTO errors_detailed (id, date_occured, status, domain, request, method, response) VALUES (NULL, ?1, ?2, ?3, ?4, ?5, ?6)",
-        params![data.Date, data.Status, data.Domain, data.Request, data.Method, data.Response]
+        params![data.date, data.status, data.domain, data.request, data.method, data.response]
     )?;
 
     let inserted_id : u32 = db.last_insert_rowid() as u32;
