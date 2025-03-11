@@ -380,10 +380,10 @@ pub async fn query_workflows() -> Result<Vec<Workflow>> {
 }
 
 
-pub async fn query_workflow_steps() -> Result<Vec<WorkflowStep>> {
-    return query("SELECT id, title, setup_time, time_per_page FROM workflow_step;",
-        [], workflow_step_from_row);
-}
+// pub async fn query_workflow_steps() -> Result<Vec<WorkflowStep>> {
+//     return query("SELECT id, title, setup_time, time_per_page FROM workflow_step;",
+//         [], workflow_step_from_row);
+// }
 
 pub async fn query_simulation_reports() -> Result<Vec<SimulationReportDetailed>> {
     return query("

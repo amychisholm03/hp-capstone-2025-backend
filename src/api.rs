@@ -178,17 +178,7 @@ async fn get_workflows() -> Response {
 }
 
 async fn get_workflow_steps() -> Response {
-    return match query_workflow_steps().await {
-        Ok(data) => response(200, json!(data).to_string()),
-        Err(e) => return error_response(
-            500,
-            e.to_string(),
-            "An error occurred getting workflow steps.".to_string(),
-            "/WorkflowStep".to_string(),
-            "GET".to_string(),
-            "".to_string(),
-        ).await,
-    };
+    return response(200, json!(get_all_workflow_steps().await).to_string());
 }
 
 async fn get_simulation_reports() -> Response {
