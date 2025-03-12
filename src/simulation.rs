@@ -7,11 +7,6 @@ use std::{
     time::{SystemTime, UNIX_EPOCH}
 };
 use futures::future::join_all;
-use std::{
-    collections::HashMap,
-    sync::RwLock,
-    time::{SystemTime, UNIX_EPOCH},
-};
 
 struct SearchData {
     visited: Vec<bool>,

@@ -40,7 +40,6 @@ pub enum CustomError {
     TokioSetError(#[from] SetError<HashMap<u32, WFSVariant>>),
 }
 
-
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ErrorDetailed {
@@ -405,7 +404,7 @@ pub async fn find_simulation_report_workflow_steps(id: DocID) -> Result<HashMap<
 }
 
 /// Returns the workflow with the given ID
-pub async fn find_workflow(id: DocID) -> Result<Workflow> {
+pub async fn find_workflow(id: DocID) -> Result<Workflow, CustomError> {
     // TODO: refactor similar to other find functions
     let db = DB_CONNECTION.lock().unwrap();
 
