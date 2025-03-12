@@ -298,6 +298,49 @@ Tracks the execution of workflow steps within a simulation report. These haven't
   </tbody>
 </table>
 
+### error_detailed
+
+Tracks an error generated durring runtime, with specific detailed contents.
+
+<table>
+  <thead>
+    <tr>
+      <th>Attribute</th>
+      <th>Type</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>id (pk)</code></td>
+      <td>integer</td>
+    </tr>
+    <tr>
+      <td><code>date</code></td>
+      <td>integer</td>
+    </tr>
+    <tr>
+      <td><code>status</code></td>
+      <td>integer</td>
+    </tr>
+    <tr>
+      <td><code>domain</code></td>
+      <td>text</td>
+    </tr>
+    <tr>
+      <td><code>request</code></td>
+      <td>text</td>
+    </tr>
+    <tr>
+      <td><code>method</code></td>
+      <td>text</td>
+    </tr>
+    <tr>
+      <td><code>response</code></td>
+      <td>text</td>
+    </tr>
+  </tbody>
+</table>
+
 ### Other Data Structures
 
 These could either be hardcoded or stored in a database:

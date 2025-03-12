@@ -1,4 +1,21 @@
-DROP TABLE IF EXISTS workflow;
+-- Create a table to define detailed error reports
+CREATE TABLE IF NOT EXISTS errors_detailed (
+  id INTEGER PRIMARY KEY,
+  date_occured INTEGER,
+  status INTEGER,
+  domain TEXT NOT NULL,
+  request TEXT NOT NULL,
+  method TEXT NOT NULL,
+  response TEXT NOT NULL
+);
+
+-- Limit the number of records in the error table to 100
+CREATE TRIGGER ensure_max_rows
+AFTER INSERT ON errors_detailed
+WHEN (SELECT COUNT(*) FROM errors_detailed) > 128
+BEGIN
+    DELETE FROM errors_detailed WHERE id = (SELECT id FROM errors_detailed ORDER BY id ASC LIMIT 1);
+END;
 
 -- Create a table to define rasterization profiles
 CREATE TABLE IF NOT EXISTS rasterization_profile (
