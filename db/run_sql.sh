@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 DB_PATH="./database.db3"
 SQL_DIR="./sql"

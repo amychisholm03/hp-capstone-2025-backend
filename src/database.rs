@@ -1,12 +1,13 @@
 use std::{
     collections::HashMap,
-    fmt::Debug,
+    fmt::{Debug, Display},
     sync::{Arc, Mutex}
 };
 use thiserror;
 use serde::{Serialize, Deserialize};
 use lazy_static::lazy_static;
 use rusqlite::{params, Connection, Error, Row, Result, Params};
+use crate::simulation::{*};
 use tokio::sync::SetError;
 use crate::{
     simulation::{*},
@@ -38,6 +39,19 @@ pub enum CustomError {
     #[error(transparent)]
     TokioSetError(#[from] SetError<HashMap<u32, WFSVariant>>),
 }
+
+
+#[allow(non_snake_case)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ErrorDetailed {
+    #[serde(default)] pub id: Option<DocID>,
+    pub date: u32,
+    pub status: u32,
+    pub domain: String,
+    pub request: String,
+    pub method: String,
+    pub response: String
+} 
 
 
 #[allow(non_snake_case)]
@@ -146,6 +160,21 @@ pub struct user {
     pub password: String,
 }
 
+impl ErrorDetailed {
+	pub fn new(date: u32, status: u32, domain: String, request: String, method: String, response: String) -> ErrorDetailed {
+		return ErrorDetailed{
+			  id: None,
+		    date: date,
+        status: status,
+        domain: domain,
+        request: request,
+        method: method,
+        response: response,
+    }
+	}
+}
+
+
 impl SimulationReport {
 	pub fn new(print_job_id: DocID, workflow_id: DocID, creation_time: u32, total_time_taken: u32, step_times: HashMap<DocID,u32>) -> SimulationReport {
 		return SimulationReport{
@@ -167,6 +196,18 @@ impl SimulationReport {
  * appropriate struct from the result. These functions assume that
  * the columns in the row are in a specific order
  **/
+
+fn error_detailed_from_row(row: &Row) -> Result<ErrorDetailed> {
+    return Ok(ErrorDetailed {
+        id: row.get(0)?,
+        date: row.get(1)?,
+        status: row.get(2)?,
+        domain: row.get(3)?,
+        request: row.get(4)?,
+        method: row.get(5)?,
+        response: row.get(6)?,
+    });
+}
 
 fn print_job_from_row(row: &Row) -> Result<PrintJob> {
     return Ok(PrintJob {
@@ -309,6 +350,11 @@ fn check_id_lookup_results<T>(mut rows: Vec<T>) -> Result<T,CustomError> {
  * error if it doesn't exist
  **/
 
+pub async fn query_errors_detailed() -> Result<Vec<ErrorDetailed>> {
+    return query("SELECT id, date_occured, status, domain, request, method, response FROM errors_detailed", 
+        [], error_detailed_from_row);
+}
+
 pub async fn query_print_jobs() -> Result<Vec<PrintJob>> {
     return query("SELECT id, title, creation_time, page_count, rasterization_profile_id FROM printjob;", 
         [], print_job_from_row);
@@ -324,19 +370,20 @@ pub async fn query_workflows() -> Result<Vec<Workflow>> {
 
     let mut populated_workflows = Vec::new();
     for workflow in empty_workflows {
-        let wf = find_workflow(workflow.id.unwrap()).await?;
-        populated_workflows.push(wf);
+        let wf = find_workflow(workflow.id.unwrap()).await;
+        if let Ok(wf) = wf {
+            populated_workflows.push(wf);
+        }
     }
 
     Ok(populated_workflows)
-
 }
 
 
-pub async fn query_workflow_steps() -> Result<Vec<WorkflowStep>> {
-    return query("SELECT id, title, setup_time, time_per_page FROM workflow_step;",
-        [], workflow_step_from_row);
-}
+// pub async fn query_workflow_steps() -> Result<Vec<WorkflowStep>> {
+//     return query("SELECT id, title, setup_time, time_per_page FROM workflow_step;",
+//         [], workflow_step_from_row);
+// }
 
 pub async fn query_simulation_reports() -> Result<Vec<SimulationReportDetailed>> {
     return query("
@@ -403,7 +450,7 @@ pub async fn find_simulation_report_workflow_steps(id: DocID) -> Result<HashMap<
 }
 
 // TODO: refactor similar to other find functions
-pub async fn find_workflow(id: DocID) -> Result<Workflow> {
+pub async fn find_workflow(id: DocID) -> Result<Workflow, CustomError> {
     let db = DB_CONNECTION.lock().unwrap();
 
     // Get the workflow matching the supplied id
@@ -412,7 +459,7 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow> {
 
     let mut workflow = match workflow_iter.next() {
         Some(Ok(w)) => w,
-        _ => return Err(Error::QueryReturnedNoRows),
+        _ => return Err(CustomError::DatabaseError(Error::QueryReturnedNoRows)),
     };
 
     // Get all of the steps that belong to this workflow
@@ -434,7 +481,7 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow> {
     for step_result in steps_iter {
         let step = match step_result {
             Ok(s) => s,
-            Err(e) => return Err(e),
+            Err(_) => return Err(CustomError::OtherError("Failed to find steps for workflow.".to_string())),
         };
         id_to_indice.insert(step.id, workflow.WorkflowSteps.len());
         workflow.WorkflowSteps.push(step);
@@ -452,7 +499,7 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow> {
         for next_step_result in next_steps_iter {
             let next_step = match next_step_result {
                 Ok(s) => s,
-                Err(e) => return Err(e),
+                Err(_) => return Err(CustomError::OtherError("Failed to find steps for workflow.".to_string())),
             };
             step.Next.push(*id_to_indice.get(&next_step).unwrap());
         }
@@ -468,7 +515,7 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow> {
         for prev_step_result in prev_steps_iter {
             let prev_step = match prev_step_result {
                 Ok(s) => s,
-                Err(e) => return Err(e),
+                Err(_) => return Err(CustomError::OtherError("Failed to find steps for workflow.".to_string())),
             };
             step.Prev.push(*id_to_indice.get(&prev_step).unwrap());
         }
@@ -497,6 +544,18 @@ pub async fn find_simulation_report(id: DocID) -> Result<SimulationReport,Custom
 /**
  * Functions to insert data into the database
  **/
+    
+pub async fn insert_error_detailed(data: ErrorDetailed) -> Result<u32> {
+    let db = DB_CONNECTION.lock().unwrap();
+    
+    db.execute(
+        "INSERT INTO errors_detailed (id, date_occured, status, domain, request, method, response) VALUES (NULL, ?1, ?2, ?3, ?4, ?5, ?6)",
+        params![data.date, data.status, data.domain, data.request, data.method, data.response]
+    )?;
+
+    let inserted_id : u32 = db.last_insert_rowid() as u32;
+    return Ok(inserted_id);
+}
 
 pub async fn insert_print_job(data: PrintJob) -> Result<DocID> {
     let db = DB_CONNECTION.lock().unwrap();
