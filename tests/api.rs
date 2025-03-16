@@ -87,8 +87,9 @@ async fn test_get_simulation_reports() {
     server.abort();
 }
 
+/// TODO: create simmy report test
+
 /// Test the full cycle of creating and deleting a print job
-/// TODO: figure out why simulation report is not passing
 #[tokio::test]
 #[serial]
 async fn test_printjob_post_get_delete() {
@@ -100,9 +101,6 @@ async fn test_printjob_post_get_delete() {
     let rasterization_profile_id = test_get_rasterization_profile().await;
     let print_job_id = test_post_print_job(rasterization_profile_id).await;
     test_get_print_job_by_id(print_job_id).await;
-    //let sim_report_id = test_post_simulation_report(print_job_id, workflow_id).await; //TODO: not passing
-    //test_get_simulation_report_by_id(sim_report_id).await;
-    //test_delete_simulation_report(sim_report_id).await;
     test_delete_print_job(print_job_id).await;
 
     server.abort();
@@ -167,13 +165,13 @@ async fn test_post_workflow() -> DocID {
     let payload = json!({
         "Title": "Test Workflow",
         "WorkflowSteps": [
-            { "StepID": 0 },       // download file
-            { "StepID": 1 },         // preflight
-            { "StepID": 2 },         // impose
-            { "StepID": 3 },         // analyze
-            { "StepID": 4 },         // color setup
-            { "StepID": 5, "NumCores": 1 },         // rasterization
-            { "StepID": 6 }   // loading
+            { "WorkflowStepID": 0 },       // download file
+            { "WorkflowStepID": 1 },         // preflight
+            { "WorkflowStepID": 2 },         // impose
+            { "WorkflowStepID": 3 },         // analyze
+            { "WorkflowStepID": 4 },         // color setup
+            { "WorkflowStepID": 5, "NumCores": 1 },         // rasterization
+            { "WorkflowStepID": 6 }   // loading
         ]
     });
 

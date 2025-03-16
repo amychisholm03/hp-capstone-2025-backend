@@ -40,7 +40,7 @@ impl WorkflowStep {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AssignedWorkflowStepArgs {
     /// The ID of the workflow step to assign; [0-9]
-    pub StepID: u32, 
+    pub WorkflowStepID: u32, 
     /// Number of RIPs, only applies to Rasterization step
     pub NumCores: Option<u32>,   
 }

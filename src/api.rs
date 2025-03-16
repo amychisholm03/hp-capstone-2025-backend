@@ -411,7 +411,7 @@ async fn post_workflow(Json(payload): Json<WorkflowArgs>) -> impl IntoResponse {
         Ok(data) => response(201, data.to_string()),
         Err(err) => {
             let code: u16 = match err.to_string().to_ascii_lowercase() == "invalid workflow" {
-                true => 422,
+                true =>  {println!("Error: {}", err); 422}
                 false => {println!("Error: {}", err); 500}
             }; 
             return error_response(

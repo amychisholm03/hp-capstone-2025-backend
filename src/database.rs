@@ -557,7 +557,7 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
     for step_args in &data.WorkflowSteps {
         db.execute(
             "INSERT INTO assigned_workflow_step (id, workflow_id, workflow_step_id) VALUES (NULL, ?1, ?2)",
-            params![inserted_id, step_args.StepID]
+            params![inserted_id, step_args.WorkflowStepID]
         )?;
 
         // map the primary key of each AssignedWorkflowStep to it's index in the vector.
@@ -565,7 +565,7 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
         index_to_id.insert(indexcounter, inserted_id); 
         indexcounter += 1;
 
-        match get_variant_by_id(step_args.StepID)? {
+        match get_variant_by_id(step_args.WorkflowStepID)? {
             WFSVariant::Rasterization {..} => {
                 db.execute("INSERT INTO rasterization_params (id, assigned_workflow_step_id, num_of_RIPs) VALUES (NULL, ?1, ?2)",
                     params![inserted_id, step_args.NumCores])?;
@@ -574,11 +574,7 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
         }
     }
 
-    // Now tie each step to it's previous/next workflow steps
-    indexcounter = 0;
     for step in &workflow.Steps {
-	    // TODO: make so we don't have to use queries in a loop at some point. pry fine for now but it's shitty for performance
-        // ... all steps that come after this step
         for next_step in &step.next {
             db.execute(
                 "INSERT INTO next_workflow_step (assigned_workflow_step_id, next_step_id) VALUES (?1, ?2)",
@@ -586,8 +582,6 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
             )?;
         }
 
-	    // TODO: make so we don't have to use queries in a loop at some point. pry fine for now but it's shitty for performance
-        // ... all steps that come before this step
         for prev_step in &step.prev {
             db.execute(
                 "INSERT INTO prev_workflow_step (assigned_workflow_step_id, prev_step_id) VALUES (?1, ?2)",
