@@ -200,7 +200,8 @@ impl WFSVariant {
                 time_per_page: 1,
                 valid_prev: vec![Analyzer],
                 // Any rasterization num_cores valid [1,10]
-                valid_next: (1..=10)
+                // 🤨
+                valid_next: (0..=10)
                     .map(|num_cores| Rasterization { num_cores })
                     .collect(),
                 no_prev_valid: false,
@@ -224,7 +225,7 @@ impl WFSVariant {
                 setup_time: 100,
                 time_per_page: 1,
                 // Any rasterization num_cores valid [1,10]
-                valid_prev: (1..=10)
+                valid_prev: (0..=10)
                     .map(|num_cores| Rasterization { num_cores })
                     .collect(),
                 valid_next: vec![Cutting, Laminating, Metrics],
