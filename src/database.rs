@@ -539,7 +539,20 @@ pub async fn insert_rasterization_profile(data: RasterizationProfile) -> Result<
 /// Inserts a new workflow into the database
 pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
     let wf_title = data.Title.clone();
-    let workflow = Workflow{id: data.id, Title: wf_title, Steps: vec![]};
+    let mut workflow = Workflow{id: data.id, Title: wf_title, Steps: vec![]};
+    
+    // TODO: Caleb needs to make this less garbage
+    workflow.Steps = match fill_edges(data.WorkflowSteps.clone().into_iter()
+        .map(|s| WorkflowNode { 
+            data: get_variant_by_id(s.WorkflowStepID).unwrap(),
+            prev: vec![],
+            next: vec![]
+        })
+        .collect::<Vec<_>>())
+    {
+        Ok(s) => s,
+        Err(_) => return Err(CustomError::OtherError("".to_string())),
+    };
     
     // Open db connection
     let db = DB_CONNECTION.lock().unwrap();
@@ -574,11 +587,13 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
         }
     }
 
+    indexcounter = 0;
     for step in &workflow.Steps {
         for next_step in &step.next {
             db.execute(
                 "INSERT INTO next_workflow_step (assigned_workflow_step_id, next_step_id) VALUES (?1, ?2)",
                 params![index_to_id.get(&indexcounter), index_to_id.get(next_step)] 
+                // params![step.data.id(), index_to_id.get(next_step)] 
             )?;
         }
 
@@ -586,6 +601,7 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
             db.execute(
                 "INSERT INTO prev_workflow_step (assigned_workflow_step_id, prev_step_id) VALUES (?1, ?2)",
                 params![index_to_id.get(&indexcounter), index_to_id.get(prev_step)] 
+                // params![index_to_id.get(&indexcounter), index_to_id.get(prev_step)] 
             )?;
         }
         indexcounter+=1;

@@ -56,7 +56,7 @@ where
 }
 
 /// Given a list of nodes with no edges, fill in the edges to create a graph
-fn fill_edges(steps: Vec<WorkflowNode>) -> Result<Vec<WorkflowNode>, ()> {
+pub fn fill_edges(steps: Vec<WorkflowNode>) -> Result<Vec<WorkflowNode>, ()> {
     // TODO: respect no_valid_prev and no_valid_next
     let mut new_steps = steps.clone();
     for (i, step) in steps.iter().enumerate() {
