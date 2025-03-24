@@ -98,16 +98,13 @@ async fn traverse_list(
 }
 
 async fn simulate_step(print_job: &PrintJob, wfs: &WorkflowNode) -> u32 {
-    let workflow_step = get_workflow_step_by_id(wfs.data.id(), None)
-        .await
-        .expect("Workflow has invalid step");
-    return match workflow_step {
+    return match wfs.data {
         WFSVariant::Rasterization { num_cores } => {
             return ((print_job.PageCount as f32) / (num_cores as f32)).ceil() as u32
-                * workflow_step.time_per_page()
-                + workflow_step.setup_time();
+                * wfs.data.time_per_page()
+                + wfs.data.setup_time();
         }
-        _ => print_job.PageCount * workflow_step.time_per_page() + workflow_step.setup_time(),
+        _ => print_job.PageCount * wfs.data.time_per_page() + wfs.data.setup_time(),
     };
 }
 

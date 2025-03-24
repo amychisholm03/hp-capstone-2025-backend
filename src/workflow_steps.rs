@@ -394,7 +394,7 @@ pub fn get_variant_by_id(id: DocID) -> Result<WFSVariant, CustomError> {
 /// * prop_id - The ID of the step's property table if applicable (e.g. Rasterization)
 pub async fn get_workflow_step_by_id(wfs_id: DocID, prop_id: Option<DocID>,)
 -> Result<WFSVariant, CustomError> {
-   let mut output = get_variant_by_id(wfs_id)?;
+    let mut output = get_variant_by_id(wfs_id)?;
     output.fill_properties(prop_id).await?;
     return Ok(output);
 }

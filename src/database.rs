@@ -433,10 +433,26 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow, CustomError> {
         .collect::<Result<Vec<_>, _>>()?;
 
     // Place all workflow steps in a vector. Keep track of which step is at which index.
+    drop(workflow_iter); drop(stmt0); drop(stmt1); drop(db);
     let mut id_to_indice : HashMap<DocID, usize> = HashMap::new();
     for step in &steps_iter {
         id_to_indice.insert(step.id, workflow.Steps.len());
-        let variant = get_variant_by_id(step.WorkflowStepID).unwrap();
+        let mut variant = get_variant_by_id(step.WorkflowStepID).unwrap();
+        match (&mut variant, step.param_id) {
+            (WFSVariant::Rasterization {ref mut num_cores}, Some(id)) => {
+                *num_cores = check_id_lookup_results(
+                    query("SELECT num_of_RIPs FROM rasterization_params WHERE id=(?)", 
+                    [id], |row: &Row| { Ok(row.get(0)?) })?)?;
+                // dbg!(&num_cores);
+            },
+            (WFSVariant::Rasterization {..}, None) => return Err(CustomError::OtherError(
+                "Rasterization requires prop_id".to_string(),)),
+            
+            (EMPTY_WFS_VARIANT!(), Some(_)) => return Err(CustomError::OtherError(
+                "Given WorkflowStep doesn't require prop_id".to_string(),)),
+            (EMPTY_WFS_VARIANT!(), None) => {}
+        }
+        // dbg!(&variant);
         workflow.Steps.push(WorkflowNode {
             data: variant,
             prev: vec![],
@@ -446,6 +462,7 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow, CustomError> {
 
     // Add previous and next workflow step information to each step.
     // for step in &mut workflow.Steps {
+    let db = DB_CONNECTION.lock().unwrap();
     for step in steps_iter {
         let step_id = step.id;
 

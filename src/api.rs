@@ -436,14 +436,14 @@ async fn post_workflow(Json(payload): Json<WorkflowArgs>) -> impl IntoResponse {
 async fn post_simulation_report(Json(payload): Json<SimulationReportArgs>) -> Response {
     return match insert_simulation_report(payload.PrintJobID, payload.WorkflowID).await {
         Ok(data) => response(201, data.to_string()),
-        Err(err) => return error_response(
+        Err(err) => { return error_response(
             500,
             err.to_string(),
             format!("An error occurred."),
             "/SimulationReport".to_string(),
             "POST".to_string(),
             serde_json::to_string(&payload).unwrap_or("".to_string()),
-        ).await, 
+        ).await;}, 
     };
 }
 
