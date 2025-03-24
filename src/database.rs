@@ -429,15 +429,12 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow, CustomError> {
             ON rasterization_params.assigned_workflow_step_id = assigned_workflow_step.id 
         WHERE workflow_id = ?"
     )?;
-    let steps_iter = stmt1.query_map([id], |row: &Row| assigned_workflow_step_from_row(row))?;
+    let steps_iter = stmt1.query_map([id], |row: &Row| assigned_workflow_step_from_row(row))?
+        .collect::<Result<Vec<_>, _>>()?;
 
     // Place all workflow steps in a vector. Keep track of which step is at which index.
     let mut id_to_indice : HashMap<DocID, usize> = HashMap::new();
-    for step_result in steps_iter {
-        let step = match step_result {
-            Ok(s) => s,
-            Err(_) => return Err(CustomError::OtherError("Failed to find steps for workflow.".to_string())),
-        };
+    for step in &steps_iter {
         id_to_indice.insert(step.id, workflow.Steps.len());
         let variant = get_variant_by_id(step.WorkflowStepID).unwrap();
         workflow.Steps.push(WorkflowNode {
@@ -448,8 +445,9 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow, CustomError> {
     }
 
     // Add previous and next workflow step information to each step.
-    for step in &mut workflow.Steps {
-        let step_id = step.data.id();
+    // for step in &mut workflow.Steps {
+    for step in steps_iter {
+        let step_id = step.id;
 
         // Add all of the steps that come next
         let mut stmt2 = db.prepare("SELECT assigned_workflow_step_id, next_step_id FROM next_workflow_step WHERE assigned_workflow_step_id=(?);")?;
@@ -462,7 +460,8 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow, CustomError> {
                 Ok(s) => s,
                 Err(_) => return Err(CustomError::OtherError("Failed to find steps for workflow.".to_string())),
             };
-            step.next.push(*id_to_indice.get(&next_step).unwrap());
+            workflow.Steps[*id_to_indice.get(&step_id).unwrap()]
+                .next.push(*id_to_indice.get(&next_step).unwrap());
         }
 
         // Add all of the steps that come before this step
@@ -476,7 +475,8 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow, CustomError> {
                 Ok(s) => s,
                 Err(_) => return Err(CustomError::OtherError("Failed to find steps for workflow.".to_string())),
             };
-            step.prev.push(*id_to_indice.get(&prev_step).unwrap());
+            workflow.Steps[*id_to_indice.get(&step_id).unwrap()]
+                .prev.push(*id_to_indice.get(&prev_step).unwrap());
         }
     }
 
