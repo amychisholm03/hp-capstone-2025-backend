@@ -382,7 +382,7 @@ pub async fn find_simulation_report_workflow_steps(id: DocID) -> Result<HashMap<
     let db = DB_CONNECTION.lock().unwrap();
     let mut stmt0 = db.prepare("
         SELECT
-            simulation_report_step_time.assigned_workflow_step_id,
+            simulation_report_step_time.workflow_step_id,
             simulation_report_step_time.step_time
         FROM simulation_report_step_time
         WHERE simulation_report_step_time.simulation_report_id = (?);
