@@ -11,11 +11,11 @@ use crate::simulation::{*};
 use tokio::sync::SetError;
 use crate::{
     simulation::{*},
+    workflow::{*},
     workflow_steps::{*},
     EMPTY_WFS_VARIANT
 };
 use sha2::{Sha256, Digest};
-
 
 pub type DocID = u32;
 const DATABASE_LOCATION: &str = "./db/database.db3";
@@ -28,8 +28,8 @@ lazy_static! {
 }
 
 
-// This is a wrapper for passing along a rusqlite error or a custom error string
-// More error types could be added to this enum if needed
+/// This is a wrapper for passing along a rusqlite error or a custom error string
+/// More error types could be added to this enum if needed
 #[derive(Debug, thiserror::Error)]
 pub enum CustomError {
     #[error("{0}")]
@@ -39,7 +39,6 @@ pub enum CustomError {
     #[error(transparent)]
     TokioSetError(#[from] SetError<HashMap<u32, WFSVariant>>),
 }
-
 
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -72,29 +71,6 @@ pub struct RasterizationProfile {
     pub title: String,
     pub profile: String,
 }
-
-
-#[allow(non_snake_case)]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AssignedWorkflowStep {
-	pub id: DocID,             // primary key for this assigned workflow step
-    pub WorkflowStepID: DocID, // foreign key ID pertaining to what type of workflow step this is.
-    pub param_id: Option<DocID>,
-	pub Prev: Vec<usize>,      // list of indices into a vec of AssignedWorkflowSteps, denoting which steps came last.
-	pub Next: Vec<usize>       // list of indicies into a vec of AssignedWorkflowSteps, denoting which steps come next.
-}
-
-
-#[allow(non_snake_case)]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Workflow {
-	#[serde(default)] id: Option<DocID>,
-	Title: String,
-	pub WorkflowSteps: Vec<AssignedWorkflowStep>,
-    pub Parallelizable: bool,
-    pub numOfRIPs: u32,
-}
-
 
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -131,26 +107,6 @@ pub struct SimulationReportDetailed {
 pub struct SimulationReportArgs {
     pub PrintJobID: DocID,
     pub WorkflowID: DocID,
-}
-
-
-#[allow(non_snake_case)]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AssignedWorkflowStepArgs {
-    pub WorkflowStepID: DocID, // foreign key ID pertaining to what type of workflow step this is.
-	pub Prev: Vec<usize>,      // list of indices into a vec of AssignedWorkflowSteps, denoting which steps came last.
-	pub Next: Vec<usize>       // list of indicies into a vec of AssignedWorkflowSteps, denoting which steps come next.
-}
-
-
-#[allow(non_snake_case)]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WorkflowArgs {
-	#[serde(default)] id: Option<DocID>,
-	Title: String,
-	pub WorkflowSteps: Vec<AssignedWorkflowStepArgs>,
-    pub Parallelizable: bool,
-    pub numOfRIPs: u32,
 }
 
 #[allow(non_snake_case)]
@@ -223,9 +179,7 @@ fn workflow_from_row(row: &Row) -> Result<Workflow> {
     return Ok(Workflow {
         id: row.get(0)?,
         Title: row.get(1)?,
-        WorkflowSteps: vec![],
-        Parallelizable: false,
-        numOfRIPs: 0,
+        Steps: vec![],
     });
 }
 
@@ -449,8 +403,9 @@ pub async fn find_simulation_report_workflow_steps(id: DocID) -> Result<HashMap<
 
 }
 
-// TODO: refactor similar to other find functions
+/// Returns the workflow with the given ID
 pub async fn find_workflow(id: DocID) -> Result<Workflow, CustomError> {
+    // TODO: refactor similar to other find functions
     let db = DB_CONNECTION.lock().unwrap();
 
     // Get the workflow matching the supplied id
@@ -474,50 +429,71 @@ pub async fn find_workflow(id: DocID) -> Result<Workflow, CustomError> {
             ON rasterization_params.assigned_workflow_step_id = assigned_workflow_step.id 
         WHERE workflow_id = ?"
     )?;
-    let steps_iter = stmt1.query_map([id], |row: &Row| assigned_workflow_step_from_row(row))?;
+    let steps_iter = stmt1.query_map([id], |row: &Row| assigned_workflow_step_from_row(row))?
+        .collect::<Result<Vec<_>, _>>()?;
 
     // Place all workflow steps in a vector. Keep track of which step is at which index.
+    drop(workflow_iter); drop(stmt0); drop(stmt1); drop(db);
     let mut id_to_indice : HashMap<DocID, usize> = HashMap::new();
-    for step_result in steps_iter {
-        let step = match step_result {
-            Ok(s) => s,
-            Err(_) => return Err(CustomError::OtherError("Failed to find steps for workflow.".to_string())),
-        };
-        id_to_indice.insert(step.id, workflow.WorkflowSteps.len());
-        workflow.WorkflowSteps.push(step);
+    for step in &steps_iter {
+        id_to_indice.insert(step.id, workflow.Steps.len());
+        let mut variant = get_variant_by_id(step.WorkflowStepID).unwrap();
+        match (&mut variant, step.param_id) {
+            (WFSVariant::Rasterization {ref mut num_cores}, Some(id)) => {
+                *num_cores = check_id_lookup_results(
+                    query("SELECT num_of_RIPs FROM rasterization_params WHERE id=(?)", 
+                    [id], |row: &Row| { Ok(row.get(0)?) })?)?;
+                // dbg!(&num_cores);
+            },
+            (WFSVariant::Rasterization {..}, None) => return Err(CustomError::OtherError(
+                "Rasterization requires prop_id".to_string(),)),
+            
+            (EMPTY_WFS_VARIANT!(), Some(_)) => return Err(CustomError::OtherError(
+                "Given WorkflowStep doesn't require prop_id".to_string(),)),
+            (EMPTY_WFS_VARIANT!(), None) => {}
+        }
+        // dbg!(&variant);
+        workflow.Steps.push(WorkflowNode {
+            data: variant,
+            prev: vec![],
+            next: vec![],
+        });
     }
 
     // Add previous and next workflow step information to each step.
-    for step in &mut workflow.WorkflowSteps {
-        //// Add all of the steps that come next
+    // for step in &mut workflow.Steps {
+    let db = DB_CONNECTION.lock().unwrap();
+    for step in steps_iter {
+        let step_id = step.id;
+
+        // Add all of the steps that come next
         let mut stmt2 = db.prepare("SELECT assigned_workflow_step_id, next_step_id FROM next_workflow_step WHERE assigned_workflow_step_id=(?);")?;
-        let next_steps_iter = stmt2.query_map([step.id], |row| {
+        let next_steps_iter = stmt2.query_map([step_id], |row| {
             let next_step_id: u32 = row.get(1)?;
             Ok(next_step_id)
         })?;
-
         for next_step_result in next_steps_iter {
             let next_step = match next_step_result {
                 Ok(s) => s,
                 Err(_) => return Err(CustomError::OtherError("Failed to find steps for workflow.".to_string())),
             };
-            step.Next.push(*id_to_indice.get(&next_step).unwrap());
+            workflow.Steps[*id_to_indice.get(&step_id).unwrap()]
+                .next.push(*id_to_indice.get(&next_step).unwrap());
         }
 
-        //// Add all of the steps that come before this step
+        // Add all of the steps that come before this step
         let mut stmt3 = db.prepare("SELECT assigned_workflow_step_id, prev_step_id FROM prev_workflow_step WHERE assigned_workflow_step_id=(?);")?;
-
-        let prev_steps_iter = stmt3.query_map([step.id], |row| {
+        let prev_steps_iter = stmt3.query_map([step_id], |row| {
             let next_step_id: u32 = row.get(1)?;
             Ok(next_step_id)
         })?;
-
         for prev_step_result in prev_steps_iter {
             let prev_step = match prev_step_result {
                 Ok(s) => s,
                 Err(_) => return Err(CustomError::OtherError("Failed to find steps for workflow.".to_string())),
             };
-            step.Prev.push(*id_to_indice.get(&prev_step).unwrap());
+            workflow.Steps[*id_to_indice.get(&step_id).unwrap()]
+                .prev.push(*id_to_indice.get(&prev_step).unwrap());
         }
     }
 
@@ -541,10 +517,6 @@ pub async fn find_simulation_report(id: DocID) -> Result<SimulationReport,Custom
 }
 
 
-/**
- * Functions to insert data into the database
- **/
-    
 pub async fn insert_error_detailed(data: ErrorDetailed) -> Result<u32> {
     let db = DB_CONNECTION.lock().unwrap();
     
@@ -581,24 +553,41 @@ pub async fn insert_rasterization_profile(data: RasterizationProfile) -> Result<
 	return Ok(inserted_id);
 }
 
+/// Inserts a new workflow into the database
 pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
-    // Ensure that the workflow is valid
+    let wf_title = data.Title.clone();
+    let mut workflow = Workflow{id: data.id, Title: wf_title, Steps: vec![]};
+    
+    // TODO: Caleb needs to make this less garbage
+    workflow.Steps = match fill_edges(data.WorkflowSteps.clone().into_iter()
+        .map(|s| WorkflowNode { 
+            data: get_variant_by_id(s.WorkflowStepID).unwrap(),
+            prev: vec![],
+            next: vec![]
+        })
+        .collect::<Vec<_>>())
+    {
+        Ok(s) => s,
+        Err(_) => return Err(CustomError::OtherError("".to_string())),
+    };
+    
+    // Open db connection
     let db = DB_CONNECTION.lock().unwrap();
 
     // Insert the Workflow
     db.execute(
         "INSERT INTO workflow (id, title) VALUES (NULL, ?1)",
-        params![data.Title/*, data.Parallelizable, data.numOfRIPs*/]
+        params![data.Title]
     )?;
     let inserted_id : DocID = db.last_insert_rowid() as DocID;
     
     // Load all workflow steps into the database.
     let mut indexcounter : usize = 0;
     let mut index_to_id : HashMap<usize, DocID> = HashMap::new();
-    for step in &data.WorkflowSteps {
+    for step_args in &data.WorkflowSteps {
         db.execute(
             "INSERT INTO assigned_workflow_step (id, workflow_id, workflow_step_id) VALUES (NULL, ?1, ?2)",
-            params![inserted_id, step.WorkflowStepID]
+            params![inserted_id, step_args.WorkflowStepID]
         )?;
 
         // map the primary key of each AssignedWorkflowStep to it's index in the vector.
@@ -606,34 +595,30 @@ pub async fn insert_workflow(data: WorkflowArgs) -> Result<DocID,CustomError> {
         index_to_id.insert(indexcounter, inserted_id); 
         indexcounter += 1;
 
-        match get_variant_by_id(step.WorkflowStepID)? {
+        match get_variant_by_id(step_args.WorkflowStepID)? {
             WFSVariant::Rasterization {..} => {
                 db.execute("INSERT INTO rasterization_params (id, assigned_workflow_step_id, num_of_RIPs) VALUES (NULL, ?1, ?2)",
-                    params![inserted_id, data.numOfRIPs])?;
+                    params![inserted_id, step_args.NumCores])?;
             },
             EMPTY_WFS_VARIANT!() => {}
         }
     }
 
-    // Now tie each step to it's previous/next workflow steps
     indexcounter = 0;
-    for step in &data.WorkflowSteps {
-
-	// TODO: make so we don't have to use queries in a loop at some point. pry fine for now but it's shitty for performance
-        // ... all steps that come after this step
-        for next_step in &step.Next {
+    for step in &workflow.Steps {
+        for next_step in &step.next {
             db.execute(
                 "INSERT INTO next_workflow_step (assigned_workflow_step_id, next_step_id) VALUES (?1, ?2)",
                 params![index_to_id.get(&indexcounter), index_to_id.get(next_step)] 
+                // params![step.data.id(), index_to_id.get(next_step)] 
             )?;
         }
 
-	// TODO: make so we don't have to use queries in a loop at some point. pry fine for now but it's shitty for performance
-        // ... all steps that come before this step
-        for prev_step in &step.Prev {
+        for prev_step in &step.prev {
             db.execute(
                 "INSERT INTO prev_workflow_step (assigned_workflow_step_id, prev_step_id) VALUES (?1, ?2)",
                 params![index_to_id.get(&indexcounter), index_to_id.get(prev_step)] 
+                // params![index_to_id.get(&indexcounter), index_to_id.get(prev_step)] 
             )?;
         }
         indexcounter+=1;

@@ -1,6 +1,5 @@
+use crate::{database::*, workflow::*, workflow_steps::*};
 use std::time::{SystemTime, UNIX_EPOCH};
-use crate::database::*;
-use crate::workflow_steps::*;
 use axum::{
     extract::Path,
     response::{Response, IntoResponse},
@@ -54,8 +53,12 @@ pub fn build_routes() -> Router {
         .route("/SimulationReport", get(get_simulation_reports))
         .route("/SimulationReport/{id}", get(get_simulation_report_by_id))
         .route("/SimulationReport/{id}", delete(delete_simulation_report))
+        .route(
+            "/SimulationReport/{id}/WorkflowStep/Time",
+            get(get_simulation_report_workflow_steps_by_id),
+        )
+        // Fallback
         .fallback(endpoint_not_found)
-        .route("/SimulationReport/{id}/WorkflowStep/Time", get(get_simulation_report_workflow_steps_by_id))
         // CORS
         .layer(ServiceBuilder::new().layer(cors_layer));
 }
@@ -396,12 +399,19 @@ async fn post_print_job(Json(payload): Json<PrintJob>) -> Response {
     };
 }
 
-async fn post_workflow(Json(payload): Json<WorkflowArgs>) -> Response {
+/// Inserts a Workflow into the database.
+///
+/// ### Arguments
+/// * `payload` - A JSON object of a Workflow to insert.
+///
+/// ### Returns
+/// The status code of the insertion.
+async fn post_workflow(Json(payload): Json<WorkflowArgs>) -> impl IntoResponse {
     return match insert_workflow(payload.clone()).await {
         Ok(data) => response(201, data.to_string()),
         Err(err) => {
             let code: u16 = match err.to_string().to_ascii_lowercase() == "invalid workflow" {
-                true => 422,
+                true =>  {println!("Error: {}", err); 422}
                 false => {println!("Error: {}", err); 500}
             }; 
             return error_response(
@@ -426,14 +436,14 @@ async fn post_workflow(Json(payload): Json<WorkflowArgs>) -> Response {
 async fn post_simulation_report(Json(payload): Json<SimulationReportArgs>) -> Response {
     return match insert_simulation_report(payload.PrintJobID, payload.WorkflowID).await {
         Ok(data) => response(201, data.to_string()),
-        Err(err) => return error_response(
+        Err(err) => { return error_response(
             500,
             err.to_string(),
             format!("An error occurred."),
             "/SimulationReport".to_string(),
             "POST".to_string(),
             serde_json::to_string(&payload).unwrap_or("".to_string()),
-        ).await, 
+        ).await;}, 
     };
 }
 
