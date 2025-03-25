@@ -87,7 +87,22 @@ async fn test_get_simulation_reports() {
     server.abort();
 }
 
-/// TODO: create simmy report test
+#[tokio::test]
+#[serial]
+async fn test_simulation_report_create(){
+    let server = tokio::spawn(async {
+        backend::run_server(HOST, PORT).await;
+    });
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+
+    let rasterization_profile_id = test_get_rasterization_profile().await;
+    let print_job_id = test_post_print_job(rasterization_profile_id).await;
+    let workflow_id = test_post_workflow().await;
+    let sim_report_id = test_post_simulation_report(print_job_id, workflow_id).await;
+    test_get_simulation_report_by_id(sim_report_id).await;
+
+    server.abort();
+}
 
 /// Test the full cycle of creating and deleting a print job
 #[tokio::test]
